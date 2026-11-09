@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hosted town on testnet: `clonestown.testnet` with its market. A sign-up function (`web/api/enlist.js`) sends a guest's clones in with no login; a nightly keeper (`cargo run -p clones-replay --bin keeper`, run by the `town` workflow at 02:00 UTC) plays the night, merges everyone home and publishes each guest's log to the `town-data` branch.
+- Testnet tools: house setup, sweep and recovery examples.
 - Replay page (`web/`): one night in 60 seconds, played from a night log, with explorer links, the refused withdrawal and a morning ledger. Soundtrack opt-in.
 - The demo night (seed 853) played on NEAR testnet; the chain matched the answer key. Log in `web/data/night.json`.
 - Runner handles many players in one night, retries rate-limited RPC calls and waits for consistent reads.

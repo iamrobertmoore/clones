@@ -1,0 +1,10 @@
+{
+  "name": "clones-town",
+  "private": true,
+  "description": "Replay page and hosted town for Clones.",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "near-api-js": "4.0.4"
+  }
+}

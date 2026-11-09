@@ -5,6 +5,7 @@ description = "Plays one seeded night on a local NEAR sandbox with real transact
 edition.workspace = true
 license.workspace = true
 publish = false
+default-run = "clones-replay"
 
 [dependencies]
 clones-core = { path = "../core" }

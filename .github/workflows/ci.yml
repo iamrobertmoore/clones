@@ -31,3 +31,16 @@ jobs:
             echo "Some tests were skipped"; exit 1
           fi
           awk '/test result:/ {n += $4} END {print n " tests passed"; if (n == 0) exit 1}' test.log
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sign-up function tests
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          node --test 'api/*.test.js'

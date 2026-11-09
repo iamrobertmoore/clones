@@ -1,0 +1,5 @@
+{
+  "functions": {
+    "api/enlist.js": { "maxDuration": 60, "includeFiles": "api/leash.wasm" }
+  }
+}

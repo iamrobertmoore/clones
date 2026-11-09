@@ -1,0 +1,52 @@
+name: town
+
+# The hosted town's night: every day at 02:00 UTC the keeper plays one night for every clone in
+# town on NEAR testnet, merges them all home at dawn, and publishes each guest's night log to the
+# town-data branch (never main).
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: town
+  cancel-in-progress: false
+
+jobs:
+  night:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Play tonight
+        env:
+          HOUSE_ACCOUNT: clonestown.testnet
+          HOUSE_KEY: ${{ secrets.HOUSE_KEY }}
+          OUT_DIR: ${{ runner.temp }}/nights
+        run: cargo run --release -p clones-replay --bin keeper
+      - name: Publish the night logs
+        env:
+          NIGHTS: ${{ runner.temp }}/nights
+        run: |
+          if [ ! -f "$NIGHTS/index.json" ]; then echo "No night tonight."; exit 0; fi
+          day=$(date -u +%Y-%m-%d)
+          git config user.name "Robert Moore"
+          git config user.email "iamrobertmoore@gmail.com"
+          if git fetch origin town-data; then
+            git switch town-data
+          else
+            git switch --orphan town-data
+            git rm -rf --quiet . || true
+          fi
+          mkdir -p "nights/$day" nights/latest
+          cp "$NIGHTS"/*.json "nights/$day/"
+          cp "$NIGHTS"/*.json nights/latest/
+          git add nights
+          git commit -m "Town night $day"
+          git push origin town-data
