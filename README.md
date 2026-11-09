@@ -23,12 +23,18 @@ checks that the chain matched it exactly. The full log goes to `replay.json`.
 
 `cargo test --workspace` runs every test, including the same night as a test.
 
+## Watch it
+
+`web/` is the replay page. Serve the folder (for example `python3 -m http.server -d web`) and open it.
+It plays the demo night recorded on NEAR testnet, with a link to every transaction.
+
 ## Layout
 
 - `core`: the rules of the town (prices, fills, temperaments), shared by the contract and the clones.
 - `contracts/market`: the town. Clears every order and holds every number.
 - `contracts/leash`: deployed on each clone. Only the player can merge it.
-- `replay`: plays a seeded night on a local sandbox and writes the log.
+- `replay`: plays a seeded night (local sandbox or testnet) and writes the log.
+- `web`: the replay page.
 
 ## Licence
 

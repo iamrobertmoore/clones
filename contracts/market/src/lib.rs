@@ -12,11 +12,17 @@
 
 use clones_core as rules;
 use near_sdk::json_types::U64;
-use near_sdk::store::{LookupMap, Vector};
+use near_sdk::store::{IterableMap, LookupMap, Vector};
 use near_sdk::{env, near, require, AccountId, NearToken, PanicOnDefault, Promise};
 
 /// Clone names a player may use. Three clones, no more.
 pub const CLONE_NAMES: [&str; 3] = ["clone-1", "clone-2", "clone-3"];
+
+/// Most clones the town holds at once, to bound storage.
+pub const MAX_CLONES_IN_TOWN: u32 = 60;
+
+/// Settlements remembered per player.
+pub const RESULTS_KEPT: usize = 9;
 
 /// Smallest stake a clone can be sent in with, in milliNEAR.
 pub const MIN_STAKE_MILLI: u64 = 100;
@@ -107,16 +113,32 @@ pub struct Order {
     pub fee: u64,
 }
 
+/// What a clone brought home, remembered on chain for its player.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Settlement {
+    pub clone: AccountId,
+    pub temperament: Temperament,
+    pub night: u32,
+    pub seed: U64,
+    pub stake: u64,
+    pub paid_out: u64,
+    pub broke: bool,
+    pub orders_placed: u32,
+}
+
 #[near(serializers = [json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TownView {
     pub keeper: AccountId,
+    pub night: u32,
     pub seed: U64,
     pub round: u32,
     pub rounds: u32,
     pub goods: Vec<String>,
     pub prices: [u64; 5],
     pub fees_collected: u64,
+    pub clones_in_town: u32,
 }
 
 #[near(contract_state)]
@@ -126,8 +148,10 @@ pub struct Market {
     seed: u64,
     round: u32,
     fees: u64,
-    clones: LookupMap<AccountId, CloneRecord>,
+    night: u32,
+    clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
+    results: LookupMap<AccountId, Vec<Settlement>>,
 }
 
 /// If `clone` is `clone-N.<player>` with N in 1..=3, return the player.
@@ -150,8 +174,10 @@ impl Market {
             seed: seed.0,
             round: 0,
             fees: 0,
-            clones: LookupMap::new(b"c"),
+            night: 1,
+            clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
+            results: LookupMap::new(b"r"),
         }
     }
 
@@ -171,6 +197,7 @@ impl Market {
         self.only_keeper();
         self.seed = seed.0;
         self.round = 0;
+        self.night += 1;
     }
 
     /// Ring the next hour. Prices move.
@@ -193,6 +220,10 @@ impl Market {
         require!(
             !self.clones.contains_key(&clone_id),
             "that clone is already in town"
+        );
+        require!(
+            self.clones.len() < MAX_CLONES_IN_TOWN,
+            "the town is full tonight"
         );
         let stake = (env::attached_deposit().as_yoctonear() / YOCTO_PER_MILLI) as u64;
         require!(
@@ -271,14 +302,48 @@ impl Market {
             }
         ));
         self.clones.remove(&clone_id);
+        let mut kept = self.results.get(&rec.player).cloned().unwrap_or_default();
+        kept.push(Settlement {
+            clone: clone_id.clone(),
+            temperament: rec.temperament,
+            night: self.night,
+            seed: U64(self.seed),
+            stake: rec.stake,
+            paid_out: ledger.cash,
+            broke: rules::is_broke(ledger.cash, rec.stake),
+            orders_placed: rec.orders_placed,
+        });
+        if kept.len() > RESULTS_KEPT {
+            kept.remove(0);
+        }
+        self.results.insert(rec.player.clone(), kept);
         Promise::new(clone_id).transfer(NearToken::from_yoctonear(
             ledger.cash as u128 * YOCTO_PER_MILLI,
         ))
     }
 
     pub fn get_clone(&self, clone_id: AccountId) -> Option<CloneView> {
-        let prices = self.prices();
-        self.clones.get(&clone_id).map(|r| {
+        self.clones.get(&clone_id).map(|r| self.view_of(r))
+    }
+
+    /// Every clone in town, in a stable order.
+    pub fn list_clones(&self, from: u32, limit: u32) -> Vec<(AccountId, CloneView)> {
+        self.clones
+            .iter()
+            .skip(from as usize)
+            .take(limit as usize)
+            .map(|(id, r)| (id.clone(), self.view_of(r)))
+            .collect()
+    }
+
+    /// What this player's clones brought home, most recent last.
+    pub fn get_results(&self, player: AccountId) -> Vec<Settlement> {
+        self.results.get(&player).cloned().unwrap_or_default()
+    }
+
+    fn view_of(&self, r: &CloneRecord) -> CloneView {
+        {
+            let prices = self.prices();
             let worth = r.ledger().worth(&prices);
             CloneView {
                 player: r.player.clone(),
@@ -290,18 +355,20 @@ impl Market {
                 worth,
                 broke: rules::is_broke(worth, r.stake),
             }
-        })
+        }
     }
 
     pub fn get_town(&self) -> TownView {
         TownView {
             keeper: self.keeper.clone(),
+            night: self.night,
             seed: U64(self.seed),
             round: self.round,
             rounds: rules::ROUNDS,
             goods: rules::GOODS.iter().map(|g| g.to_string()).collect(),
             prices: self.prices(),
             fees_collected: self.fees,
+            clones_in_town: self.clones.len(),
         }
     }
 
@@ -345,6 +412,27 @@ mod tests {
         as_caller("alice.testnet", NearToken::from_near(2));
         m.register_clone(acc("clone-1.alice.testnet"), Temperament::Greedy);
         m
+    }
+
+    #[test]
+    fn lists_the_clones_in_town() {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(1));
+        m.register_clone(acc("clone-2.bob.testnet"), Temperament::Loyal);
+        let all = m.list_clones(0, 10);
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[1].0, acc("clone-2.bob.testnet"));
+        assert_eq!(m.get_town().clones_in_town, 2);
+    }
+
+    #[test]
+    fn a_new_night_resets_the_hour_and_counts_up() {
+        let mut m = town_with_clone();
+        as_caller("keeper.testnet", zero());
+        m.advance_round();
+        m.open_night(U64(9));
+        let t = m.get_town();
+        assert_eq!((t.round, t.night, t.seed.0), (0, 2, 9));
     }
 
     #[test]
@@ -484,6 +572,12 @@ mod tests {
         as_caller("alice.testnet", zero());
         let _ = m.settle(acc("clone-1.alice.testnet"));
         assert!(m.get_clone(acc("clone-1.alice.testnet")).is_none());
+        let r = m.get_results(acc("alice.testnet"));
+        assert_eq!(r.len(), 1);
+        assert_eq!(
+            (r[0].stake, r[0].paid_out, r[0].broke, r[0].night),
+            (2000, 1996, false, 1)
+        );
         // Bought 3 salt at 30 (fee 2), sold at 30 (fee 2).
         assert_eq!(m.get_town().fees_collected, 4);
     }

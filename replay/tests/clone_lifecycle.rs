@@ -222,7 +222,7 @@ async fn settle_then_merge_brings_everything_home() -> anyhow::Result<()> {
     // Merge: a real DeleteAccount, beneficiary = the player.
     t.player
         .call(t.clone.id(), "merge")
-        .max_gas()
+        .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await?
         .into_result()?;

@@ -118,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
 
     let out = player
         .call(clone.id(), "merge")
-        .max_gas()
+        .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await?;
     link("merge (DeleteAccount -> player)", &out);
