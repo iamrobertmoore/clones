@@ -47,7 +47,11 @@ async fn main() -> anyhow::Result<()> {
 
     let market = worker.dev_deploy(&market_wasm).await?;
     save_key(&keys_dir, market.id(), market.as_account().secret_key())?;
-    let out = market.call("new").transact().await?;
+    let out = market
+        .call("new")
+        .args_json(json!({ "seed": "853" }))
+        .transact()
+        .await?;
     link("market init", &out);
     out.into_result()?;
 
@@ -90,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 
     let out = clone
         .call(market.id(), "place_order")
-        .args_json(json!({ "good": "salt", "side": "buy", "qty": 3, "price": NearToken::from_millinear(100) }))
+        .args_json(json!({ "good": "salt", "side": "buy", "qty": 3, "price": 30 }))
         .transact()
         .await?;
     link("clone places an order", &out);

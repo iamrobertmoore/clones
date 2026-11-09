@@ -21,7 +21,12 @@ async fn town() -> anyhow::Result<Town> {
     let leash_wasm = near_workspaces::compile_project("../contracts/leash").await?;
 
     let market = worker.dev_deploy(&market_wasm).await?;
-    market.call("new").transact().await?.into_result()?;
+    market
+        .call("new")
+        .args_json(json!({ "seed": "853" }))
+        .transact()
+        .await?
+        .into_result()?;
 
     let player = worker
         .root_account()?
@@ -92,9 +97,7 @@ async fn the_clone_trades_with_its_key() -> anyhow::Result<()> {
     let id: u32 = t
         .clone
         .call(t.market.id(), "place_order")
-        .args_json(
-            json!({ "good": "salt", "side": "buy", "qty": 3, "price": "100000000000000000000000" }),
-        )
+        .args_json(json!({ "good": "salt", "side": "buy", "qty": 3, "price": 30 }))
         .transact()
         .await?
         .into_result()?
@@ -108,10 +111,7 @@ async fn the_clone_trades_with_its_key() -> anyhow::Result<()> {
         .await?
         .json()?;
     assert_eq!(info["orders_placed"], 1);
-    assert_eq!(
-        info["cash"],
-        NearToken::from_near(2).as_yoctonear().to_string()
-    );
+    assert_eq!(info["cash"], 2000 - 92);
     Ok(())
 }
 
@@ -152,7 +152,7 @@ async fn the_chain_refuses_every_way_a_clone_could_move_money() -> anyhow::Resul
     let smuggle = t
         .clone
         .call(t.market.id(), "place_order")
-        .args_json(json!({ "good": "salt", "side": "buy", "qty": 1, "price": "1" }))
+        .args_json(json!({ "good": "salt", "side": "buy", "qty": 1, "price": 30 }))
         .deposit(NearToken::from_millinear(1))
         .transact()
         .await;

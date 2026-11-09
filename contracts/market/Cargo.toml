@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 near-sdk.workspace = true
+clones-core = { path = "../../core" }
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }

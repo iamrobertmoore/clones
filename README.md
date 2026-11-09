@@ -7,21 +7,28 @@ survivors back and their earnings land in your account.
 
 Work in progress for NEAR HACKATHON (November 2026).
 
-## Run the tests
+## Run one night in 60 seconds
 
 ```bash
 rustup target add wasm32-unknown-unknown
-cargo test --workspace
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh
+cargo run -p clones-replay
 ```
 
-The sandbox tests start a local NEAR node and run one clone's whole life with real transactions:
-create, trade, three refused attempts to move money, settle, merge.
+This starts a local NEAR node, creates three clones (cautious, greedy, loyal) with real
+transactions, plays twelve hours of trading, and shows each clone's reasoning and every order. At
+dawn the greedy clone is broke, tries to withdraw, and the chain refuses. Then all three merge
+home. Before the night starts, the same rules run off chain to produce an answer key, and the run
+checks that the chain matched it exactly. The full log goes to `replay.json`.
+
+`cargo test --workspace` runs every test, including the same night as a test.
 
 ## Layout
 
-- `contracts/market`: the town. Holds every number.
+- `core`: the rules of the town (prices, fills, temperaments), shared by the contract and the clones.
+- `contracts/market`: the town. Clears every order and holds every number.
 - `contracts/leash`: deployed on each clone. Only the player can merge it.
-- `sandbox-tests`: end-to-end tests against a local NEAR sandbox.
+- `replay`: plays a seeded night on a local sandbox and writes the log.
 
 ## Licence
 

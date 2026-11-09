@@ -1,0 +1,16 @@
+[package]
+name = "clones-replay"
+version = "0.1.0"
+description = "Plays one seeded night on a local NEAR sandbox with real transactions and writes the log the replay page shows."
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+clones-core = { path = "../core" }
+near-workspaces = { version = "0.24.0", features = ["unstable"] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

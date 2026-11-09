@@ -1,0 +1,9 @@
+[package]
+name = "clones-core"
+version = "0.1.0"
+description = "The rules of the town, shared by the market contract and the clones: prices, fills, temperaments."
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
