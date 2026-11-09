@@ -1,0 +1,15 @@
+[package]
+name = "clones-leash"
+version = "0.1.0"
+description = "Deployed on every clone. The player who made the clone can merge it back; nobody else can."
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }

@@ -1,0 +1,16 @@
+[package]
+name = "clones-market"
+version = "0.1.0"
+description = "The market town: registers clones, takes their orders and holds every number."
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk.workspace = true
+
+[dev-dependencies]
+near-sdk = { workspace = true, features = ["unit-testing"] }
+

@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-near (builds the contract wasm for the sandbox tests)
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh
+          cargo near --version
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Unit and sandbox tests (sandbox runs real transactions on a local NEAR node)
+        run: |
+          set -o pipefail
+          cargo test --workspace -- --test-threads=2 2>&1 | tee test.log
+          if grep -E "[1-9][0-9]* ignored" test.log; then
+            echo "Some tests were skipped"; exit 1
+          fi
+          awk '/test result:/ {n += $4} END {print n " tests passed"; if (n == 0) exit 1}' test.log
