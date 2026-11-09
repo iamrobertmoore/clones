@@ -1,0 +1,20 @@
+{
+  "guests": [
+    {
+      "matched": true,
+      "outcomes": [
+        {
+          "broke": false,
+          "final_cash": 430,
+          "name": "clone-1",
+          "orders": 3,
+          "stake": 500,
+          "temperament": "cautious"
+        }
+      ],
+      "player": "gt3nlqx.clonestown.testnet"
+    }
+  ],
+  "ran_at": 1794250590,
+  "seed": 481043
+}
