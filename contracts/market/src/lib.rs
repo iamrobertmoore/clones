@@ -13,7 +13,7 @@
 use clones_core as rules;
 use near_sdk::json_types::U64;
 use near_sdk::store::{IterableMap, LookupMap, Vector};
-use near_sdk::{env, near, require, AccountId, NearToken, PanicOnDefault, Promise};
+use near_sdk::{env, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise};
 
 /// Clone names a player may use. Three clones, no more.
 pub const CLONE_NAMES: [&str; 3] = ["clone-1", "clone-2", "clone-3"];
@@ -152,6 +152,8 @@ pub struct Market {
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
+    /// When set, only players under this account (`<guest>.<house>`) may send clones in.
+    guests_under: Option<AccountId>,
 }
 
 /// If `clone` is `clone-N.<player>` with N in 1..=3, return the player.
@@ -166,9 +168,11 @@ pub fn player_of(clone: &str) -> Option<&str> {
 
 #[near]
 impl Market {
-    /// The caller becomes the town keeper, who opens nights and rings the hours.
+    /// The caller becomes the town keeper, who opens nights and rings the hours. With
+    /// `guests_under`, only that account's sub-accounts may play (the hosted town: the house runs
+    /// every guest's clones, so nobody can trade on foresight of the seeded prices).
     #[init]
-    pub fn new(seed: U64) -> Self {
+    pub fn new(seed: U64, guests_under: Option<AccountId>) -> Self {
         Self {
             keeper: env::predecessor_account_id(),
             seed: seed.0,
@@ -178,6 +182,7 @@ impl Market {
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
+            guests_under,
         }
     }
 
@@ -217,6 +222,12 @@ impl Market {
             player_of(clone_id.as_str()) == Some(player.as_str()),
             "a clone must be clone-1, clone-2 or clone-3 under the caller's own account"
         );
+        if let Some(house) = &self.guests_under {
+            require!(
+                player.as_str().ends_with(&format!(".{house}")),
+                "this town only takes guests of its house"
+            );
+        }
         require!(
             !self.clones.contains_key(&clone_id),
             "that clone is already in town"
@@ -317,9 +328,27 @@ impl Market {
             kept.remove(0);
         }
         self.results.insert(rec.player.clone(), kept);
-        Promise::new(clone_id).transfer(NearToken::from_yoctonear(
-            ledger.cash as u128 * YOCTO_PER_MILLI,
-        ))
+        let amount = NearToken::from_yoctonear(ledger.cash as u128 * YOCTO_PER_MILLI);
+        Promise::new(clone_id).transfer(amount).then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(Gas::from_tgas(10))
+                .after_payout(rec.player, amount),
+        )
+    }
+
+    /// If the clone account was already gone, the payout bounced back here: send it to the
+    /// player instead, so nothing is stranded in the market.
+    #[private]
+    pub fn after_payout(&mut self, player: AccountId, amount: NearToken) -> Option<Promise> {
+        match env::promise_result_checked(0, 0) {
+            Ok(_) => None,
+            Err(_) => {
+                env::log_str(&format!(
+                    "clone account was gone; paid {amount} to {player}"
+                ));
+                Some(Promise::new(player).transfer(amount))
+            }
+        }
     }
 
     pub fn get_clone(&self, clone_id: AccountId) -> Option<CloneView> {
@@ -408,10 +437,28 @@ mod tests {
 
     fn town_with_clone() -> Market {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED));
+        let mut m = Market::new(U64(SEED), None);
         as_caller("alice.testnet", NearToken::from_near(2));
         m.register_clone(acc("clone-1.alice.testnet"), Temperament::Greedy);
         m
+    }
+
+    #[test]
+    #[should_panic(expected = "only takes guests of its house")]
+    fn a_hosted_town_refuses_outsiders() {
+        as_caller("keeper.testnet", zero());
+        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")));
+        as_caller("mallory.testnet", NearToken::from_near(1));
+        m.register_clone(acc("clone-1.mallory.testnet"), Temperament::Greedy);
+    }
+
+    #[test]
+    fn a_hosted_town_takes_its_guests() {
+        as_caller("keeper.testnet", zero());
+        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")));
+        as_caller("g1.house.testnet", NearToken::from_near(1));
+        m.register_clone(acc("clone-1.g1.house.testnet"), Temperament::Greedy);
+        assert_eq!(m.get_town().clones_in_town, 1);
     }
 
     #[test]
@@ -459,7 +506,7 @@ mod tests {
     #[should_panic(expected = "under the caller's own account")]
     fn cannot_register_someone_elses_clone() {
         as_caller("mallory.testnet", NearToken::from_near(1));
-        let mut m = Market::new(U64(SEED));
+        let mut m = Market::new(U64(SEED), None);
         m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal);
     }
 
@@ -475,7 +522,7 @@ mod tests {
     #[should_panic(expected = "at least 0.1 NEAR")]
     fn stake_has_a_floor() {
         as_caller("alice.testnet", NearToken::from_millinear(10));
-        let mut m = Market::new(U64(SEED));
+        let mut m = Market::new(U64(SEED), None);
         m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious);
     }
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Review round 1 (who can call what) fixes: the hosted market only takes guests of its house; the keeper skips anyone else and one guest's error no longer stops the night; settle pays the player if the clone account is already gone; sign-up funds exactly what the clones need, rolls back on failure and caps the town at 15 clones; the town workflow builds without the house key and pins its actions by commit.
+- Town page (`web/town.html`): send up to three clones in with no login, watch them wait, read the morning ledger from the chain.
 - Hosted town on testnet: `clonestown.testnet` with its market. A sign-up function (`web/api/enlist.js`) sends a guest's clones in with no login; a nightly keeper (`cargo run -p clones-replay --bin keeper`, run by the `town` workflow at 02:00 UTC) plays the night, merges everyone home and publishes each guest's log to the `town-data` branch.
 - Testnet tools: house setup, sweep and recovery examples.
 - Replay page (`web/`): one night in 60 seconds, played from a night log, with explorer links, the refused withdrawal and a morning ledger. Soundtrack opt-in.

@@ -181,6 +181,7 @@ async fn the_chain_refuses_every_way_a_clone_could_move_money() -> anyhow::Resul
         .clone
         .call(t.market.id(), "settle")
         .args_json(json!({ "clone_id": t.clone.id() }))
+        .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await;
     assert!(settle.is_err() || settle.unwrap().is_failure());
@@ -210,6 +211,7 @@ async fn settle_then_merge_brings_everything_home() -> anyhow::Result<()> {
     t.player
         .call(t.market.id(), "settle")
         .args_json(json!({ "clone_id": t.clone.id() }))
+        .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await?
         .into_result()?;
@@ -236,6 +238,35 @@ async fn settle_then_merge_brings_everything_home() -> anyhow::Result<()> {
     assert!(
         gained >= NearToken::from_millinear(4900),
         "the player should get the clone's 3 NEAR plus 2 NEAR of cash back, less gas; got {gained}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn settling_after_the_clone_is_gone_still_pays_the_player() -> anyhow::Result<()> {
+    let t = town().await?;
+    // Merge first: the clone account is deleted while its cash is still in the market.
+    t.player
+        .call(t.clone.id(), "merge")
+        .gas(near_workspaces::types::Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+    let before = t.worker.view_account(t.player.id()).await?.balance;
+
+    // Then settle: the payout to the deleted clone bounces, and the market sends it to the player.
+    t.player
+        .call(t.market.id(), "settle")
+        .args_json(json!({ "clone_id": t.clone.id() }))
+        .gas(near_workspaces::types::Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+    let after = t.worker.view_account(t.player.id()).await?.balance;
+    let gained = after.saturating_sub(before);
+    assert!(
+        gained >= NearToken::from_millinear(1990),
+        "the 2 NEAR of cash should reach the player, got {gained}"
     );
     Ok(())
 }

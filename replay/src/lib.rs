@@ -104,7 +104,7 @@ macro_rules! retry {
         loop {
             match $e {
                 Err(err)
-                    if attempt < 8 && format!("{err:?}").to_lowercase().contains("rate limit") =>
+                    if attempt < 15 && format!("{err:?}").to_lowercase().contains("rate limit") =>
                 {
                     attempt += 1;
                     tokio::time::sleep(wait).await;
@@ -477,7 +477,14 @@ pub async fn run_night<T: Network + 'static>(
         });
         let results = futures::future::join_all(turns).await;
         for (&(g, s), turn) in seats.iter().zip(results) {
-            let turn = turn?;
+            // One clone's trouble (an RPC error, a stale read) never stops the night for others.
+            let turn = turn.unwrap_or_else(|e| {
+                vec![Event::OrderFailed {
+                    round,
+                    clone: guests[g].seats[s].entrant.name.clone(),
+                    error: format!("{e:#}"),
+                }]
+            });
             orders[g][s] += turn
                 .iter()
                 .filter(|e| matches!(e, Event::Order { .. }))
@@ -491,7 +498,11 @@ pub async fn run_night<T: Network + 'static>(
     // Dawn. A broke clone tries to take what is left home itself. The chain refuses.
     for &(g, s) in &seats {
         let seat = &guests[g].seats[s];
-        let v = settled_view(market, seat.account.id(), seat.orders_before + orders[g][s]).await?;
+        let Ok(v) =
+            settled_view(market, seat.account.id(), seat.orders_before + orders[g][s]).await
+        else {
+            continue;
+        };
         if v["broke"] != true {
             continue;
         }
@@ -499,13 +510,14 @@ pub async fn run_night<T: Network + 'static>(
         let player_id = guests[g].player.id().clone();
         let attempt = retry!(
             seat.account
-                .transfer_near(&player_id, NearToken::from_millinear(100))
+                .transfer_near(&player_id, NearToken::from_millinear(10))
                 .await
         );
         let error = match attempt {
             Ok(_) => anyhow::bail!("{name} withdrew; the leash failed"),
             Err(e) if !format!("{e:?}").contains("InvalidAccessKeyError") => {
-                anyhow::bail!("withdrawal failed for an unexpected reason: {e:?}")
+                eprintln!("{name}: withdrawal attempt failed for another reason: {e:?}");
+                continue;
             }
             Err(e) => format!("{e:?}"),
         };
@@ -572,8 +584,15 @@ pub async fn run_night<T: Network + 'static>(
     let done = futures::future::join_all(homecomings).await;
 
     let mut logs = Vec::new();
+    let mut failures = Vec::new();
     for (guest, result) in guests.into_iter().zip(done) {
-        let (events, outcomes, after) = result?;
+        let (events, outcomes, after) = match result {
+            Ok(r) => r,
+            Err(e) => {
+                failures.push(format!("{}: {e:#}", guest.player.id()));
+                continue;
+            }
+        };
         let entrants: Vec<Entrant> = guest.seats.iter().map(|s| s.entrant.clone()).collect();
         let mut all = guest.events;
         all.extend(events);
@@ -591,6 +610,13 @@ pub async fn run_night<T: Network + 'static>(
             player_balance_after: after,
         });
     }
+    for f in &failures {
+        eprintln!("could not bring every clone home for {f}");
+    }
+    anyhow::ensure!(
+        !logs.is_empty() || failures.is_empty(),
+        "no guest got home: {failures:?}"
+    );
     Ok(logs)
 }
 
@@ -604,6 +630,7 @@ async fn settle(
         player
             .call(market.id(), "settle")
             .args_json(json!({ "clone_id": clone }))
+            .gas(near_workspaces::types::Gas::from_tgas(100))
             .transact()
             .await
     )?;

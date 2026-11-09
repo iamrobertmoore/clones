@@ -23,9 +23,10 @@ async fn two_guests_one_night_everyone_home() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
     let (market_wasm, leash_wasm) = contracts().await?;
     let market = worker.dev_deploy(&market_wasm).await?;
+    let house_id = format!("house.{}", worker.root_account()?.id());
     market
         .call("new")
-        .args_json(json!({ "seed": "0" }))
+        .args_json(json!({ "seed": "0", "guests_under": house_id }))
         .transact()
         .await?
         .into_result()?;

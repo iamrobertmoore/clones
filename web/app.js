@@ -21,6 +21,8 @@
   var cloneInfo = {};       // name -> {temperament, n}
   var bubbles = {};         // name -> [{t, end, say}]
   var refusedItem = null;
+  var guestLog = false;      // hosted-town log: clones already in town, balances swept to the house
+  var stakes = {};           // clone -> stake from outcomes
   var lastEventT = 0;
   var explorer = null;
 
@@ -98,20 +100,26 @@
   }
 
   /* ---------- loading ---------- */
+  var LOG_ORIGIN = 'https://raw.githubusercontent.com';
   function safePath(p) {
-    return p && !/^[a-z][a-z0-9+.-]*:/i.test(p) && p.indexOf('//') !== 0 && p.indexOf('\\') < 0;
+    if (!p || p.indexOf('\\') >= 0) return false;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(p) || p.indexOf('//') === 0) {
+      // Absolute URLs: only the published night logs on raw.githubusercontent.com.
+      try { return new URL(p).origin === LOG_ORIGIN; } catch (err) { return false; }
+    }
+    return true;
   }
   function load() {
     var q = new URLSearchParams(location.search).get('night');
     var tries = safePath(q) ? [q] : ['data/night.json', 'data/night-853-sandbox.json'];
-    var i = 0;
+    var i = 0, lastLoadError = null;
     function next() {
-      if (i >= tries.length) return Promise.reject(new Error('no night log found'));
+      if (i >= tries.length) return Promise.reject(lastLoadError || new Error('no night log found'));
       var path = tries[i++];
       return fetch(path, { cache: 'no-cache' }).then(function (r) {
-        if (!r.ok) throw new Error(r.status);
+        if (!r.ok) throw new Error(r.status === 404 ? 'not published yet' : 'HTTP ' + r.status);
         return r.json().then(function (j) { return { path: path, data: j }; });
-      }).catch(function () { return next(); });
+      }).catch(function (err) { lastLoadError = err; return next(); });
     }
     return next();
   }
@@ -160,6 +168,8 @@
       if (e.kind === 'clone_created' && cloneInfo[e.clone]) cloneInfo[e.clone].temperament = e.temperament;
     });
     names.forEach(function (n, k) { cloneInfo[n].n = k; bubbles[n] = []; });
+    (D.outcomes || []).forEach(function (o) { stakes[o.name] = o.stake; });
+    guestLog = !D.events.some(function (e) { return e.kind === 'sent_in'; });
     TL.forEach(function (it) {
       if (it.e.kind === 'bubble' && bubbles[it.e.clone]) bubbles[it.e.clone].push({ t: it.t, say: it.e.say, dawn: it.t >= NIGHT_END, segEnd: it.seg && it.seg.end ? it.seg.end : Infinity });
       if (it.e.kind === 'withdraw_refused' && !refusedItem) refusedItem = it;
@@ -177,14 +187,17 @@
   /* ---------- state at time t ---------- */
   function stateAt(t) {
     var goods = D.goods;
-    var s = { prices: null, prev: null, round: null, player: D.player_balance_before || 0, clones: {}, allMerged: false, merges: 0 };
+    // Guest logs from the hosted town start with the clones already in town: no clone_created or
+    // sent_in events, so each clone starts on its stake and the player purse counts what comes home.
+    var s = { prices: null, prev: null, round: null, player: guestLog ? 0 : (D.player_balance_before || 0), clones: {}, allMerged: false, merges: 0 };
     names.forEach(function (n) {
-      s.clones[n] = { born: false, bornT: 0, cash: 0, hold: goods.map(function () { return 0; }), settled: null, merged: null, mergedT: 0, broke: false };
+      s.clones[n] = { born: guestLog, bornT: -10, cash: guestLog ? (stakes[n] || 0) : 0, hold: goods.map(function () { return 0; }), settled: null, merged: null, mergedT: 0, broke: false };
     });
     for (var k = 0; k < TL.length; k++) {
       var it = TL[k], e = it.e;
       if (it.t > t) break;
       var c = e.clone ? s.clones[e.clone] : null;
+      if (e.clone && !c) continue;
       switch (e.kind) {
         case 'clone_created': c.born = true; c.bornT = it.t; break;
         case 'sent_in': if (!c.born) { c.born = true; c.bornT = it.t; } c.cash += e.stake; s.player -= e.stake; break;
@@ -222,6 +235,8 @@
   }
   function buildClones() {
     var box = $('clones'); box.textContent = '';
+    box.style.gridTemplateColumns = 'repeat(' + Math.max(1, names.length) + ', minmax(0, 1fr))';
+    box.style.maxWidth = (names.length < 3 ? names.length * 250 : 760) + 'px';
     names.forEach(function (n, k) {
       var info = cloneInfo[n], tint = TINTS[info.temperament] || '#8a8a8a';
       var c = el('div', 'clone unborn'); c.dataset.n = k;
@@ -294,7 +309,7 @@
       case 'withdraw_refused': return 'CHAIN REFUSED: ' + accountOf(who) + ' tried to withdraw. ' + refusalCode(e.error);
       case 'settled': return who + ' settled: paid out ' + near(e.paid_out) + ' NEAR' + (e.broke ? ' (broke)' : '');
       case 'merged': return who + ' merged back into you (DeleteAccount): ' + (e.clone_deleted ? 'account deleted' : 'account NOT deleted');
-      default: return e.kind;
+      default: return String(e.kind || 'event').replace(/_/g, ' ') + (who ? ': ' + who : '');
     }
   }
   function logRow(it, fresh) {
@@ -445,9 +460,9 @@
     });
 
     // player purse
-    var playerShown = s.allMerged && D.player_balance_after != null ? D.player_balance_after : s.player;
+    var playerShown = !guestLog && s.allMerged && D.player_balance_after != null ? D.player_balance_after : s.player;
     setText($('playerCash'), near(playerShown));
-    setText($('playerNote'), s.allMerged ? 'after gas and account costs' : s.merges ? 'clones coming home' : started && s.round !== null ? 'stake is out with the clones' : 'before the night');
+    setText($('playerNote'), guestLog ? (s.merges ? 'paid home by merged clones' : 'waiting for the clones to come home') : s.allMerged ? 'after gas and account costs' : s.merges ? 'clones coming home' : started && s.round !== null ? 'stake is out with the clones' : 'before the night');
     var pdl = null;
     TL.forEach(function (it) { if (it.e.kind === 'merged' && it.t <= t && t - it.t < 1.4) { var c = s.clones[it.e.clone]; pdl = { v: c.settled ? c.settled.paid_out : 0, p: (t - it.t) / 1.4 }; } });
     showDelta(ui.playerDelta, pdl, rm);
@@ -548,12 +563,23 @@
       rows.appendChild(li);
     });
     var rp = $('resultPlayer');
-    rp.textContent = 'Stake vs paid out, per clone. Your account: ' + near(D.player_balance_before) + ' NEAR before the night, ' +
-      near(D.player_balance_after) + ' NEAR after every clone merged home (gas and account costs included).';
-    var ok = deepEqual(D.outcomes, D.answer_key);
+    if (guestLog) {
+      var home = 0;
+      Object.keys(paid).forEach(function (k) { home += paid[k]; });
+      rp.textContent = 'Stake vs paid out, per clone. ' + near(home) + ' NEAR came home in total. Hosted-town guests play with testnet NEAR, which goes back to the house afterwards.';
+    } else {
+      rp.textContent = 'Stake vs paid out, per clone. Your account: ' + near(D.player_balance_before) + ' NEAR before the night, ' +
+        near(D.player_balance_after) + ' NEAR after every clone merged home (gas and account costs included).';
+    }
     var rk = $('resultKey');
-    rk.textContent = 'Answer key matched: ' + (ok ? 'yes' : 'no');
-    rk.className = 'result-key ' + (ok ? 'yes' : 'no');
+    if (D.answer_key == null) {
+      rk.textContent = 'Answer key: none for this night';
+      rk.className = 'result-key';
+    } else {
+      var ok = deepEqual(D.outcomes, D.answer_key);
+      rk.textContent = 'Answer key matched: ' + (ok ? 'yes' : 'no');
+      rk.className = 'result-key ' + (ok ? 'yes' : 'no');
+    }
     rk.title = 'Compares the recorded outcomes with the answer key written before the clones ran (seed ' + D.seed + ').';
   }
 
@@ -645,10 +671,15 @@
     buildStatic();
     buildBoard();
     buildClones();
+    if (!refusedItem) $('introBlurb').textContent = 'Twelve hours of trading, then dawn: every clone settles up and merges back into its player.';
     $('introKicker').textContent = 'Seed ' + D.seed + ', ' + D.network + ' run, ' + names.length + ' clones of ' + D.player;
     $('runBtn').disabled = false;
     render();
   }).catch(function (err) {
-    $('introKicker').textContent = 'Could not load the night log (' + err.message + '). Serve this folder over http, e.g. python3 -m http.server.';
+    var asked = new URLSearchParams(location.search).get('night');
+    $('introKicker').textContent = asked
+      ? 'This night log is ' + (err.message === 'not published yet' ? 'not published yet. Logs appear after the night is played (02:00 UTC); try again later.' : 'unavailable (' + err.message + ').')
+      : 'Could not load the night log (' + err.message + '). Serve this folder over http, e.g. python3 -m http.server.';
+    if (asked) { var back = el('a', null, 'Back to the town'); back.href = 'town.html'; $('introKicker').appendChild(document.createTextNode(' ')); $('introKicker').appendChild(back); }
   });
 })();

@@ -38,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
         let settle = player
             .call(&town_id, "settle")
             .args_json(serde_json::json!({ "clone_id": clone }))
+            .gas(near_workspaces::types::Gas::from_tgas(100))
             .transact()
             .await?;
         println!("settle {clone}: {}", settle.is_success());

@@ -235,6 +235,9 @@ main { max-width: 980px; margin: 0 auto; padding: 0 16px; }
 .btn.big { font-size: 22px; padding: 10px 22px; width: 100%; background: var(--blood); color: #fff6ea; }
 .btn.big:hover:not(:disabled) { background: #cf3328; }
 .btn.ghost { background: transparent; }
+a.btn { display: inline-block; text-decoration: none; }
+.town-cta { background: var(--blood); color: #fff6ea; font-size: 16px; white-space: normal; text-align: center; }
+.town-cta:hover { background: #cf3328 !important; }
 .btn.small { font-size: 15px; padding: 4px 12px; }
 
 /* Controls */

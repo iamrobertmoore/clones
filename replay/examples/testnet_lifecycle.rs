@@ -111,6 +111,7 @@ async fn main() -> anyhow::Result<()> {
     let out = player
         .call(market.id(), "settle")
         .args_json(json!({ "clone_id": clone.id() }))
+        .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await?;
     link("settle clone's cash", &out);

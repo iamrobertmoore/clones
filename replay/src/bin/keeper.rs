@@ -42,8 +42,14 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut by_player: BTreeMap<AccountId, Vec<(AccountId, serde_json::Value)>> = BTreeMap::new();
+    let suffix = format!(".{house_id}");
     for (id, v) in in_town {
         let player: AccountId = v["player"].as_str().unwrap_or_default().parse()?;
+        // The house can only sign for its own guests; anyone else's clone is not ours to run.
+        if !player.as_str().ends_with(&suffix) {
+            eprintln!("skipping {id}: not a guest of {house_id}");
+            continue;
+        }
         by_player.entry(player).or_default().push((id, v));
     }
 
@@ -69,11 +75,11 @@ async fn main() -> anyhow::Result<()> {
                 })
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
-        let balance_before = (worker
-            .view_account(&player_id)
-            .await?
-            .balance
-            .as_millinear()) as u64;
+        let Ok(details) = worker.view_account(&player_id).await else {
+            eprintln!("skipping {player_id}: account not found");
+            continue;
+        };
+        let balance_before = details.balance.as_millinear() as u64;
         guests.push(Guest {
             player: Account::from_secret_key(player_id, key.clone(), &worker),
             seats,
@@ -90,6 +96,10 @@ async fn main() -> anyhow::Result<()> {
         Ok(s) => s.parse()?,
         Err(_) => mix(day) % 1_000_000,
     };
+    if guests.is_empty() {
+        println!("No guests of the house tonight.");
+        return Ok(());
+    }
     println!("Night for {} guests, seed {seed}", guests.len());
 
     let logs = run_night(

@@ -10,14 +10,20 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { connect, keyStores, KeyPair, transactions, utils } = require("near-api-js");
+const {
+  connect,
+  keyStores,
+  KeyPair,
+  transactions,
+  utils,
+} = require("near-api-js");
 
 const TEMPERAMENTS = ["cautious", "greedy", "loyal"];
 const STAKE = utils.format.parseNearAmount("0.5");
 const CLONE_ACCOUNT = utils.format.parseNearAmount("0.45");
-const GUEST_FUND = utils.format.parseNearAmount("3.0");
+const GAS_FLOAT = utils.format.parseNearAmount("0.15");
 const ALLOWANCE = utils.format.parseNearAmount("1");
-const MAX_CLONES_TONIGHT = 30;
+const MAX_CLONES_TONIGHT = 15; // what the house float can carry
 const HOUSE_RESERVE = 2; // NEAR the house always keeps
 
 const leash = fs.readFileSync(path.join(__dirname, "leash.wasm"));
@@ -52,12 +58,23 @@ async function enlist(temperaments, env = process.env) {
 
   const town = await view(houseAccount, market, "get_town");
   if (town.clones_in_town + clones.length > MAX_CLONES_TONIGHT) {
-    return { status: 409, body: { error: "The town is full tonight. Come back tomorrow." } };
+    return {
+      status: 409,
+      body: { error: "The town is full tonight. Come back tomorrow." },
+    };
   }
+  // Exactly what the clones need, plus gas: n x (account + stake) + float.
+  const guestFund =
+    BigInt(clones.length) * (BigInt(CLONE_ACCOUNT) + BigInt(STAKE)) +
+    BigInt(GAS_FLOAT);
   const { available } = await houseAccount.getAccountBalance();
-  const need = BigInt(GUEST_FUND) + BigInt(utils.format.parseNearAmount(String(HOUSE_RESERVE)));
+  const need =
+    guestFund + BigInt(utils.format.parseNearAmount(String(HOUSE_RESERVE)));
   if (BigInt(available) < need) {
-    return { status: 409, body: { error: "The house is out of testnet NEAR tonight." } };
+    return {
+      status: 409,
+      body: { error: "The house is out of testnet NEAR tonight." },
+    };
   }
 
   const txs = [];
@@ -66,42 +83,98 @@ async function enlist(temperaments, env = process.env) {
     receiverId: guest,
     actions: [
       transactions.createAccount(),
-      transactions.transfer(BigInt(GUEST_FUND)),
+      transactions.transfer(guestFund),
       transactions.addKey(pk, transactions.fullAccessKey()),
     ],
   });
   txs.push({ step: "guest created", tx: out.transaction.hash });
 
   const guestAccount = await near.account(guest);
-  for (let i = 0; i < clones.length; i++) {
-    out = await guestAccount.signAndSendTransaction({
-      receiverId: clones[i],
-      actions: [
-        transactions.createAccount(),
-        transactions.transfer(BigInt(CLONE_ACCOUNT)),
-        transactions.addKey(
-          pk,
-          transactions.functionCallAccessKey(market, ["place_order"], BigInt(ALLOWANCE))
-        ),
-        transactions.deployContract(leash),
-      ],
-    });
-    txs.push({ step: `${clones[i].split(".")[0]} created`, tx: out.transaction.hash });
-    out = await guestAccount.functionCall({
-      contractId: market,
-      methodName: "register_clone",
-      args: { clone_id: clones[i], temperament: temperaments[i] },
-      gas: BigInt("30000000000000"),
-      attachedDeposit: BigInt(STAKE),
-    });
-    txs.push({ step: `${clones[i].split(".")[0]} sent in`, tx: out.transaction.hash });
+  const made = [];
+  const sentIn = [];
+  try {
+    for (let i = 0; i < clones.length; i++) {
+      out = await guestAccount.signAndSendTransaction({
+        receiverId: clones[i],
+        actions: [
+          transactions.createAccount(),
+          transactions.transfer(BigInt(CLONE_ACCOUNT)),
+          transactions.addKey(
+            pk,
+            transactions.functionCallAccessKey(
+              market,
+              ["place_order"],
+              BigInt(ALLOWANCE),
+            ),
+          ),
+          transactions.deployContract(leash),
+        ],
+      });
+      made.push(clones[i]);
+      txs.push({
+        step: `${clones[i].split(".")[0]} created`,
+        tx: out.transaction.hash,
+      });
+      out = await guestAccount.functionCall({
+        contractId: market,
+        methodName: "register_clone",
+        args: { clone_id: clones[i], temperament: temperaments[i] },
+        gas: BigInt("30000000000000"),
+        attachedDeposit: BigInt(STAKE),
+      });
+      sentIn.push(clones[i]);
+      txs.push({
+        step: `${clones[i].split(".")[0]} sent in`,
+        tx: out.transaction.hash,
+      });
+    }
+  } catch (e) {
+    await rollBack(guestAccount, market, house, made, sentIn);
+    throw e;
   }
   return { status: 200, body: { guest, market, clones, temperaments, txs } };
 }
 
+// Something failed half way: bring every NEAR back to the house so nothing is stranded.
+async function rollBack(guestAccount, market, house, made, sentIn) {
+  const attempt = async (what, fn) => {
+    try {
+      await fn();
+    } catch (e) {
+      console.error(`roll back: ${what} failed`, e);
+    }
+  };
+  for (const clone of sentIn) {
+    await attempt(`settle ${clone}`, () =>
+      guestAccount.functionCall({
+        contractId: market,
+        methodName: "settle",
+        args: { clone_id: clone },
+        gas: BigInt("100000000000000"),
+      }),
+    );
+  }
+  for (const clone of made) {
+    await attempt(`merge ${clone}`, () =>
+      guestAccount.functionCall({
+        contractId: clone,
+        methodName: "merge",
+        args: {},
+        gas: BigInt("100000000000000"),
+      }),
+    );
+  }
+  await attempt("delete guest", () => guestAccount.deleteAccount(house));
+}
+
 function parseTemperaments(body) {
-  const list = body && Array.isArray(body.temperaments) ? body.temperaments : TEMPERAMENTS;
-  if (list.length < 1 || list.length > 3 || !list.every((t) => TEMPERAMENTS.includes(t))) {
+  const list =
+    body && Array.isArray(body.temperaments) ? body.temperaments : TEMPERAMENTS;
+  if (
+    list.length < 1 ||
+    list.length > 3 ||
+    !list.every((t) => TEMPERAMENTS.includes(t))
+  ) {
     return null;
   }
   return list;
@@ -122,14 +195,18 @@ module.exports = async function handler(req, res) {
   }
   const temperaments = parseTemperaments(body);
   if (!temperaments) {
-    res.status(400).json({ error: "temperaments: one to three of cautious, greedy, loyal" });
+    res
+      .status(400)
+      .json({ error: "temperaments: one to three of cautious, greedy, loyal" });
     return;
   }
   try {
     const { status, body: out } = await enlist(temperaments);
     res.status(status).json(out);
   } catch (e) {
-    res.status(500).json({ error: "Could not send the clones in. Try again in a minute." });
+    res
+      .status(500)
+      .json({ error: "Could not send the clones in. Try again in a minute." });
     console.error(e);
   }
 };
