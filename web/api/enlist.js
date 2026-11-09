@@ -34,6 +34,25 @@ function guestName() {
   return "g" + Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// A brand-new account takes a moment to show up on every RPC node. Before signing, near-api-js
+// looks up the signer's key, and if the node it asks hasn't seen the account yet it gives up with
+// KeyNotFound. Nothing has been sent at that point, so trying again is safe.
+async function whenVisible(fn, tries = 10, waitMs = 1000) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e && e.type === "KeyNotFound" && attempt < tries) {
+        await sleep(waitMs);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 async function view(account, contractId, methodName, args = {}) {
   return account.viewFunction({ contractId, methodName, args });
 }
@@ -94,34 +113,38 @@ async function enlist(temperaments, env = process.env) {
   const sentIn = [];
   try {
     for (let i = 0; i < clones.length; i++) {
-      out = await guestAccount.signAndSendTransaction({
-        receiverId: clones[i],
-        actions: [
-          transactions.createAccount(),
-          transactions.transfer(BigInt(CLONE_ACCOUNT)),
-          transactions.addKey(
-            pk,
-            transactions.functionCallAccessKey(
-              market,
-              ["place_order"],
-              BigInt(ALLOWANCE),
+      out = await whenVisible(() =>
+        guestAccount.signAndSendTransaction({
+          receiverId: clones[i],
+          actions: [
+            transactions.createAccount(),
+            transactions.transfer(BigInt(CLONE_ACCOUNT)),
+            transactions.addKey(
+              pk,
+              transactions.functionCallAccessKey(
+                market,
+                ["place_order"],
+                BigInt(ALLOWANCE),
+              ),
             ),
-          ),
-          transactions.deployContract(leash),
-        ],
-      });
+            transactions.deployContract(leash),
+          ],
+        }),
+      );
       made.push(clones[i]);
       txs.push({
         step: `${clones[i].split(".")[0]} created`,
         tx: out.transaction.hash,
       });
-      out = await guestAccount.functionCall({
-        contractId: market,
-        methodName: "register_clone",
-        args: { clone_id: clones[i], temperament: temperaments[i] },
-        gas: BigInt("30000000000000"),
-        attachedDeposit: BigInt(STAKE),
-      });
+      out = await whenVisible(() =>
+        guestAccount.functionCall({
+          contractId: market,
+          methodName: "register_clone",
+          args: { clone_id: clones[i], temperament: temperaments[i] },
+          gas: BigInt("30000000000000"),
+          attachedDeposit: BigInt(STAKE),
+        }),
+      );
       sentIn.push(clones[i]);
       txs.push({
         step: `${clones[i].split(".")[0]} sent in`,
@@ -139,7 +162,7 @@ async function enlist(temperaments, env = process.env) {
 async function rollBack(guestAccount, market, house, made, sentIn) {
   const attempt = async (what, fn) => {
     try {
-      await fn();
+      await whenVisible(fn);
     } catch (e) {
       console.error(`roll back: ${what} failed`, e);
     }
@@ -213,3 +236,4 @@ module.exports = async function handler(req, res) {
 
 module.exports.enlist = enlist;
 module.exports.parseTemperaments = parseTemperaments;
+module.exports.whenVisible = whenVisible;

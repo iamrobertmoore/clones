@@ -6,3 +6,4 @@
 neardev/
 replay.json
 node_modules/
+.vercel/
