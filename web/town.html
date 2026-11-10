@@ -7,64 +7,15 @@
 <meta name="description" content="Send up to three clones of yourself into the Clones market town tonight. Testnet, no login: each clone's only key can trade, never withdraw.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Grenze+Gotisch:wght@500;700&family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="town.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23f2c94c' stroke='%237a5a1e' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%2307060a'/%3E%3Cpath d='M15.5 4a8 8 0 1 0 0 16a6.5 6.5 0 1 1 0-16z' fill='%23ece6d9'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23d7212b'/%3E%3C/svg%3E">
 </head>
 <body>
-<!-- Shared drawings: one person (every clone is this same person), five goods, one coin. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <symbol id="person" viewBox="0 0 40 64">
-      <ellipse cx="20" cy="62" rx="12" ry="2.5" fill="rgba(0,0,0,.35)"/>
-      <rect x="13" y="46" width="5" height="15" rx="1" fill="#2b2238"/>
-      <rect x="22" y="46" width="5" height="15" rx="1" fill="#2b2238"/>
-      <path d="M8 28 Q20 22 32 28 L34 50 L6 50 Z" fill="var(--tunic, #888)" stroke="#1d1626" stroke-width="2"/>
-      <rect x="9" y="27" width="22" height="4" rx="2" fill="var(--collar, #c0392b)" stroke="#1d1626" stroke-width="1.5"/>
-      <circle cx="20" cy="31" r="2.2" fill="#d9b64a" stroke="#1d1626" stroke-width="1"/>
-      <circle cx="20" cy="15" r="10" fill="#f0c9a0" stroke="#1d1626" stroke-width="2"/>
-      <path d="M9.5 14 Q10 3 20 4 Q31 3 30.5 14 Q27 8 22 10 Q18 7 14 10 Q11 11 9.5 14 Z" fill="#6b3b22" stroke="#1d1626" stroke-width="1.5"/>
-      <circle cx="16.5" cy="16" r="1.4" fill="#1d1626"/>
-      <circle cx="23.5" cy="16" r="1.4" fill="#1d1626"/>
-      <path d="M17 20.5 Q20 22.5 23 20.5" fill="none" stroke="#1d1626" stroke-width="1.3" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="g-grain" viewBox="0 0 24 24">
-      <path d="M12 22 V6" stroke="#7a5a1e" stroke-width="2"/>
-      <ellipse cx="12" cy="5" rx="2.6" ry="3.6" fill="#e8c35a" stroke="#7a5a1e"/>
-      <ellipse cx="8.5" cy="10" rx="2.4" ry="3.4" transform="rotate(-30 8.5 10)" fill="#e8c35a" stroke="#7a5a1e"/>
-      <ellipse cx="15.5" cy="10" rx="2.4" ry="3.4" transform="rotate(30 15.5 10)" fill="#e8c35a" stroke="#7a5a1e"/>
-      <ellipse cx="8.5" cy="15.5" rx="2.4" ry="3.4" transform="rotate(-30 8.5 15.5)" fill="#e8c35a" stroke="#7a5a1e"/>
-      <ellipse cx="15.5" cy="15.5" rx="2.4" ry="3.4" transform="rotate(30 15.5 15.5)" fill="#e8c35a" stroke="#7a5a1e"/>
-    </symbol>
-    <symbol id="g-salt" viewBox="0 0 24 24">
-      <path d="M3 21 L12 7 L21 21 Z" fill="#f4f1ea" stroke="#5e6a75" stroke-width="1.6"/>
-      <rect x="6" y="15" width="3" height="3" fill="#cfd8df"/><rect x="13" y="12" width="3" height="3" fill="#cfd8df"/>
-    </symbol>
-    <symbol id="g-wool" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" fill="#d6c3e8" stroke="#5b4a72" stroke-width="1.6"/>
-      <path d="M5 9 Q12 14 19 8 M4.5 14 Q12 19 19.5 13 M9 4 Q14 12 10 21" fill="none" stroke="#5b4a72" stroke-width="1.2"/>
-    </symbol>
-    <symbol id="g-iron" viewBox="0 0 24 24">
-      <path d="M2 18 L6 9 H18 L22 18 Z" fill="#9aa4ad" stroke="#2e353b" stroke-width="1.6"/>
-      <path d="M6 9 L8 12 H16 L18 9" fill="none" stroke="#2e353b" stroke-width="1"/>
-    </symbol>
-    <symbol id="g-amber" viewBox="0 0 24 24">
-      <path d="M12 2 L20 9 L12 22 L4 9 Z" fill="#f29b1d" stroke="#7a3d06" stroke-width="1.6"/>
-      <path d="M4 9 H20 M12 2 L9 9 L12 22 L15 9 Z" fill="none" stroke="#7a3d06" stroke-width="1"/>
-      <path d="M8 7 L10 5" stroke="#ffe2a8" stroke-width="1.4" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="coin" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" fill="#f2c94c" stroke="#7a5a1e" stroke-width="2"/>
-      <circle cx="12" cy="12" r="6.5" fill="none" stroke="#b8892b" stroke-width="1.4"/>
-      <text x="12" y="16" text-anchor="middle" font-size="10" font-family="Georgia,serif" font-weight="700" fill="#7a5a1e">N</text>
-    </symbol>
-  </defs>
-</svg>
-
 <header class="top">
   <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
-  <p class="tag">The hosted town. Send up to three copies of yourself in tonight; the night is played at 02:00 UTC and they merge back into you at dawn.</p>
+  <p class="tag">The hosted town. Send up to three copies of yourself in tonight; the night is played around 02:00 UTC and they merge back into you at dawn.</p>
   <a class="btn ghost town-nav" href="index.html">Watch a recorded night</a>
 </header>
 
@@ -80,14 +31,14 @@
       <div class="clock town-clock"><span id="clockTime">--:--</span><small id="clockLabel">loading the town</small></div>
 
       <div class="stall">
-        <div class="awning" aria-hidden="true"></div>
+        <div class="arch" aria-hidden="true"><span class="rose"></span></div>
         <div class="board" aria-label="Market board, live prices in milliNEAR per unit">
           <div class="board-head">Market board <small id="boardNote">live from the market contract, milliNEAR / unit</small></div>
           <ul class="board-goods" id="boardGoods"></ul>
         </div>
         <div class="counter" id="counter">
-          <span class="lantern" aria-hidden="true"></span>
-          <span class="merchant-label">the town merchant</span>
+          <span class="candle c1" aria-hidden="true"></span><span class="candle c2" aria-hidden="true"></span>
+          <span class="merchant-label">the merchant</span>
           <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener">market.clonestown.testnet</a>
         </div>
       </div>
@@ -108,7 +59,7 @@
         <div class="bed" id="bed" aria-hidden="true">
           <span class="post" id="bedpost"></span>
           <svg class="sleeper" viewBox="0 0 40 64"><use href="#person"/></svg>
-          <span class="blanket"></span>
+          <span class="shroud"></span>
           <span class="zzz">z z z</span>
         </div>
         <div class="player-purse purse">
@@ -133,7 +84,7 @@
         <div class="intro-card">
           <p class="intro-kicker">Done</p>
           <h2>They are in town</h2>
-          <p>Your clones wait at the merchant's counter until the night is played at 02:00 UTC. This is your page; this browser remembers it, but keep the link to check from anywhere:</p>
+          <p>Your clones wait at the merchant's counter until the night is played around 02:00 UTC. This is your page; this browser remembers it, but keep the link to check from anywhere:</p>
           <p class="guest-url"><a id="guestUrl" href="#"></a></p>
           <div class="result-actions">
             <a class="btn" id="goGuest" href="#">Go to my clones</a>
@@ -165,9 +116,9 @@
   <section class="paper temperaments" id="temperaments" aria-labelledby="tempTitle">
     <h2 id="tempTitle">The three temperaments</h2>
     <ul class="temp-list">
-      <li><b class="t-chip" style="--tint:#5b84b1">cautious</b> buys what is cheap and takes profit at +10%.</li>
-      <li><b class="t-chip" style="--tint:#d39a2a">greedy</b> chases whatever rose the most, all in. Often goes broke.</li>
-      <li><b class="t-chip" style="--tint:#4e9a5f">loyal</b> trades only grain and salt and keeps your money safe.</li>
+      <li><b class="t-chip" style="--tint:#7aa2c8">cautious</b> buys what is cheap and takes profit at +10%.</li>
+      <li><b class="t-chip" style="--tint:#d9a53a">greedy</b> chases whatever rose the most, all in. Often goes broke.</li>
+      <li><b class="t-chip" style="--tint:#79a86a">loyal</b> trades only grain and salt and keeps your money safe.</li>
     </ul>
   </section>
 
@@ -182,7 +133,7 @@
       <li><b>Testnet only.</b> No real money. The house pays each clone's 0.5 NEAR stake with testnet NEAR.</li>
       <li><b>No login.</b> You get a guest account (<code>g&hellip;.clonestown.testnet</code>) and a link. This browser remembers it.</li>
       <li><b>The leash is real.</b> Each clone is a NEAR sub-account of your guest whose only key is a function-call key for the market. It can trade. It can never withdraw: if it tries, the chain refuses the transaction.</li>
-      <li><b>Once a day.</b> At 02:00 UTC the keeper plays the night: twelve hours of trading, then dawn. Each clone settles, then merges back into your guest account (a real DeleteAccount), and its result stays on chain.</li>
+      <li><b>Once a day.</b> Around 02:00 UTC the keeper plays the night: twelve hours of trading, then dawn. Each clone settles, then merges back into your guest account (a real DeleteAccount), and its result stays on chain.</li>
     </ul>
     <p class="again"><a id="enlistAgain" href="town.html?new=1">Send in a new set of clones</a></p>
   </section>
@@ -192,6 +143,7 @@
   <p>Everything on this page is read from <code>market.clonestown.testnet</code> through a public testnet RPC.</p>
 </footer>
 
+<script src="art.js"></script>
 <script src="town.js"></script>
 </body>
 </html>

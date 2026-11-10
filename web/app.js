@@ -8,7 +8,7 @@
   var SETUP_END = 6;        // clones created and sent in: 0..6 s
   var NIGHT_END = 48;       // twelve hours: 6..48 s (3.5 s per hour)
   var DAWN_END = 59.4;      // dawn, refusal, settle and merge: 48..59.4 s
-  var TINTS = { cautious: '#5b84b1', greedy: '#d39a2a', loyal: '#4e9a5f' };
+  var TINTS = { cautious: '#7aa2c8', greedy: '#d9a53a', loyal: '#79a86a' };
   var EXPLORERS = { testnet: 'https://testnet.nearblocks.io', mainnet: 'https://nearblocks.io' };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -27,9 +27,8 @@
   var explorer = null;
 
   var T = 0, playing = false, started = false, lastTs = 0, prevT = 0;
-  var musicOn = false, resultDismissed = false, logCount = 0, lastRound = null;
+  var resultDismissed = false, logCount = 0, lastRound = null;
   var ui = { clones: {}, flies: new Map(), leash: {} };
-  var audio = $('music');
 
   /* ---------- helpers ---------- */
   function near(m) { return (m / 1000).toFixed(3); }
@@ -352,13 +351,14 @@
     // sky, moon, clock
     var night = clamp((t - SETUP_END) / (NIGHT_END - SETUP_END), 0, 1);
     var dawn = clamp((t - NIGHT_END) / 2.5, 0, 1);
-    scene.style.setProperty('--sky-top', mix('#120c2a', '#4a3570', dawn));
-    scene.style.setProperty('--sky-bottom', mix('#3a2a5c', '#f08a4b', dawn));
+    scene.style.setProperty('--sky-top', mix('#020205', '#16040a', dawn));
+    scene.style.setProperty('--sky-bottom', mix('#0e1220', '#8a0f16', dawn));
+    scene.style.setProperty('--dawn', dawn.toFixed(3));
     scene.style.setProperty('--star-o', String(1 - dawn));
     scene.style.setProperty('--lamp', String(0.45 * (1 - dawn) + 0.1));
     var moon = $('moon');
     moon.style.left = (6 + night * 82) + '%';
-    moon.style.top = (34 - Math.sin(night * Math.PI) * 26) + '%';
+    moon.style.top = (22 - Math.sin(night * Math.PI) * 16) + '%';
     moon.style.opacity = String(1 - dawn);
     var timeTxt, label;
     if (s.round === null) { timeTxt = '18:00'; label = started ? 'dusk: sending in clones' : 'dusk'; }
@@ -427,6 +427,7 @@
         if (!rm) { dx = (bedC.x - rest.x) * pm; dy = (bedC.y - rest.y) * pm; sc = 1 - 0.6 * pm; }
         op = 1 - pm * 0.9;
       }
+      u.walker.style.filter = walking && !rm ? 'blur(' + (pm * 2.5).toFixed(2) + 'px) brightness(' + (1 - pm * 0.6).toFixed(2) + ')' : '';
       u.walker.style.transform = (dx || dy || sc !== 1) ? 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(' + sc.toFixed(3) + ')' : '';
       u.walker.style.opacity = op === 1 ? '' : String(op);
 
@@ -477,7 +478,7 @@
         var crossed = playing && prevT < rT && t >= rT;
         var seal = ref.querySelector('.seal');
         seal.classList.remove('stamp');
-        if (crossed && !rm) { void seal.offsetWidth; seal.classList.add('stamp'); scene.classList.remove('shake'); void scene.offsetWidth; scene.classList.add('shake'); }
+        if (crossed && !rm) { void seal.offsetWidth; seal.classList.add('stamp'); scene.classList.remove('shake', 'flash'); void scene.offsetWidth; scene.classList.add('shake', 'flash'); }
         if (crossed) $('announce').textContent = 'Chain refused: ' + accountOf(refusedItem.e.clone) + ' cannot withdraw. ' + refusalCode(refusedItem.e.error);
       }
     } else if (!ref.hidden) ref.hidden = true;
@@ -547,9 +548,10 @@
     var paid = {};
     D.events.forEach(function (e) { if (e.kind === 'settled') paid[e.clone] = e.paid_out; });
     (D.outcomes || []).forEach(function (o) {
-      var li = el('li');
-      var fig = svgUse('person'); fig.style.setProperty('--tunic', TINTS[o.temperament] || '#888');
-      if (o.broke) fig.style.filter = 'saturate(.25)';
+      var li = el('li', o.broke ? 'broke' : null), tint = TINTS[o.temperament] || '#888';
+      li.style.setProperty('--tint', tint);
+      var fig = svgUse('person'); fig.style.setProperty('--tunic', tint); fig.style.setProperty('--eye', o.broke ? '#4d4a52' : tint);
+      if (o.broke) fig.style.filter = 'grayscale(1) brightness(.75)';
       li.appendChild(fig);
       var nm = el('div', 'r-name', o.name);
       nm.appendChild(el('small', null, o.temperament + ', ' + o.orders + ' orders' + (o.broke ? ', went broke' : '')));
@@ -595,64 +597,37 @@
     return 'rgb(' + r + ',' + g + ',' + bl + ')';
   }
 
-  /* ---------- playback and music ---------- */
+  /* ---------- playback ---------- */
   function frame(ts) {
     if (!playing) return;
     var dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0;
     lastTs = ts;
     T = Math.min(DURATION, T + dt);
-    if (musicOn && !audio.paused && Math.abs(audio.currentTime - T) > 0.3 && T < DURATION - 0.5) {
-      try { audio.currentTime = T; } catch (err) { /* not seekable yet */ }
-    }
-    if (T >= DURATION) { playing = false; stopMusic(); }
+    if (T >= DURATION) playing = false;
     render();
     if (playing) requestAnimationFrame(frame);
   }
   function play() {
     if (T >= DURATION - 0.05) { T = 0; prevT = 0; resultDismissed = false; }
     playing = true; lastTs = 0;
-    startMusic();
     requestAnimationFrame(frame);
     render();
   }
-  function pause() { playing = false; stopMusic(); render(); }
-  function startMusic() {
-    if (!musicOn || !playing) return;
-    try { audio.currentTime = T; } catch (err) { /* set after metadata */ }
-    var pr = audio.play();
-    if (pr && pr.catch) pr.catch(function () { /* blocked or missing: replay continues silently */ });
-  }
-  function stopMusic() { if (!audio.paused) audio.pause(); }
-  function setMusic(on) {
-    musicOn = on;
-    var b = $('musicBtn');
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.textContent = on ? 'Music: on' : 'Music: off';
-    $('musicPick').checked = on;
-    if (on) { audio.preload = 'auto'; startMusic(); } else stopMusic();
-  }
-  audio.addEventListener('loadedmetadata', function () {
-    if (musicOn && playing) { try { audio.currentTime = T; } catch (err) { /* ignore */ } }
-  });
-
+  function pause() { playing = false; render(); }
   /* ---------- wiring ---------- */
   function start() {
     started = true;
     $('intro').hidden = true;
     $('playBtn').disabled = false; $('scrub').disabled = false;
     T = 0; prevT = 0; resultDismissed = false; logCount = 0; $('log').textContent = '';
-    setMusic($('musicPick').checked);
     play();
   }
   $('runBtn').addEventListener('click', start);
   $('playBtn').addEventListener('click', function () { if (playing) pause(); else play(); });
-  $('musicBtn').addEventListener('click', function () { setMusic(!musicOn); });
-  $('musicPick').addEventListener('change', function (ev) { setMusic(ev.target.checked); });
   $('scrub').addEventListener('input', function (ev) {
     T = clamp(parseFloat(ev.target.value) || 0, 0, DURATION);
     prevT = T;
     if (T < DURATION - 0.05) resultDismissed = false;
-    if (musicOn && playing) { try { audio.currentTime = T; } catch (err) { /* ignore */ } }
     render();
   });
   $('againBtn').addEventListener('click', function () { $('result').hidden = true; T = 0; prevT = 0; resultDismissed = false; play(); });
@@ -678,7 +653,7 @@
   }).catch(function (err) {
     var asked = new URLSearchParams(location.search).get('night');
     $('introKicker').textContent = asked
-      ? 'This night log is ' + (err.message === 'not published yet' ? 'not published yet. Logs appear after the night is played (02:00 UTC); try again later.' : 'unavailable (' + err.message + ').')
+      ? 'This night log is ' + (err.message === 'not published yet' ? 'not published yet. Logs appear after the night is played (around 02:00 UTC); try again later.' : 'unavailable (' + err.message + ').')
       : 'Could not load the night log (' + err.message + '). Serve this folder over http, e.g. python3 -m http.server.';
     if (asked) { var back = el('a', null, 'Back to the town'); back.href = 'town.html'; $('introKicker').appendChild(document.createTextNode(' ')); $('introKicker').appendChild(back); }
   });

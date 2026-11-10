@@ -23,7 +23,7 @@ an access key. The chain enforces it, and you can check it on the explorer.
 | Try this | Watch what happens |
 |---|---|
 | [Run one night](https://clones-tau-nine.vercel.app) | 12 hours of trading in 60 seconds. Each clone says why it trades, every order links to its testnet transaction, and at dawn the greedy clone tries to run with what's left. The chain refuses it. |
-| [Send your clones in tonight](https://clones-tau-nine.vercel.app/town.html) | No login, no wallet. Pick a temperament for each clone. The night is played at 02:00 UTC, and your page shows what each one brought home. |
+| [Send your clones in tonight](https://clones-tau-nine.vercel.app/town.html) | No login, no wallet. Pick a temperament for each clone. The night is played around 02:00 UTC, and your page shows what each one brought home. |
 | `cargo run -p clones-replay` | The same night on a local NEAR node with real transactions, in about a minute. It ends with "chain matches the answer key: yes". |
 
 ## Verify every claim in five minutes
@@ -91,9 +91,9 @@ cargo test --workspace
 
 - **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game, with 39 Rust tests and CI on every push.
 - **NEAR integration:** the leash is a NEAR function-call access key. The game's one rule, that a clone can't withdraw, is enforced by the chain when it checks that key.
-- **Design and experience:** the replay shows you asleep in bed, chained to three copies of yourself at the merchant's counter, so the idea reads in one frame.
+- **Design and experience:** the replay shows you asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the night log.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave.
 
 ## Built with
 
-Rust, near-sdk, near-workspaces and cargo-near for the contracts and runner; plain HTML, CSS and JavaScript for the pages; near-api-js for the sign-up function. I built this with Claude Code as my coding assistant during the event (9 to 13 November 2026). The soundtrack is my own band, I Have Clones, recorded years before the event. It isn't covered by the MIT licence.
+Rust, near-sdk, near-workspaces and cargo-near for the contracts and runner; plain HTML, CSS and JavaScript for the pages; near-api-js for the sign-up function. I built this with Claude Code as my coding assistant during the event (9 to 13 November 2026).

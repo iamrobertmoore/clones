@@ -1,12 +1,15 @@
 name: town
 
-# The hosted town's night: every day at 02:00 UTC the keeper plays one night for every clone in
+# The hosted town's night: every day around 02:00 UTC the keeper plays one night for every clone in
 # town on NEAR testnet, merges them all home at dawn, and publishes each guest's night log to the
 # town-data branch (never main).
 
 on:
+  # Off the hour: GitHub queues top-of-the-hour schedules and has started this job hours late.
+  # The second run is a backstop; it finds nobody to play if the first one already merged everyone.
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "37 1 * * *"
+    - cron: "41 2 * * *"
   workflow_dispatch:
 
 permissions:

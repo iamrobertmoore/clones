@@ -12,9 +12,9 @@
   var STORE_KEY = 'clones.guest';
   var NIGHT_HOUR_UTC = 2;
   var TEMPS = {
-    cautious: { tint: '#5b84b1', why: 'Buys what is cheap, takes profit at +10%.' },
-    greedy: { tint: '#d39a2a', why: 'Chases whatever rose most. All in.' },
-    loyal: { tint: '#4e9a5f', why: 'Only grain and salt. Keeps your money safe.' }
+    cautious: { tint: '#7aa2c8', why: 'Buys what is cheap, takes profit at +10%.' },
+    greedy: { tint: '#d9a53a', why: 'Chases whatever rose most. All in.' },
+    loyal: { tint: '#79a86a', why: 'Only grain and salt. Keeps your money safe.' }
   };
   var ORDER = ['cautious', 'greedy', 'loyal'];
   var GOODS = ['grain', 'salt', 'wool', 'iron', 'amber'];
@@ -159,7 +159,8 @@
     document.querySelectorAll('.slot').forEach(function (fs) {
       var c = fs.querySelector('input:checked'), t = c ? c.value : 'none';
       fs.classList.toggle('empty', t === 'none');
-      fs.querySelector('.fig').style.setProperty('--tunic', TEMPS[t] ? TEMPS[t].tint : '#6d6875');
+      var fig = fs.querySelector('.fig'), tint = TEMPS[t] ? TEMPS[t].tint : '#4d4a52';
+      fig.style.setProperty('--tunic', tint); fig.style.setProperty('--eye', tint);
       fs.querySelector('.why').textContent = TEMPS[t] ? TEMPS[t].why : 'This slot stays empty.';
     });
     var n = chosen().length;
@@ -223,7 +224,7 @@
       });
       $('done').hidden = false;
       $('goGuest').focus();
-      setStatus('Your clones are in town', 'Guest ' + res.guest + ' with ' + (res.clones || []).length + ' clone(s). The night is played at 02:00 UTC.');
+      setStatus('Your clones are in town', 'Guest ' + res.guest + ' with ' + (res.clones || []).length + ' clone(s). The night is played around 02:00 UTC.');
     }).catch(function (err) {
       clearInterval(timer);
       $('progress').hidden = true;
@@ -310,8 +311,10 @@
     var stake = 0, paid = 0;
     night.forEach(function (r) {
       var li = el('li');
-      var fig = svgUse('person'); fig.style.setProperty('--tunic', (TEMPS[r.temperament] || {}).tint || '#888');
-      if (r.broke) fig.style.filter = 'saturate(.25)';
+      var rt = (TEMPS[r.temperament] || {}).tint || '#888';
+      li.style.setProperty('--tint', rt); if (r.broke) li.classList.add('broke');
+      var fig = svgUse('person'); fig.style.setProperty('--tunic', rt); fig.style.setProperty('--eye', r.broke ? '#4d4a52' : rt);
+      if (r.broke) fig.style.filter = 'grayscale(1) brightness(.75)';
       li.appendChild(fig);
       var nm = el('div', 'r-name', String(r.clone).split('.')[0]);
       nm.appendChild(el('small', null, r.temperament + ', ' + r.orders_placed + ' orders' + (r.broke ? ', went broke' : '')));
@@ -377,7 +380,7 @@
         if (nightInProgress()) {
           setStatus('The night is on', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' trading right now: hour ' + (town.round + 1) + ' of ' + town.rounds + '. Purses update live from the chain.');
         } else {
-          setStatus('Waiting in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. The night is played at 02:00 UTC (' + countdownText().local + ' your time), in');
+          setStatus('Waiting in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. The night is played around 02:00 UTC (' + countdownText().local + ' your time), in');
           var cd = el('span', 'count'); cd.setAttribute('data-countdown', ''); $('statusText').appendChild(cd);
           $('statusText').appendChild(document.createTextNode(' Come back after dawn: this browser remembers your clones.'));
         }
