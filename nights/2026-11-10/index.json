@@ -1,0 +1,36 @@
+{
+  "guests": [
+    {
+      "matched": true,
+      "outcomes": [
+        {
+          "broke": false,
+          "final_cash": 539,
+          "name": "clone-1",
+          "orders": 4,
+          "stake": 500,
+          "temperament": "cautious"
+        },
+        {
+          "broke": false,
+          "final_cash": 222,
+          "name": "clone-2",
+          "orders": 19,
+          "stake": 500,
+          "temperament": "greedy"
+        },
+        {
+          "broke": false,
+          "final_cash": 484,
+          "name": "clone-3",
+          "orders": 3,
+          "stake": 500,
+          "temperament": "loyal"
+        }
+      ],
+      "player": "gzy2628.clonestown.testnet"
+    }
+  ],
+  "ran_at": 1794302793,
+  "seed": 810748
+}
