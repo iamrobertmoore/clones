@@ -7,7 +7,9 @@
 const rules = require("./rules.js");
 
 const URL = "https://cloud-api.near.ai/v1/chat/completions";
-const MODEL = process.env.NEARAI_MODEL || "deepseek/deepseek-v4.1-flash";
+// A fast model that answers directly (a reasoning model spends its tokens thinking and returns an
+// empty answer at this length).
+const MODEL = process.env.NEARAI_MODEL || "google/gemini-2.5-flash";
 
 function prompt(instruction, v, mood) {
   const goods = rules.GOODS.map((g, i) => {
@@ -43,7 +45,7 @@ async function ask(messages, env = process.env, timeoutMs = 9000) {
     const r = await fetch(URL, {
       method: "POST",
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, messages, max_tokens: 120, temperature: 0.7 }),
+      body: JSON.stringify({ model: MODEL, messages, max_tokens: 160, temperature: 0.7, reasoning: { enabled: false } }),
       signal: ctl.signal,
     });
     const j = await r.json().catch(() => ({}));
