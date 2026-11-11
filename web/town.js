@@ -695,8 +695,22 @@
   function renderAccounts(list) {
     $('accountsCard').hidden = false;
     var ul = $('acctList'); ul.textContent = '';
+    function describeKeys(ks) {
+      var house = 0;
+      return ks.length + (ks.length === 1 ? ' key: ' : ' keys: ') + ks.map(function (k) {
+        var p = k.access_key.permission;
+        if (p === 'FullAccess') return 'FULL ACCESS ' + k.public_key.slice(0, 16) + '...';
+        var fc = p.FunctionCall || {};
+        return 'function call only, on ' + fc.receiver_id + ', methods [' + (fc.method_names || []).join(', ') + ']';
+      }).join('; ');
+    }
     [['you (guest)', guest], ['market', MARKET]].forEach(function (p) {
-      var li = el('li'); li.appendChild(el('b', null, p[0] + ': ')); li.appendChild(acctLink(p[1])); ul.appendChild(li);
+      var li = el('li'); li.appendChild(el('b', null, p[0] + ': ')); li.appendChild(acctLink(p[1]));
+      if (p[1] === guest) {
+        var gk = el('div', 'keys', 'reading its keys...'); li.appendChild(gk);
+        keysOf(guest).then(function (ks) { gk.textContent = describeKeys(ks); }).catch(function () { gk.textContent = ''; });
+      }
+      ul.appendChild(li);
     });
     list.filter(function (c) { return c.state; }).forEach(function (c) {
       var li = el('li'); li.appendChild(el('b', null, c.id.split('.')[0] + ': ')); li.appendChild(acctLink(c.id));
@@ -747,7 +761,7 @@
     $('claimIntro').textContent = 'Your browser made this key when you sent your clones in, and it is the only full-access key on ' + guest + '. The house holds a key that can only whisper, retrain and settle at the market: it can run your clones but can never move your NEAR. Save the key file; it lives only in this browser.';
     $('claimBtn').hidden = true;
     $('claimed').hidden = false;
-    $('claimAcct').textContent = guest;
+    $('claimed').firstElementChild.textContent = 'Your full-access key for ' + guest + '. It is kept in this browser only; download the key file to keep it safe.';
     $('claimSecret').textContent = k.private_key;
     $('claimDownload').href = URL.createObjectURL(new Blob([JSON.stringify(k, null, 2)], { type: 'application/json' }));
     $('claimDownload').download = guest + '.json';
