@@ -364,14 +364,25 @@ async function bringHome(t, clones) {
             continue;
           }
         }
-        try {
-          const m = await patient(
-            () => guest.functionCall({ contractId: c.id, methodName: "merge", args: {}, gas: 100n * TGAS }),
-            14,
-          );
-          events.push({ kind: "merged", ...who, tx: m.transaction.hash, clone_deleted: true });
-        } catch (e) {
-          events.push({ kind: "order_failed", round: rules.ROUNDS, ...who, error: message(e).slice(0, 300) });
+        // The market merges a bound clone home right after paying it. Wait for that; merge
+        // here only if the clone is still there (an older, unbound clone).
+        let gone = false;
+        for (let i = 0; i < 8 && !gone; i++) {
+          gone = !(await exists(t, c.id));
+          if (!gone) await new Promise((r) => setTimeout(r, 800));
+        }
+        if (gone) {
+          events.push({ kind: "merged", ...who, tx: null, clone_deleted: true, by: "market" });
+        } else {
+          try {
+            const m = await patient(
+              () => guest.functionCall({ contractId: c.id, methodName: "merge", args: {}, gas: 100n * TGAS }),
+              14,
+            );
+            events.push({ kind: "merged", ...who, tx: m.transaction.hash, clone_deleted: true });
+          } catch (e) {
+            events.push({ kind: "order_failed", round: rules.ROUNDS, ...who, error: message(e).slice(0, 300) });
+          }
         }
       }
       if (!stillOut.has(player)) await sweep(t, guest);
