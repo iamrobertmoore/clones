@@ -33,6 +33,11 @@ jobs:
       - name: Install (no secrets in this step)
         working-directory: web
         run: npm ci --no-audit --no-fund
+      - name: Top up the house from the testnet faucet if it runs low (no secrets in this step)
+        working-directory: web
+        env:
+          HOUSE_ACCOUNT: clonestown.testnet
+        run: node scripts/topup.js
       - name: Ring the bell
         working-directory: web
         env:
