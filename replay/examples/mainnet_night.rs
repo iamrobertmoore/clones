@@ -1,7 +1,8 @@
 //! One real night on NEAR mainnet, in a market nobody can change.
 //!
 //!     CLONES_KEYS_DIR=/private/keys cargo run --release -p clones-replay --example mainnet_night -- \
-//!         <funder: an account whose key is in CLONES_KEYS_DIR> <house name, e.g. clones-town.near> [seed]
+//!         <funder: an account whose key is in CLONES_KEYS_DIR> <house name, e.g. clones-town.near> \
+//!         [return-to: your own account, for what is left at the end] [seed]
 //!
 //! It creates the house (`<house>` through the `near` account registrar), then:
 //! - the market `market.<house>`, deployed and initialised in one transaction and given no access
@@ -12,9 +13,10 @@
 //! - one seeded night with an answer key computed before it starts; the broke clone's withdrawal
 //!   is refused by the chain; every clone settles and merges home with DeleteAccount.
 //!
-//! Real NEAR: about 6 in total. The market keeps about 2.5 NEAR of storage for good (it has no key
-//! to close it with); the rest ends on the house and player accounts, whose keys are saved to
-//! CLONES_KEYS_DIR. Never commit that folder.
+//! Real NEAR: send the funder 4.9. The market keeps 2.45 NEAR of storage for good (it has no key
+//! to close it with, which is the point), gas is a few hundredths, and the clones' stakes come back
+//! with their profit or loss. With `return-to`, everything left on the house and player accounts
+//! (about 2.2 NEAR) is sent there at the end. Keys are saved to CLONES_KEYS_DIR; never commit it.
 
 use clones_core::{Entrant, Temperament};
 use clones_replay::{contracts, enlist, run_night};
@@ -29,8 +31,12 @@ const EXPLORER: &str = "https://nearblocks.io";
 async fn main() -> anyhow::Result<()> {
     let dir: PathBuf = std::env::var("CLONES_KEYS_DIR")?.into();
     let args: Vec<String> = std::env::args().skip(1).collect();
-    anyhow::ensure!(args.len() >= 2, "usage: <funder> <house.near> [seed]");
-    let seed: u64 = args.get(2).map(|s| s.parse()).transpose()?.unwrap_or(617);
+    anyhow::ensure!(
+        args.len() >= 2,
+        "usage: <funder> <house.near> [return-to] [seed]"
+    );
+    let return_to: Option<AccountId> = args.get(2).map(|s| s.parse()).transpose()?;
+    let seed: u64 = args.get(3).map(|s| s.parse()).transpose()?.unwrap_or(617);
     let rpc =
         std::env::var("NEAR_RPC").unwrap_or_else(|_| "https://rpc.mainnet.fastnear.com".into());
     let worker = near_workspaces::mainnet().rpc_addr(&rpc).await?;
@@ -61,8 +67,8 @@ async fn main() -> anyhow::Result<()> {
     let house_id: AccountId = args[1].parse()?;
     let have = worker.view_account(funder.id()).await?.balance;
     anyhow::ensure!(
-        have >= NearToken::from_millinear(5800),
-        "the funder holds {have}; send it about 6 NEAR first"
+        have >= NearToken::from_millinear(4850),
+        "the funder holds {have}; send it 4.9 NEAR first"
     );
 
     // 1. The house, through the `near` registrar.
@@ -71,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
     let out = funder
         .call(&"near".parse()?, "create_account")
         .args_json(json!({ "new_account_id": house_id, "new_public_key": house_key.public_key() }))
-        .deposit(have.saturating_sub(NearToken::from_millinear(100)))
+        .deposit(have.saturating_sub(NearToken::from_millinear(50)))
         .gas(near_workspaces::types::Gas::from_tgas(100))
         .transact()
         .await?;
@@ -89,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
     let out = house
         .batch(&market_id)
         .create_account()
-        .transfer(NearToken::from_millinear(2600))
+        .transfer(NearToken::from_millinear(2450))
         .deploy(&market_wasm)
         .call(
             near_workspaces::operations::Function::new("new")
@@ -122,7 +128,7 @@ async fn main() -> anyhow::Result<()> {
     save(&player_id, &player_key)?;
     let player = house
         .create_subaccount("you")
-        .initial_balance(NearToken::from_millinear(2700))
+        .initial_balance(NearToken::from_millinear(2250))
         .keys(player_key)
         .transact()
         .await?
@@ -142,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
         player,
         &leash_wasm,
         &entrants,
-        NearToken::from_millinear(550),
+        NearToken::from_millinear(470),
         None,
     )
     .await?;
@@ -168,5 +174,19 @@ async fn main() -> anyhow::Result<()> {
         log.events.len()
     );
     anyhow::ensure!(matched, "the chain disagreed with the answer key");
+
+    // 5. Send what is left on the player and house accounts back to the owner.
+    if let Some(to) = return_to {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        let you = load(player_id.as_str())?;
+        for acc in [&you, &house] {
+            let bal = worker.view_account(acc.id()).await?.balance;
+            let send = bal.saturating_sub(NearToken::from_millinear(20));
+            if !send.is_zero() {
+                acc.transfer_near(&to, send).await?.into_result()?;
+                println!("returned {send} from {} to {to}", acc.id());
+            }
+        }
+    }
     Ok(())
 }
