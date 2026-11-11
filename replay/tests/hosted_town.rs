@@ -10,11 +10,7 @@ use serde_json::json;
 fn entrants(ts: &[Temperament]) -> Vec<Entrant> {
     ts.iter()
         .enumerate()
-        .map(|(i, t)| Entrant {
-            name: format!("clone-{}", i + 1),
-            temperament: *t,
-            stake: 500,
-        })
+        .map(|(i, t)| Entrant::new(&format!("clone-{}", i + 1), *t, 500))
         .collect()
 }
 
@@ -104,7 +100,7 @@ async fn two_guests_one_night_everyone_home() -> anyhow::Result<()> {
         assert_eq!(results.len(), log.outcomes.len());
         assert!(results
             .iter()
-            .all(|r| r["night"] == 2 && r["seed"] == "853"));
+            .all(|r| r["night"] == 1 && r["seed"] == "853"));
     }
     let town: serde_json::Value = market.view("get_town").await?.json()?;
     assert_eq!(town["clones_in_town"], 0, "everyone went home");

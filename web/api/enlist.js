@@ -1,11 +1,14 @@
 // Send three clones into the hosted town for tonight, with no login.
 //
-// POST /api/enlist  {"temperaments": ["cautious", "greedy", "loyal"]}
+// POST /api/enlist  {"clones": [{"temperament": "greedy", "stake": 500, "nights": 2}, ...]}
+//   (or the older {"temperaments": [...]}: 0.5 NEAR, one night each)
 //
 // Creates a guest player g<id>.<house> and, under it, clone-1..3 whose only key is a function-call
-// key for the market's place_order (it can trade, it can never withdraw), deploys the leash on
-// each, and sends each into town with its stake. Testnet only. The house key signs everything;
-// the nightly keeper plays the night and merges every clone home at dawn.
+// key for the market's `trade` (it can trade, it can never withdraw), deploys the leash on each,
+// and sends each into town with the stake the player chose, for the nights the player chose.
+// Testnet only. The house key signs everything; anyone can ring the bell (api/bell.js) to play
+// the next night, and a nightly job rings it too. Clones come home at the dawn after their last
+// night, or when they go broke.
 
 const fs = require("fs");
 const path = require("path");
@@ -19,11 +22,12 @@ const {
 } = require("near-api-js");
 
 const TEMPERAMENTS = ["cautious", "greedy", "loyal"];
-const STAKE = utils.format.parseNearAmount("0.5");
+const STAKES = [250, 500, 1000]; // milliNEAR a player can send a clone in with
+const DEFAULT_STAKE = 500;
 const CLONE_ACCOUNT = utils.format.parseNearAmount("0.45");
 const GAS_FLOAT = utils.format.parseNearAmount("0.15");
 const ALLOWANCE = utils.format.parseNearAmount("1");
-const MAX_CLONES_TONIGHT = 15; // what the house float can carry
+const MAX_CLONES_TONIGHT = 45; // what the house float can carry
 const HOUSE_RESERVE = 2; // NEAR the house always keeps
 
 const leash = fs.readFileSync(path.join(__dirname, "leash.wasm"));
@@ -57,10 +61,18 @@ async function view(account, contractId, methodName, args = {}) {
   return account.viewFunction({ contractId, methodName, args });
 }
 
-async function enlist(temperaments, env = process.env) {
+const milli = (m) => BigInt(m) * 10n ** 21n;
+
+// A token only this sign-up's browser gets, so only it can later claim the guest account.
+function claimToken(guest, env = process.env) {
+  return crypto.createHmac("sha256", env.HOUSE_KEY.trim()).update(`claim:${guest}`).digest("hex").slice(0, 32);
+}
+
+async function enlist(plan, env = process.env) {
+  const temperaments = plan.map((c) => c.temperament);
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = `market.${house}`;
+  const market = env.MARKET_ACCOUNT || `crypt.${house}`;
   const guest = `${guestName()}.${house}`;
   const clones = temperaments.map((_, i) => `clone-${i + 1}.${guest}`);
 
@@ -82,9 +94,10 @@ async function enlist(temperaments, env = process.env) {
       body: { error: "The town is full tonight. Come back tomorrow." },
     };
   }
-  // Exactly what the clones need, plus gas: n x (account + stake) + float.
+  // Exactly what the clones need, plus gas: n x account + their stakes + float.
   const guestFund =
-    BigInt(clones.length) * (BigInt(CLONE_ACCOUNT) + BigInt(STAKE)) +
+    BigInt(clones.length) * BigInt(CLONE_ACCOUNT) +
+    plan.reduce((sum, c) => sum + milli(c.stake), 0n) +
     BigInt(GAS_FLOAT);
   const { available } = await houseAccount.getAccountBalance();
   const need =
@@ -123,7 +136,7 @@ async function enlist(temperaments, env = process.env) {
               pk,
               transactions.functionCallAccessKey(
                 market,
-                ["place_order"],
+                ["trade"],
                 BigInt(ALLOWANCE),
               ),
             ),
@@ -140,9 +153,9 @@ async function enlist(temperaments, env = process.env) {
         guestAccount.functionCall({
           contractId: market,
           methodName: "register_clone",
-          args: { clone_id: clones[i], temperament: temperaments[i] },
+          args: { clone_id: clones[i], temperament: plan[i].temperament, nights: plan[i].nights },
           gas: BigInt("30000000000000"),
-          attachedDeposit: BigInt(STAKE),
+          attachedDeposit: milli(plan[i].stake),
         }),
       );
       sentIn.push(clones[i]);
@@ -155,7 +168,10 @@ async function enlist(temperaments, env = process.env) {
     await rollBack(guestAccount, market, house, made, sentIn);
     throw e;
   }
-  return { status: 200, body: { guest, market, clones, temperaments, txs } };
+  return {
+    status: 200,
+    body: { guest, market, clones, temperaments, plan, txs, claim: claimToken(guest, env) },
+  };
 }
 
 // Something failed half way: bring every NEAR back to the house so nothing is stranded.
@@ -203,6 +219,30 @@ function parseTemperaments(body) {
   return list;
 }
 
+// The player's plan: one to three clones, each a temperament, a stake and a number of nights.
+function parsePlan(body) {
+  if (body && Array.isArray(body.clones)) {
+    const list = body.clones;
+    if (list.length < 1 || list.length > 3) return null;
+    const plan = list.map((c) => ({
+      temperament: c && c.temperament,
+      stake: c && c.stake === undefined ? DEFAULT_STAKE : Number(c && c.stake),
+      nights: c && c.nights === undefined ? 1 : Number(c && c.nights),
+    }));
+    const ok = plan.every(
+      (c) =>
+        TEMPERAMENTS.includes(c.temperament) &&
+        STAKES.includes(c.stake) &&
+        Number.isInteger(c.nights) &&
+        c.nights >= 1 &&
+        c.nights <= 3,
+    );
+    return ok ? plan : null;
+  }
+  const ts = parseTemperaments(body);
+  return ts ? ts.map((t) => ({ temperament: t, stake: DEFAULT_STAKE, nights: 1 })) : null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "POST only" });
@@ -216,15 +256,16 @@ module.exports = async function handler(req, res) {
       body = {};
     }
   }
-  const temperaments = parseTemperaments(body);
-  if (!temperaments) {
-    res
-      .status(400)
-      .json({ error: "temperaments: one to three of cautious, greedy, loyal" });
+  const plan = parsePlan(body);
+  if (!plan) {
+    res.status(400).json({
+      error:
+        "clones: one to three, each a temperament (cautious, greedy, loyal), a stake (250, 500 or 1000 milliNEAR) and 1 to 3 nights",
+    });
     return;
   }
   try {
-    const { status, body: out } = await enlist(temperaments);
+    const { status, body: out } = await enlist(plan);
     res.status(status).json(out);
   } catch (e) {
     res
@@ -236,4 +277,6 @@ module.exports = async function handler(req, res) {
 
 module.exports.enlist = enlist;
 module.exports.parseTemperaments = parseTemperaments;
+module.exports.parsePlan = parsePlan;
+module.exports.claimToken = claimToken;
 module.exports.whenVisible = whenVisible;

@@ -4,7 +4,7 @@
 
 **A trading game on NEAR where copies of you trade while you sleep. They can trade, but they can never withdraw.**
 
-[Watch one night (60 s)](https://clones-tau-nine.vercel.app) · [Send your own clones in tonight](https://clones-tau-nine.vercel.app/town.html) · [The town on testnet](https://testnet.nearblocks.io/address/market.clonestown.testnet)
+[Watch one night (60 s)](https://clones-tau-nine.vercel.app) · [Send your own clones in tonight](https://clones-tau-nine.vercel.app/town.html) · [The town on testnet](https://testnet.nearblocks.io/address/crypt.clonestown.testnet)
 
 You go offline. Up to three copies of you walk into a market town and trade five goods with the
 town merchant all night. One is cautious, one is greedy, one is loyal. Each copy is a real NEAR

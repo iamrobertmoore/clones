@@ -63,6 +63,62 @@
 .how code { overflow-wrap: anywhere; }
 .again { margin-top: 12px; }
 
+/* Stake and nights per clone */
+.slot .picker { flex: 1 1 auto; display: flex; flex-direction: column; }
+.picker .knobs { margin-top: auto; }
+.knobs { display: grid; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px solid #2f2b35; }
+.knobs[hidden] { display: none; }
+.seg { display: flex; align-items: center; gap: 3px; flex-wrap: nowrap; }
+.seg-label { font-family: var(--goth); font-size: 14px; color: var(--ash); min-width: 44px; }
+.seg label { flex: 1 1 0; text-align: center; cursor: pointer; padding: 0; min-height: 0; border: 0; }
+.seg label span { display: block; font-family: var(--mono); font-size: 13px; color: var(--ash); border: 1px solid #45404c; padding: 3px 0; background: #0d0c10; transition: color .15s, border-color .15s, background .15s; }
+.seg label:hover span { color: var(--bone); }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg input:checked + span { color: #050407; background: var(--bone); border-color: var(--bone); }
+.seg input:focus-visible + span { outline: 2px solid var(--frost); outline-offset: 1px; }
+
+/* The bell */
+.bell-row { position: relative; z-index: 4; margin: 16px auto 0; max-width: 520px; text-align: center; }
+.bell-row[hidden] { display: none; }
+.btn.bell { font-size: 23px; }
+
+/* Merchant stock gauge under each price */
+.board-goods .gstock { display: block; height: 3px; margin: 3px auto 0; width: 70%; background: #1a181d; box-shadow: 0 0 0 1px #000; overflow: hidden; }
+.board-goods .gstock i { display: block; height: 100%; background: linear-gradient(90deg, #6b6375, var(--bone)); transition: width .5s; }
+
+/* Try to run */
+.clone .run { margin-top: 6px; font-size: 14px; padding: 3px 10px; border-color: rgba(215, 33, 43, .55); color: #ffd0cf; }
+.clone .run:hover:not(:disabled) { border-color: var(--blood-hi); box-shadow: 0 0 14px rgba(215, 33, 43, .45); }
+#refusal { position: fixed; inset: 0; z-index: 50; align-items: center; padding: 16px; background: rgba(3, 2, 5, .55); pointer-events: auto; }
+#refusal .seal { pointer-events: auto; max-width: 560px; }
+.seal-raw { font-family: var(--mono); font-size: 11.5px; color: var(--ash); margin: 8px 0 0; line-height: 1.4; }
+#refusal .seal .btn { margin-top: 12px; }
+
+/* What happened in town */
+.crier { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 3px; font-size: 15px; }
+.crier[hidden] { display: none; }
+.crier li { padding: 3px 8px; border-left: 2px solid #45404c; background: rgba(255, 255, 255, .02); color: var(--bone); }
+.crier li.order-row { border-left-color: var(--frost); }
+.crier li.refused-row { border-left-color: var(--blood-hi); color: #ffd0cf; background: rgba(215, 33, 43, .08); }
+.crier li.muted { color: var(--ash); font-size: 14px; }
+.crier li.warn { color: var(--loss); }
+
+/* The town's board */
+.board-rows { margin: 8px 0 0; padding-left: 26px; display: grid; gap: 5px; }
+.board-rows li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 3px 0; border-bottom: 1px solid #1f1c24; }
+.board-rows li::marker { font-family: var(--mono); color: var(--ash); }
+.board-rows li.mine { background: rgba(236, 230, 217, .05); }
+.board-rows .b-who { flex: 1 1 220px; }
+.board-rows .b-num { font-family: var(--mono); font-weight: 600; min-width: 4.5em; text-align: right; }
+.board-rows .b-num.gain { color: var(--gain); }
+.board-rows .b-num.loss { color: var(--loss); }
+.board-rows .b-det { font-family: var(--mono); font-size: 13px; color: var(--ash); }
+
+/* Keys and claiming */
+.acct-list .keys { font-family: var(--mono); font-size: 12.5px; color: var(--ash); margin-top: 2px; }
+.claimed { margin-top: 10px; }
+.claimed[hidden] { display: none; }
+
 @media (max-width: 600px) {
   .top { gap: 10px; }
   .slots { gap: 4px; }
@@ -73,6 +129,10 @@
   .picker label .dot { width: 9px; height: 9px; }
   .picker .why { font-size: 12.5px; min-height: 6.4em; padding: 3px 3px 0; }
   .paper h2 { font-size: 27px; }
+  .seg-label { min-width: 0; font-size: 12px; }
+  .seg label span { font-size: 11.5px; padding: 3px 0; }
+  .btn.bell { font-size: 19px; }
+  .clone .run { font-size: 12.5px; padding: 2px 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

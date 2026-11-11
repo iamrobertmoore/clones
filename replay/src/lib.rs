@@ -4,7 +4,7 @@
 //! Before anything runs, `clones_core::simulate` gives the answer key for the seed, and the log
 //! carries both, so anyone can check that the chain did exactly what the rules say.
 
-use clones_core::{self as rules, Entrant, Outcome, Temperament, View};
+use clones_core::{self as rules, Book, Entrant, Outcome, Stock, Temperament, View};
 use near_workspaces::network::Sandbox;
 use near_workspaces::types::{AccessKey, Finality, Gas, KeyType, NearToken, SecretKey};
 use near_workspaces::{Account, AccountId, Contract, Network, Worker};
@@ -83,6 +83,11 @@ pub struct NightLog {
     /// Player balance before sending the clones and after merging them, in milliNEAR.
     pub player_balance_before: u64,
     pub player_balance_after: u64,
+    /// The night number and the merchant's stock at dusk (what the answer key starts from).
+    pub night: u32,
+    pub dusk_stock: Stock,
+    /// The merchant's stock as each hour began, 0 (dusk) to ROUNDS (dawn).
+    pub stock: Vec<Stock>,
 }
 
 const MILLI: u128 = 1_000_000_000_000_000_000_000;
@@ -179,15 +184,16 @@ fn ledger_of(v: &serde_json::Value) -> anyhow::Result<rules::Ledger> {
     )?)
 }
 
-/// One clone's turn: look, decide, place each order. Returns the events.
+/// One clone's turn: look, decide, send the whole turn as one `trade` call. Returns the events and
+/// whether the turn cleared.
 async fn take_turn(
     market: &Contract,
     c: &Seat,
     round: u32,
-    prices: [u64; 5],
+    book: Book,
     prev: [u64; 5],
     orders_so_far: u32,
-) -> anyhow::Result<Vec<Event>> {
+) -> anyhow::Result<(Vec<Event>, u32)> {
     let name = c.entrant.name.clone();
     let ledger =
         ledger_of(&settled_view(market, c.account.id(), c.orders_before + orders_so_far).await?)?;
@@ -195,7 +201,8 @@ async fn take_turn(
         c.entrant.temperament,
         &View {
             round,
-            prices,
+            book,
+            prices: book.board(),
             prev,
             ledger,
             stake: c.entrant.stake,
@@ -206,43 +213,62 @@ async fn take_turn(
         clone: name.clone(),
         say: decision.say,
     }];
-    for i in decision.intents {
-        let out = retry!(
-            c.account
-                .call(market.id(), "place_order")
-                .args_json(json!({
-                    "good": rules::GOODS[i.good],
-                    "side": i.side,
-                    "qty": i.qty,
-                    "price": i.limit,
-                }))
-                .gas(Gas::from_tgas(30))
-                .transact()
-                .await
-        );
-        match out {
-            Ok(o) if o.is_success() => events.push(Event::Order {
+    if decision.intents.is_empty() {
+        return Ok((events, 0));
+    }
+    let orders: Vec<serde_json::Value> = decision
+        .intents
+        .iter()
+        .map(|i| {
+            json!({
+                "good": rules::GOODS[i.good],
+                "side": i.side,
+                "qty": i.qty,
+                "price": i.limit,
+            })
+        })
+        .collect();
+    let out = retry!(
+        c.account
+            .call(market.id(), "trade")
+            .args_json(json!({ "round": round, "orders": orders }))
+            .gas(Gas::from_tgas(50))
+            .transact()
+            .await
+    );
+    match out {
+        Ok(o) if o.is_success() => {
+            let tx = tx_hash(&o);
+            for i in &decision.intents {
+                events.push(Event::Order {
+                    round,
+                    clone: name.clone(),
+                    good: rules::GOODS[i.good].to_string(),
+                    side: i.side,
+                    qty: i.qty,
+                    price: book.quote(i.good, i.side, i.qty),
+                    tx: tx.clone(),
+                });
+            }
+            Ok((events, decision.intents.len() as u32))
+        }
+        Ok(o) => {
+            events.push(Event::OrderFailed {
                 round,
-                clone: name.clone(),
-                good: rules::GOODS[i.good].to_string(),
-                side: i.side,
-                qty: i.qty,
-                price: prices[i.good],
-                tx: tx_hash(&o),
-            }),
-            Ok(o) => events.push(Event::OrderFailed {
-                round,
-                clone: name.clone(),
+                clone: name,
                 error: format!("{:?}", o.into_result().err()),
-            }),
-            Err(e) => events.push(Event::OrderFailed {
+            });
+            Ok((events, 0))
+        }
+        Err(e) => {
+            events.push(Event::OrderFailed {
                 round,
-                clone: name.clone(),
+                clone: name,
                 error: format!("{e:?}"),
-            }),
+            });
+            Ok((events, 0))
         }
     }
-    Ok(events)
 }
 
 /// Compile both contracts with cargo-near.
@@ -304,7 +330,7 @@ pub async fn enlist<T: Network + 'static>(
                     key.public_key(),
                     AccessKey::function_call_access(
                         market.id(),
-                        &["place_order"],
+                        &["trade"],
                         Some(NearToken::from_near(1)),
                     ),
                 )
@@ -322,7 +348,9 @@ pub async fn enlist<T: Network + 'static>(
         let out = retry!(
             player
                 .call(market.id(), "register_clone")
-                .args_json(json!({ "clone_id": id, "temperament": e.temperament }))
+                .args_json(
+                    json!({ "clone_id": id, "temperament": e.temperament, "nights": e.nights })
+                )
                 .deposit(NearToken::from_millinear(e.stake as u128))
                 .transact()
                 .await
@@ -354,7 +382,7 @@ pub async fn run_sandbox_night(seed: u64) -> anyhow::Result<NightLog> {
     let market = worker.dev_deploy(&market_wasm).await?;
     market
         .call("new")
-        .args_json(json!({ "seed": seed.to_string() }))
+        .args_json(json!({ "seed": "0" }))
         .transact()
         .await?
         .into_result()?;
@@ -379,7 +407,7 @@ pub async fn run_sandbox_night(seed: u64) -> anyhow::Result<NightLog> {
     .await
 }
 
-/// One player, the three standard clones, one night (the market must already be at `seed`).
+/// One player, the three standard clones, one night (the keeper opens it at `seed`).
 #[allow(clippy::too_many_arguments)]
 pub async fn play_night<T: Network + 'static>(
     worker: &Worker<T>,
@@ -408,7 +436,7 @@ pub async fn play_night<T: Network + 'static>(
         keeper,
         vec![guest],
         seed,
-        false,
+        true,
         None,
     )
     .await?;
@@ -416,9 +444,10 @@ pub async fn play_night<T: Network + 'static>(
 }
 
 /// Play one night for every guest in town at once: twelve hours of trading (all clones act in
-/// parallel each hour), then dawn: a broke clone's refused withdrawal, settle, merge. Returns one
-/// log per guest. With `open`, the keeper first opens a new night at `seed`. With `sweep_to`,
-/// each guest's balance (less 0.05 NEAR) is sent there after the merge.
+/// parallel each hour), then dawn: a broke clone's refused withdrawal, then settle and merge for
+/// every clone that is due home (its last night, or broke). Returns one log per guest. With
+/// `open`, the keeper first opens the next night at `seed`. With `sweep_to`, each guest's balance
+/// (less 0.05 NEAR) is sent there once none of its clones is left in town.
 #[allow(clippy::too_many_arguments)]
 pub async fn run_night<T: Network + 'static>(
     worker: &Worker<T>,
@@ -431,10 +460,13 @@ pub async fn run_night<T: Network + 'static>(
     sweep_to: Option<&AccountId>,
 ) -> anyhow::Result<Vec<NightLog>> {
     if open {
+        let town: serde_json::Value =
+            retry!(market.view("get_town").finality(Finality::Optimistic).await)?.json()?;
+        let next = town["night"].as_u64().unwrap_or_default() + 1;
         retry!(
             keeper
                 .call(market.id(), "open_night")
-                .args_json(json!({ "seed": seed.to_string() }))
+                .args_json(json!({ "seed": seed.to_string(), "night": next }))
                 .transact()
                 .await
         )?
@@ -446,31 +478,43 @@ pub async fn run_night<T: Network + 'static>(
         "the town is at seed {}, not {seed}",
         town["seed"]
     );
+    let night = town["night"].as_u64().unwrap_or_default() as u32;
+    let dusk_stock: Stock = serde_json::from_value(town["hour_stock"].clone())?;
 
     let seats: Vec<(usize, usize)> = guests
         .iter()
         .enumerate()
         .flat_map(|(g, guest)| (0..guest.seats.len()).map(move |s| (g, s)))
         .collect();
+    // The answer key is for the whole town: every clone's trades move the merchant for everyone.
+    let town_entrants: Vec<Entrant> = seats
+        .iter()
+        .map(|&(g, s)| guests[g].seats[s].entrant.clone())
+        .collect();
+    let key = rules::simulate_town(seed, dusk_stock, &town_entrants);
     let mut orders: Vec<Vec<u32>> = guests.iter().map(|g| vec![0; g.seats.len()]).collect();
 
     let mut prev: Option<[u64; 5]> = None;
+    let mut stocks = Vec::new();
     for round in 0..=rules::ROUNDS {
         let town = town_at(market, round).await?;
         let prices: [u64; 5] = serde_json::from_value(town["prices"].clone())?;
+        let hour_stock: Stock = serde_json::from_value(town["hour_stock"].clone())?;
+        stocks.push(hour_stock);
         for g in guests.iter_mut() {
             g.events.push(Event::Hour { round, prices });
         }
         if round == rules::ROUNDS {
             break;
         }
+        let book = Book::at(seed, round, hour_stock);
         let turns = seats.iter().map(|&(g, s)| {
             let seat = &guests[g].seats[s];
             take_turn(
                 market,
                 seat,
                 round,
-                prices,
+                book,
                 prev.unwrap_or(prices),
                 orders[g][s],
             )
@@ -478,31 +522,37 @@ pub async fn run_night<T: Network + 'static>(
         let results = futures::future::join_all(turns).await;
         for (&(g, s), turn) in seats.iter().zip(results) {
             // One clone's trouble (an RPC error, a stale read) never stops the night for others.
-            let turn = turn.unwrap_or_else(|e| {
-                vec![Event::OrderFailed {
-                    round,
-                    clone: guests[g].seats[s].entrant.name.clone(),
-                    error: format!("{e:#}"),
-                }]
+            let (events, placed) = turn.unwrap_or_else(|e| {
+                (
+                    vec![Event::OrderFailed {
+                        round,
+                        clone: guests[g].seats[s].entrant.name.clone(),
+                        error: format!("{e:#}"),
+                    }],
+                    0,
+                )
             });
-            orders[g][s] += turn
-                .iter()
-                .filter(|e| matches!(e, Event::Order { .. }))
-                .count() as u32;
-            guests[g].events.extend(turn);
+            orders[g][s] += placed;
+            guests[g].events.extend(events);
         }
-        retry!(keeper.call(market.id(), "advance_round").transact().await)?.into_result()?;
+        retry!(
+            keeper
+                .call(market.id(), "advance_round")
+                .args_json(json!({ "round": round }))
+                .transact()
+                .await
+        )?
+        .into_result()?;
         prev = Some(prices);
     }
 
-    // Dawn. A broke clone tries to take what is left home itself. The chain refuses.
+    // Dawn. Read every clone; a broke clone tries to take what is left home itself. The chain
+    // refuses.
+    let mut views = std::collections::HashMap::new();
     for &(g, s) in &seats {
         let seat = &guests[g].seats[s];
-        let Ok(v) =
-            settled_view(market, seat.account.id(), seat.orders_before + orders[g][s]).await
-        else {
-            continue;
-        };
+        let v = settled_view(market, seat.account.id(), seat.orders_before + orders[g][s]).await?;
+        views.insert((g, s), v.clone());
         if v["broke"] != true {
             continue;
         }
@@ -530,13 +580,30 @@ pub async fn run_night<T: Network + 'static>(
         ev.push(Event::WithdrawRefused { clone: name, error });
     }
 
-    // Settle and merge, each guest's clones in turn, guests in parallel.
+    // Settle and merge the clones that are due home, each guest's in turn, guests in parallel.
     let homecomings = guests.iter().enumerate().map(|(g, guest)| {
         let orders = orders[g].clone();
+        let views = &views;
         async move {
             let mut events = Vec::new();
             let mut outcomes = Vec::new();
+            let mut stayed = 0;
             for (s, seat) in guest.seats.iter().enumerate() {
+                let v = &views[&(g, s)];
+                if v["due_home"] != true {
+                    stayed += 1;
+                    let worth = v["worth"].as_u64().unwrap_or_default();
+                    outcomes.push(Outcome {
+                        name: seat.entrant.name.clone(),
+                        temperament: seat.entrant.temperament,
+                        stake: seat.entrant.stake,
+                        final_cash: worth,
+                        broke: v["broke"] == true,
+                        orders: orders[s],
+                        home: false,
+                    });
+                    continue;
+                }
                 let (paid_out, broke, tx) =
                     settle(market, &guest.player, seat.account.id()).await?;
                 events.push(Event::Settled {
@@ -552,6 +619,7 @@ pub async fn run_night<T: Network + 'static>(
                     final_cash: paid_out,
                     broke,
                     orders: orders[s],
+                    home: true,
                 });
                 let out = retry!(
                     guest
@@ -569,7 +637,7 @@ pub async fn run_night<T: Network + 'static>(
                     clone_deleted: !account_exists(worker, seat.account.id()).await?,
                 });
             }
-            if let Some(to) = sweep_to {
+            if let (Some(to), 0) = (sweep_to, stayed) {
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                 let bal = retry!(worker.view_account(guest.player.id()).await)?.balance;
                 let send = bal.saturating_sub(NearToken::from_millinear(50));
@@ -585,7 +653,11 @@ pub async fn run_night<T: Network + 'static>(
 
     let mut logs = Vec::new();
     let mut failures = Vec::new();
+    let mut k = 0;
     for (guest, result) in guests.into_iter().zip(done) {
+        let n = guest.seats.len();
+        let answer_key = key.outcomes[k..k + n].to_vec();
+        k += n;
         let (events, outcomes, after) = match result {
             Ok(r) => r,
             Err(e) => {
@@ -593,7 +665,6 @@ pub async fn run_night<T: Network + 'static>(
                 continue;
             }
         };
-        let entrants: Vec<Entrant> = guest.seats.iter().map(|s| s.entrant.clone()).collect();
         let mut all = guest.events;
         all.extend(events);
         logs.push(NightLog {
@@ -603,11 +674,14 @@ pub async fn run_night<T: Network + 'static>(
             player: guest.player.id().to_string(),
             rounds: rules::ROUNDS,
             goods: rules::GOODS.iter().map(|g| g.to_string()).collect(),
-            answer_key: rules::simulate(seed, &entrants),
+            answer_key,
             outcomes,
             events: all,
             player_balance_before: guest.balance_before,
             player_balance_after: after,
+            night,
+            dusk_stock,
+            stock: stocks.clone(),
         });
     }
     for f in &failures {

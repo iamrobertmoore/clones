@@ -81,3 +81,30 @@ test("gives up after the last try", async () => {
   );
   assert.strictEqual(calls, 4);
 });
+
+const { parsePlan, claimToken } = require("./enlist.js");
+
+test("a plan is one to three clones with a temperament, a stake and 1 to 3 nights", () => {
+  assert.deepStrictEqual(
+    parsePlan({ clones: [{ temperament: "greedy", stake: 1000, nights: 3 }] }),
+    [{ temperament: "greedy", stake: 1000, nights: 3 }],
+  );
+  assert.deepStrictEqual(parsePlan({ clones: [{ temperament: "loyal" }] }), [
+    { temperament: "loyal", stake: 500, nights: 1 },
+  ]);
+  assert.deepStrictEqual(parsePlan({ temperaments: ["cautious"] }), [
+    { temperament: "cautious", stake: 500, nights: 1 },
+  ]);
+  assert.strictEqual(parsePlan({ clones: [{ temperament: "greedy", stake: 5000 }] }), null);
+  assert.strictEqual(parsePlan({ clones: [{ temperament: "greedy", nights: 4 }] }), null);
+  assert.strictEqual(parsePlan({ clones: [null] }), null);
+  assert.strictEqual(parsePlan({ clones: [] }), null);
+});
+
+test("a claim token is tied to one guest and the house key", () => {
+  const env = { HOUSE_KEY: "ed25519:secret" };
+  const a = claimToken("ga.house.testnet", env);
+  assert.strictEqual(a, claimToken("ga.house.testnet", env));
+  assert.notStrictEqual(a, claimToken("gb.house.testnet", env));
+  assert.notStrictEqual(a, claimToken("ga.house.testnet", { HOUSE_KEY: "ed25519:other" }));
+});

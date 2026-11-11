@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
             clone_key.public_key(),
             AccessKey::function_call_access(
                 market.id(),
-                &["place_order"],
+                &["trade"],
                 Some(NearToken::from_millinear(250)),
             ),
         )
@@ -92,12 +92,20 @@ async fn main() -> anyhow::Result<()> {
     link("send clone into town (2 NEAR)", &out);
     out.into_result()?;
 
-    let out = clone
-        .call(market.id(), "place_order")
-        .args_json(json!({ "good": "salt", "side": "buy", "qty": 3, "price": 30 }))
+    let out = market
+        .call("open_night")
+        .args_json(json!({ "seed": "853", "night": 1 }))
         .transact()
         .await?;
-    link("clone places an order", &out);
+    link("keeper opens the night", &out);
+    out.into_result()?;
+
+    let out = clone
+        .call(market.id(), "trade")
+        .args_json(json!({ "round": 0, "orders": [{ "good": "salt", "side": "buy", "qty": 3, "price": 30 }] }))
+        .transact()
+        .await?;
+    link("clone trades", &out);
     out.into_result()?;
 
     match clone
@@ -107,6 +115,16 @@ async fn main() -> anyhow::Result<()> {
         Ok(_) => anyhow::bail!("the clone withdrew; the leash failed"),
         Err(e) => println!("clone tries to withdraw          REFUSED by the chain: {e:?}"),
     }
+
+    for round in 0..12u32 {
+        market
+            .call("advance_round")
+            .args_json(json!({ "round": round }))
+            .transact()
+            .await?
+            .into_result()?;
+    }
+    println!("keeper rang twelve hours: dawn");
 
     let out = player
         .call(market.id(), "settle")

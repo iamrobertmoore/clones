@@ -23,7 +23,7 @@ async fn town() -> anyhow::Result<Town> {
     let market = worker.dev_deploy(&market_wasm).await?;
     market
         .call("new")
-        .args_json(json!({ "seed": "853" }))
+        .args_json(json!({ "seed": "0" }))
         .transact()
         .await?
         .into_result()?;
@@ -41,7 +41,7 @@ async fn town() -> anyhow::Result<Town> {
     let clone_key = SecretKey::from_random(KeyType::ED25519);
     let leash_key = AccessKey::function_call_access(
         market.id(),
-        &["place_order"],
+        &["trade"],
         Some(NearToken::from_millinear(250)),
     );
     player
@@ -63,12 +63,33 @@ async fn town() -> anyhow::Result<Town> {
         .await?
         .into_result()?;
 
+    // The keeper (the market account) opens the first night; the clone can trade from now.
+    market
+        .call("open_night")
+        .args_json(json!({ "seed": "853", "night": 1 }))
+        .transact()
+        .await?
+        .into_result()?;
+
     Ok(Town {
         worker,
         market,
         player,
         clone,
     })
+}
+
+/// Ring the twelve hours: dawn, when clones can be settled.
+async fn dawn(t: &Town) -> anyhow::Result<()> {
+    for round in 0..12 {
+        t.market
+            .call("advance_round")
+            .args_json(json!({ "round": round }))
+            .transact()
+            .await?
+            .into_result()?;
+    }
+    Ok(())
 }
 
 #[tokio::test]
@@ -94,15 +115,15 @@ async fn the_clone_has_exactly_one_key_and_it_is_a_leash() -> anyhow::Result<()>
 #[tokio::test]
 async fn the_clone_trades_with_its_key() -> anyhow::Result<()> {
     let t = town().await?;
-    let id: u32 = t
+    let ids: Vec<u32> = t
         .clone
-        .call(t.market.id(), "place_order")
-        .args_json(json!({ "good": "salt", "side": "buy", "qty": 3, "price": 30 }))
+        .call(t.market.id(), "trade")
+        .args_json(json!({ "round": 0, "orders": [{ "good": "salt", "side": "buy", "qty": 3, "price": 30 }] }))
         .transact()
         .await?
         .into_result()?
         .json()?;
-    assert_eq!(id, 0);
+    assert_eq!(ids, vec![0]);
 
     let info: serde_json::Value = t
         .market
@@ -151,8 +172,8 @@ async fn the_chain_refuses_every_way_a_clone_could_move_money() -> anyhow::Resul
     // (Kept small so it fits the key's allowance; a big one is refused earlier, for allowance.)
     let smuggle = t
         .clone
-        .call(t.market.id(), "place_order")
-        .args_json(json!({ "good": "salt", "side": "buy", "qty": 1, "price": 30 }))
+        .call(t.market.id(), "trade")
+        .args_json(json!({ "round": 0, "orders": [{ "good": "salt", "side": "buy", "qty": 1, "price": 30 }] }))
         .deposit(NearToken::from_millinear(1))
         .transact()
         .await;
@@ -205,6 +226,7 @@ async fn a_stranger_cannot_merge_the_clone() -> anyhow::Result<()> {
 #[tokio::test]
 async fn settle_then_merge_brings_everything_home() -> anyhow::Result<()> {
     let t = town().await?;
+    dawn(&t).await?;
     let before = t.worker.view_account(t.player.id()).await?.balance;
 
     // Market pays the clone's 2 NEAR of cash out to the clone account.
@@ -245,6 +267,7 @@ async fn settle_then_merge_brings_everything_home() -> anyhow::Result<()> {
 #[tokio::test]
 async fn settling_after_the_clone_is_gone_still_pays_the_player() -> anyhow::Result<()> {
     let t = town().await?;
+    dawn(&t).await?;
     // Merge first: the clone account is deleted while its cash is still in the market.
     t.player
         .call(t.clone.id(), "merge")

@@ -3,7 +3,11 @@
 //! player and, as a function-call key for the market only, every guest clone.
 //!
 //!     CLONES_KEYS_DIR=/private/keys cargo run -p clones-replay --example testnet_house -- \
-//!         <funder account> <house name, e.g. clonestown.testnet> <NEAR to fund it with | replace-market>
+//!         <funder account> <house name, e.g. clonestown.testnet> <NEAR to fund it with | new-market>
+//!
+//! `new-market` keeps the house and deploys a fresh market as `<MARKET_NAME>.<house>` (default
+//! `crypt`), for when the market's stored state changes shape. NEAR refuses to delete an account
+//! holding a lot of state, so an old market is left where it is rather than deleted.
 
 use clones_replay::contracts;
 use near_workspaces::types::{KeyType, NearToken, SecretKey};
@@ -30,16 +34,10 @@ async fn main() -> anyhow::Result<()> {
     let house_id: AccountId = args[1].parse()?;
     let key_file = dir.join(format!("{house_id}.json"));
 
-    // `replace-market` instead of an amount: keep the house, delete and recreate its market
-    // (needed when the market's stored state changes shape).
-    let house = if args[2] == "replace-market" {
+    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "crypt".into());
+    let house = if args[2] == "new-market" {
         let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&key_file)?)?;
         let key: SecretKey = v["private_key"].as_str().unwrap_or_default().parse()?;
-        let old: AccountId = format!("market.{house_id}").parse()?;
-        let out = Account::from_secret_key(old.clone(), key.clone(), &worker)
-            .delete_account(&house_id)
-            .await?;
-        println!("deleted {old}: {}", out.is_success());
         Account::from_secret_key(house_id.clone(), key, &worker)
     } else {
         let fund = NearToken::from_millinear((args[2].parse::<f64>()? * 1000.0) as u128);
@@ -67,8 +65,8 @@ async fn main() -> anyhow::Result<()> {
 
     let (market_wasm, _) = contracts().await?;
     let market = house
-        .create_subaccount("market")
-        .initial_balance(NearToken::from_near(3))
+        .create_subaccount(&market_name)
+        .initial_balance(NearToken::from_near(5))
         .keys(key)
         .transact()
         .await?

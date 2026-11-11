@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clones: the hosted town</title>
-<meta name="description" content="Send up to three clones of yourself into the Clones market town tonight. Testnet, no login: each clone's only key can trade, never withdraw.">
+<meta name="description" content="Send up to three clones of yourself into the Clones market town, then ring the bell and watch the night. Testnet, no login: each clone's only key can trade, never withdraw.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Grenze+Gotisch:wght@500;700&family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 <body>
 <header class="top">
   <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
-  <p class="tag">The hosted town. Send up to three copies of yourself in tonight; the night is played around 02:00 UTC and they merge back into you at dawn.</p>
+  <p class="tag">The hosted town. Send up to three copies of yourself in, then ring the bell and watch them trade a whole night in about a minute. Leave them and the bell rings by itself around 02:00 UTC.</p>
   <a class="btn ghost town-nav" href="index.html">Watch a recorded night</a>
 </header>
 
@@ -39,16 +39,16 @@
         <div class="counter" id="counter">
           <span class="candle c1" aria-hidden="true"></span><span class="candle c2" aria-hidden="true"></span>
           <span class="merchant-label">the merchant</span>
-          <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener">market.clonestown.testnet</a>
+          <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener">crypt.clonestown.testnet</a>
         </div>
       </div>
 
-      <!-- Enlist: pick a temperament per clone -->
+      <!-- Enlist: a temperament, a stake and a number of nights per clone -->
       <form class="clones enlist" id="enlistForm" hidden novalidate>
         <div class="slots" id="slots"></div>
         <div class="send-row">
-          <button class="btn big" id="sendBtn" type="submit">Send them in tonight</button>
-          <p class="send-note" id="sendNote">Each clone goes in with 0.5 testnet NEAR from the house. No login, no wallet.</p>
+          <button class="btn big" id="sendBtn" type="submit">Send them in</button>
+          <p class="send-note" id="sendNote">Testnet NEAR from the house. No login, no wallet.</p>
         </div>
       </form>
 
@@ -69,7 +69,22 @@
         </div>
       </div>
 
+      <div class="bell-row" id="bellRow" hidden>
+        <button class="btn big bell" id="bellBtn" type="button">Ring the bell: play the night now</button>
+        <p class="send-note" id="bellNote">Every clone in town trades twelve hours, about a minute. Anyone can ring it.</p>
+      </div>
+
       <svg class="leashes" id="leashes" aria-hidden="true"></svg>
+
+      <div class="refusal" id="refusal" role="alert" hidden>
+        <div class="seal">
+          <div class="seal-big">CHAIN REFUSED</div>
+          <div class="seal-err" id="refusalErr">RequiresFullAccess</div>
+          <p class="seal-why" id="refusalWhy"></p>
+          <p class="seal-raw" id="refusalRaw"></p>
+          <button class="btn small" id="refusalClose" type="button">Close</button>
+        </div>
+      </div>
 
       <div class="intro" id="progress" hidden>
         <div class="intro-card" role="status" aria-live="polite">
@@ -79,20 +94,6 @@
           <ol class="steps" id="steps"></ol>
         </div>
       </div>
-
-      <div class="intro" id="done" hidden>
-        <div class="intro-card">
-          <p class="intro-kicker">Done</p>
-          <h2>They are in town</h2>
-          <p>Your clones wait at the merchant's counter until the night is played around 02:00 UTC. This is your page; this browser remembers it, but keep the link to check from anywhere:</p>
-          <p class="guest-url"><a id="guestUrl" href="#"></a></p>
-          <div class="result-actions">
-            <a class="btn" id="goGuest" href="#">Go to my clones</a>
-            <button class="btn ghost" id="copyUrl" type="button">Copy link</button>
-          </div>
-          <details class="txs"><summary>Transactions</summary><ul id="txList"></ul></details>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -100,47 +101,69 @@
     <h2 id="statusTitle">Loading</h2>
     <p id="statusText">Reading the town from the chain...</p>
     <p class="status-error" id="statusError" hidden></p>
+    <ul class="crier" id="crier" hidden aria-label="What happened in town"></ul>
   </section>
 
   <section class="paper morning" id="morning" hidden aria-labelledby="morningTitle">
     <h2 id="morningTitle">Morning ledger</h2>
     <p class="sub" id="morningSub"></p>
+    <p class="result-key" id="verdict" hidden></p>
     <ul class="result-rows" id="morningRows"></ul>
     <p class="morning-total" id="morningTotal"></p>
     <div class="result-actions">
-      <a class="btn" id="watchBtn" href="#" aria-disabled="true">Watch your night</a>
+      <a class="btn" id="watchBtn" href="#" aria-disabled="true">Watch your night again</a>
       <span class="watch-note" id="watchNote"></span>
     </div>
+  </section>
+
+  <section class="paper townboard" id="townBoard" hidden aria-labelledby="boardTitle">
+    <h2 id="boardTitle">The town's last nights</h2>
+    <p class="sub">Every clone that came home recently, best return first. Read from the market contract (<code>get_recent</code>).</p>
+    <ol class="board-rows" id="boardRows"></ol>
+  </section>
+
+  <section class="paper claim" id="claimCard" hidden aria-labelledby="claimTitle">
+    <h2 id="claimTitle">Make this account yours</h2>
+    <p>Right now the house holds the only key to your guest account. Add a key that only you hold: your browser makes it, and the private key never leaves this page. After that, what your clones bring home stays with you instead of going back to the house, and you can remove the house key whenever you like.</p>
+    <div class="result-actions"><button class="btn" id="claimBtn" type="button">Add my own key</button><span class="watch-note" id="claimNote"></span></div>
+    <div class="claimed" id="claimed" hidden>
+      <p>Your full-access key for <b id="claimAcct"></b>. Save it now; it is shown only once and is not stored anywhere else.</p>
+      <p class="guest-url" id="claimSecret"></p>
+      <div class="result-actions"><a class="btn small" id="claimDownload" download>Download key file</a></div>
+    </div>
+  </section>
+
+  <section class="paper accounts-card" id="accountsCard" hidden aria-labelledby="accTitle">
+    <h2 id="accTitle">On the explorer, with their keys</h2>
+    <p class="sub">Each clone's keys, read live from the chain. One key each, and it can only call <code>trade</code> on the market.</p>
+    <ul class="acct-list" id="acctList"></ul>
   </section>
 
   <section class="paper temperaments" id="temperaments" aria-labelledby="tempTitle">
     <h2 id="tempTitle">The three temperaments</h2>
     <ul class="temp-list">
-      <li><b class="t-chip" style="--tint:#7aa2c8">cautious</b> buys what is cheap and takes profit at +10%.</li>
-      <li><b class="t-chip" style="--tint:#d9a53a">greedy</b> chases whatever rose the most, all in. Often goes broke.</li>
-      <li><b class="t-chip" style="--tint:#79a86a">loyal</b> trades only grain and salt and keeps your money safe.</li>
+      <li><b class="t-chip" style="--tint:#7aa2c8">cautious</b> buys what is cheap and takes profit at +10%. Over 5,000 simulated nights: never broke, about +10% a night.</li>
+      <li><b class="t-chip" style="--tint:#d9a53a">greedy</b> chases whatever rose the most, all in. Goes broke about one night in three.</li>
+      <li><b class="t-chip" style="--tint:#79a86a">loyal</b> trades only grain and salt and keeps your money safe. Never broke, roughly even.</li>
     </ul>
-  </section>
-
-  <section class="paper accounts-card" id="accountsCard" hidden aria-labelledby="accTitle">
-    <h2 id="accTitle">On the explorer</h2>
-    <ul class="acct-list" id="acctList"></ul>
+    <p class="sub">The merchant's stock is real and shared: when clones buy a good it runs short and the price rises for everyone, so three greedy clones chasing amber drive its price up against each other. Prices drift back toward usual between hours.</p>
   </section>
 
   <section class="paper how" aria-labelledby="howTitle">
     <h2 id="howTitle">How the hosted town works</h2>
     <ul>
-      <li><b>Testnet only.</b> No real money. The house pays each clone's 0.5 NEAR stake with testnet NEAR.</li>
+      <li><b>Testnet only.</b> No real money. The house pays each clone's stake with testnet NEAR.</li>
       <li><b>No login.</b> You get a guest account (<code>g&hellip;.clonestown.testnet</code>) and a link. This browser remembers it.</li>
-      <li><b>The leash is real.</b> Each clone is a NEAR sub-account of your guest whose only key is a function-call key for the market. It can trade. It can never withdraw: if it tries, the chain refuses the transaction.</li>
-      <li><b>Once a day.</b> Around 02:00 UTC the keeper plays the night: twelve hours of trading, then dawn. Each clone settles, then merges back into your guest account (a real DeleteAccount), and its result stays on chain.</li>
+      <li><b>The leash is real.</b> Each clone is a NEAR sub-account of your guest whose only key is a function-call key for the market's <code>trade</code>. It can trade. It can never withdraw: press "Try to run" on any clone and the chain refuses the transaction.</li>
+      <li><b>The bell.</b> Ring it and every clone in town trades a night of twelve hours, one transaction per clone per hour, cleared by the contract at the merchant's price. Nobody rings it? It rings by itself around 02:00 UTC.</li>
+      <li><b>Dawn.</b> A clone comes home after the nights you chose, or as soon as it goes broke: it settles, then merges back into your guest account (a real DeleteAccount). A clone with nights left keeps its goods and plays the next night.</li>
     </ul>
     <p class="again"><a id="enlistAgain" href="town.html?new=1">Send in a new set of clones</a></p>
   </section>
 </main>
 
 <footer class="foot">
-  <p>Everything on this page is read from <code>market.clonestown.testnet</code> through a public testnet RPC.</p>
+  <p>Everything on this page is read from <code>crypt.clonestown.testnet</code> through a public testnet RPC.</p>
 </footer>
 
 <script src="art.js"></script>

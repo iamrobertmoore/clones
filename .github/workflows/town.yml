@@ -1,15 +1,17 @@
 name: town
 
-# The hosted town's night: every day around 02:00 UTC the keeper plays one night for every clone in
-# town on NEAR testnet, merges them all home at dawn, and publishes each guest's night log to the
-# town-data branch (never main).
+# The hosted town's nightly bell: around 02:00 UTC it plays a night for every clone in town on NEAR
+# testnet (the same code the page's "Ring the bell" button runs, web/lib/night.js), brings home
+# every clone that is due, and publishes each guest's night log to the town-data branch (never
+# main). Anyone can also ring the bell from the page at any time.
 
 on:
   # Off the hour: GitHub queues top-of-the-hour schedules and has started this job hours late.
-  # The second run is a backstop; it finds nobody to play if the first one already merged everyone.
+  # The later runs are backstops; each finds nothing to do if an earlier one already rang.
   schedule:
     - cron: "37 1 * * *"
     - cron: "41 2 * * *"
+    - cron: "53 4 * * *"
   workflow_dispatch:
 
 permissions:
@@ -22,21 +24,22 @@ concurrency:
 jobs:
   night:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          toolchain: stable
-      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
-      - name: Build the keeper (no secrets in this step)
-        run: cargo build --release -p clones-replay --bin keeper
-      - name: Play tonight
+          node-version: 22
+      - name: Install (no secrets in this step)
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+      - name: Ring the bell
+        working-directory: web
         env:
           HOUSE_ACCOUNT: clonestown.testnet
           HOUSE_KEY: ${{ secrets.HOUSE_KEY }}
           OUT_DIR: ${{ runner.temp }}/nights
-        run: ./target/release/keeper
+        run: node scripts/ring.js
       - name: Publish the night logs
         env:
           NIGHTS: ${{ runner.temp }}/nights

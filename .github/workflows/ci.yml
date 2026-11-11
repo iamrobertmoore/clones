@@ -24,6 +24,8 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Lint
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: The JavaScript rules' golden nights are current with the Rust rules
+        run: cargo run -q -p clones-core --example golden | cmp - web/lib/golden.json
       - name: Unit and sandbox tests (sandbox runs real transactions on a local NEAR node)
         run: |
           set -o pipefail
@@ -40,8 +42,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - name: Sign-up function tests
+      - name: Web tests (sign-up, night runner, rules against the Rust golden nights)
         working-directory: web
         run: |
           npm ci --no-audit --no-fund
-          node --test 'api/*.test.js'
+          node --test 'api/*.test.js' 'lib/*.test.js'
