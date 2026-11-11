@@ -54,7 +54,7 @@ async function main() {
         (out.phase === "dawn" ? `, answer key matched: ${out.matched}` : ""),
     );
     if (out.phase === "dusk" || out.phase === "hour" || out.phase === "dawn") opened = true;
-    if (out.phase === "empty" || out.phase === "home" || out.phase === "waiting") break;
+    if (out.phase === "empty" || out.phase === "waiting" || (out.phase === "home" && !out.next)) break;
   }
   const logs = logsFrom(t, steps);
   const out = process.env.OUT_DIR;

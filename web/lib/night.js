@@ -485,8 +485,15 @@ async function ring(t, { start = false } = {}) {
   }
   // Dawn chores first: bring home every clone that is due. A clone that cannot come home now
   // (a busy RPC) never blocks the next night; it is tried again at the next ring.
-  const home = clones.some((c) => c.due_home) ? await bringHome(t, clones) : [];
-  const after = home.length ? await readState(t) : { town, clones };
+  if (clones.some((c) => c.due_home)) {
+    const home = await bringHome(t, clones);
+    const after = await readState(t);
+    const more = start && after.clones.some((c) => !isRival(t, c.player) && !c.due_home);
+    // With clones waiting, the caller rings again at once to open the night (`next`).
+    return { phase: "home", next: more ? "dusk" : null, night: town.night, round: town.round, events: home };
+  }
+  const after = { town, clones };
+  const home = [];
   if (start && after.clones.some((c) => !isRival(t, c.player) && !c.due_home)) {
     const arrived = await ensureRivals(t, after.town, after.clones);
     await openNight(t, after.town);
@@ -511,7 +518,6 @@ async function ring(t, { start = false } = {}) {
       ],
     };
   }
-  if (home.length) return { phase: "home", night: town.night, round: town.round, events: home };
   return {
     phase: clones.some((c) => !isRival(t, c.player)) ? "waiting" : "empty",
     night: town.night,

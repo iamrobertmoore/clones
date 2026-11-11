@@ -553,7 +553,8 @@
     $('refusal').hidden = true;
     $('crier').textContent = '';
     var opened = false, tries = 0;
-    setStatus('The bell is ringing', 'Every clone in town is trading. One hour every few seconds; each hour is one transaction per clone, cleared by the market contract.');
+    btn.textContent = 'Ringing...';
+    setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds, each one a transaction per clone, cleared by the market contract.');
     function step() {
       return post('/api/bell', { start: !opened }).then(function (out) {
         tries = 0;
@@ -563,7 +564,8 @@
         btn.textContent = out.phase === 'dawn' ? 'Dawn: bringing them home' : out.phase === 'home' ? 'Home' : 'Night ' + out.night + ', hour ' + Math.min(out.round + 1, 12) + ' of 12';
         return refreshMine().then(function () {
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
-          if (out.phase === 'home' || out.phase === 'waiting') return 'stop';
+          if (out.phase === 'waiting' || (out.phase === 'home' && !out.next)) return 'stop';
+          if (out.phase === 'home') setStatus('The regulars are coming', 'Last night\'s clones are home. The Widow, the Abbot and the Hound are sending clones in; the night opens in a few seconds.');
           return sleep(reduceMotion ? 200 : 900).then(step);
         });
       }).catch(function (err) {
