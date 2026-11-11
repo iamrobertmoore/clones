@@ -664,9 +664,7 @@
         if (nightOn()) {
           setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Ring the bell to carry it on and watch, or it finishes on its own.');
         } else if (!afterBell) {
-          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now and watch it, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time), in');
-          var cd = el('span', 'count'); cd.setAttribute('data-countdown', ''); $('statusText').appendChild(cd);
-          $('statusText').appendChild(document.createTextNode('. Press "Try to run" on any clone to watch the chain refuse its withdrawal.'));
+          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now and watch it, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). Press "Try to run" on any clone to watch the chain refuse its withdrawal.');
         } else {
           setStatus('Dawn', inTown.length + (inTown.length === 1 ? ' clone stays' : ' clones stay') + ' in town for the nights you chose, holding their goods. Ring again to play the next night.');
         }
