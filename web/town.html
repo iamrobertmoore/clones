@@ -119,7 +119,7 @@
 
   <section class="paper townboard" id="townBoard" hidden aria-labelledby="boardTitle">
     <h2 id="boardTitle">The town's standings</h2>
-    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (reads the omen), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the best return: the crown. Read from the market contract (<code>get_recent</code>, <code>crowned</code>).</p>
+    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (reads the omen), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the biggest profit (the crown), and its player holds the merchant's deed for the next night. Read from the market contract (<code>get_recent</code>, <code>crowned</code>).</p>
     <p class="sub" id="crownNote"></p>
     <p class="sub" id="deedNote"></p>
     <ol class="board-rows" id="standRows"></ol>
@@ -163,7 +163,7 @@
       <li><b>No login, and the account is yours.</b> You get a guest account (<code>g&hellip;.clonestown.testnet</code>). Your browser makes its only full-access key; the house's key on it can only whisper, retrain and settle at the market, so it can run your clones but never move your NEAR.</li>
       <li><b>The leash is real.</b> Each clone is a NEAR sub-account of your guest whose only key is a function-call key for the market's <code>trade</code>. It can trade. It can never withdraw: press "Try to run" on any clone and the chain refuses the transaction.</li>
       <li><b>The bell.</b> Ring it and every clone in town trades a night of twelve hours, one transaction per clone per hour, cleared by the contract at the merchant's price. Nobody rings it? It rings by itself around 02:00 UTC.</li>
-      <li><b>The crown.</b> Every fee the merchant takes during a night goes, at dawn, to the clone with the best return on its stake. The contract picks it. You compete with every other guest and the three regulars for it.</li>
+      <li><b>The crown.</b> Every fee the merchant takes during a night goes, at dawn, to the clone with the biggest profit. The contract picks it. You compete with every other guest and the three regulars for it.</li>
       <li><b>Whisper.</b> Three times a night, each of your clones will take one order from you for its next hour: hold, sell everything, or buy a good. The contract stores each whisper and allows three per clone per night; the dawn audit checks the clone obeyed.</li>
       <li><b>The deed.</b> Whoever's clone takes the crown holds the merchant's deed for the next night: a quarter of that night's fees is paid straight to their account at dawn, and the crown is the rest.</li>
       <li><b>Between nights.</b> Retrain a clone that is staying out, or bring it home early.</li>
