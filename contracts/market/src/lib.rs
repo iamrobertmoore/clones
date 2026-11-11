@@ -88,6 +88,50 @@ pub struct OrderIn {
     pub price: u64,
 }
 
+/// One order a player shouts to a clone for the next hour, once a night. The runner obeys it
+/// instead of the clone's temperament for that hour.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[serde(tag = "do", rename_all = "snake_case")]
+pub enum Whisper {
+    Hold,
+    SellAll,
+    Buy { good: String },
+}
+
+/// The mood of a night's market (see `clones_core::Regime`).
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Mood {
+    Blight,
+    Boom,
+    Slump,
+    Wild,
+}
+
+impl From<rules::Regime> for Mood {
+    fn from(r: rules::Regime) -> Self {
+        match r {
+            rules::Regime::Blight => Mood::Blight,
+            rules::Regime::Boom => Mood::Boom,
+            rules::Regime::Slump => Mood::Slump,
+            rules::Regime::Wild => Mood::Wild,
+        }
+    }
+}
+
+impl From<Mood> for rules::Regime {
+    fn from(m: Mood) -> Self {
+        match m {
+            Mood::Blight => rules::Regime::Blight,
+            Mood::Boom => rules::Regime::Boom,
+            Mood::Slump => rules::Regime::Slump,
+            Mood::Wild => rules::Regime::Wild,
+        }
+    }
+}
+
 #[near(serializers = [borsh])]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CloneRecord {
@@ -109,6 +153,9 @@ pub struct CloneRecord {
     pub dusk_cash: u64,
     pub dusk_stock: [u32; 5],
     pub dusk_orders: u32,
+    /// A whisper for (night, hour), and the last night it was whispered to.
+    pub whisper: Option<(u32, u32, Whisper)>,
+    pub whispered_night: u32,
 }
 
 impl CloneRecord {
@@ -144,6 +191,10 @@ pub struct CloneView {
     pub dusk_cash: u64,
     pub dusk_stock: [u32; 5],
     pub dusk_orders: u32,
+    /// The whisper waiting for it as (night, hour, order), if any, and whether its player has
+    /// whispered to it tonight.
+    pub whisper: Option<(u32, u32, Whisper)>,
+    pub whispered_tonight: bool,
 }
 
 #[near(serializers = [borsh, json])]
@@ -197,6 +248,16 @@ pub struct TownView {
     pub normal_stock: [i64; 5],
     /// The merchant's stock when the current night opened.
     pub dusk_stock: [i64; 5],
+    /// Tonight's mood and tomorrow's (posted a night ahead).
+    pub mood: Mood,
+    pub omen: Mood,
+    /// True when each hour's prices are drawn from the chain's block randomness as the hour is
+    /// rung, so nobody can know them in advance (the hosted town). False: prices follow the seed.
+    pub chain_dice: bool,
+    /// The usual price of each good at every hour rung so far tonight.
+    pub hours: Vec<[u64; 5]>,
+    /// The index of tonight's first order in `get_orders`.
+    pub dusk_order: u32,
     pub fees_collected: u64,
     pub clones_in_town: u32,
 }
@@ -214,6 +275,12 @@ pub struct Market {
     hour_stock: rules::Stock,
     dusk_stock: rules::Stock,
     prev_prices: [u64; 5],
+    usual: [u64; 5],
+    hours: Vec<[u64; 5]>,
+    mood: Mood,
+    omen: Mood,
+    chain_dice: bool,
+    dusk_order: u32,
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
@@ -221,6 +288,16 @@ pub struct Market {
     recent_count: u32,
     /// When set, only players under this account (`<guest>.<house>`) may send clones in.
     guests_under: Option<AccountId>,
+}
+
+/// A random u64 from the chain's block randomness, mixed with `salt`.
+fn random_u64(salt: u64) -> u64 {
+    let b = env::random_seed();
+    let mut x = 0u64;
+    for (i, byte) in b.iter().take(8).enumerate() {
+        x |= (*byte as u64) << (8 * i);
+    }
+    rules::mix(x ^ salt)
 }
 
 /// If `clone` is `clone-N.<player>` with N in 1..=3, return the player.
@@ -240,7 +317,13 @@ impl Market {
     /// sub-accounts may play (the hosted town: the house runs every guest's clones, so nobody can
     /// trade on foresight of the seeded prices).
     #[init]
-    pub fn new(seed: U64, guests_under: Option<AccountId>) -> Self {
+    pub fn new(seed: U64, guests_under: Option<AccountId>, chain_dice: Option<bool>) -> Self {
+        let chain_dice = chain_dice.unwrap_or(false);
+        let omen = if chain_dice {
+            rules::regime_of(random_u64(0))
+        } else {
+            rules::regime_of(seed.0)
+        };
         Self {
             keeper: env::predecessor_account_id(),
             seed: seed.0,
@@ -251,6 +334,12 @@ impl Market {
             hour_stock: rules::NORMAL_STOCK,
             dusk_stock: rules::NORMAL_STOCK,
             prev_prices: rules::BASE_PRICE,
+            usual: rules::BASE_PRICE,
+            hours: vec![rules::BASE_PRICE],
+            mood: omen.into(),
+            omen: omen.into(),
+            chain_dice,
+            dusk_order: 0,
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
@@ -268,7 +357,10 @@ impl Market {
     }
 
     fn book(&self) -> rules::Book {
-        rules::Book::at(self.seed, self.round, self.hour_stock)
+        rules::Book {
+            usual: self.usual,
+            stock: self.hour_stock,
+        }
     }
 
     fn asleep(&self) -> bool {
@@ -285,6 +377,17 @@ impl Market {
         self.night = night;
         self.seed = seed.0;
         self.round = 0;
+        if self.chain_dice {
+            // Tonight's mood is the omen posted last night; the chain draws tomorrow's.
+            self.mood = self.omen;
+            self.omen = rules::regime_of(random_u64(night as u64)).into();
+        } else {
+            self.mood = rules::regime_of(seed.0).into();
+            self.omen = self.mood;
+        }
+        self.usual = rules::BASE_PRICE;
+        self.hours = vec![self.usual];
+        self.dusk_order = self.orders.len();
         self.stock = rules::restock(&self.stock);
         self.hour_stock = self.stock;
         self.dusk_stock = self.stock;
@@ -304,6 +407,16 @@ impl Market {
         require!(round == self.round, "that hour has already been rung");
         self.prev_prices = self.book().board();
         self.round += 1;
+        let regime: rules::Regime = self.mood.into();
+        for g in 0..5 {
+            let h = if self.chain_dice {
+                random_u64(((self.round as u64) << 8) ^ g as u64)
+            } else {
+                rules::seeded_draw(self.seed, self.round, g)
+            };
+            self.usual[g] = rules::step_with(h, regime, self.round, g, self.usual[g]);
+        }
+        self.hours.push(self.usual);
         self.hour_stock = self.stock;
         if self.asleep() {
             let night = self.night;
@@ -375,6 +488,8 @@ impl Market {
                 dusk_cash: stake,
                 dusk_stock: [0; 5],
                 dusk_orders: 0,
+                whisper: None,
+                whispered_night: 0,
             },
         );
     }
@@ -438,6 +553,53 @@ impl Market {
             ids.push(id);
         }
         ids
+    }
+
+    /// Called by the player during a night: one order for the clone's next hour, once a night.
+    /// The night runner obeys it instead of the clone's temperament for that hour.
+    pub fn whisper(&mut self, clone_id: AccountId, whisper: Whisper) {
+        require!(!self.asleep(), "whisper while the night is on");
+        let (night, next) = (self.night, self.round + 1);
+        require!(
+            next < rules::ROUNDS,
+            "too late tonight: the last hour has begun"
+        );
+        if let Whisper::Buy { good } = &whisper {
+            require!(rules::good_index(good).is_some(), "unknown good");
+        }
+        let rec = self
+            .clones
+            .get_mut(&clone_id)
+            .unwrap_or_else(|| env::panic_str("no such clone in town"));
+        require!(
+            rec.player == env::predecessor_account_id(),
+            "only the player who sent this clone can whisper to it"
+        );
+        require!(
+            rec.from_night <= night,
+            "this clone starts trading next night"
+        );
+        require!(
+            rec.whispered_night != night,
+            "you have already whispered to this clone tonight"
+        );
+        rec.whisper = Some((night, next, whisper));
+        rec.whispered_night = night;
+    }
+
+    /// Called by the player between nights: change a clone's temperament for the nights it has
+    /// left.
+    pub fn retrain(&mut self, clone_id: AccountId, temperament: Temperament) {
+        require!(self.asleep(), "retrain between nights, not during one");
+        let rec = self
+            .clones
+            .get_mut(&clone_id)
+            .unwrap_or_else(|| env::panic_str("no such clone in town"));
+        require!(
+            rec.player == env::predecessor_account_id(),
+            "only the player who sent this clone can retrain it"
+        );
+        rec.temperament = temperament;
     }
 
     /// Called by the player between nights. Sells everything the clone holds to the merchant,
@@ -573,6 +735,8 @@ impl Market {
             dusk_cash: r.dusk_cash,
             dusk_stock: r.dusk_stock,
             dusk_orders: r.dusk_orders,
+            whisper: r.whisper.clone(),
+            whispered_tonight: r.whispered_night == self.night && self.night > 0,
         }
     }
 
@@ -591,6 +755,11 @@ impl Market {
             hour_stock: self.hour_stock,
             normal_stock: rules::NORMAL_STOCK,
             dusk_stock: self.dusk_stock,
+            mood: self.mood,
+            omen: self.omen,
+            chain_dice: self.chain_dice,
+            hours: self.hours.clone(),
+            dusk_order: self.dusk_order,
             fees_collected: self.fees,
             clones_in_town: self.clones.len(),
         }
@@ -653,7 +822,7 @@ mod tests {
     /// A town with alice's greedy clone in it and the first night open.
     fn town_with_clone() -> Market {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         as_caller("alice.testnet", NearToken::from_near(2));
         m.register_clone(acc("clone-1.alice.testnet"), Temperament::Greedy, None);
         open(&mut m);
@@ -676,7 +845,7 @@ mod tests {
     #[test]
     fn a_new_town_is_asleep_at_normal_stock() {
         as_caller("keeper.testnet", zero());
-        let m = Market::new(U64(SEED), None);
+        let m = Market::new(U64(SEED), None, None);
         let t = m.get_town();
         assert!(t.asleep);
         assert_eq!((t.night, t.stock), (0, rules::NORMAL_STOCK));
@@ -686,7 +855,7 @@ mod tests {
     #[should_panic(expected = "only takes guests of its house")]
     fn a_hosted_town_refuses_outsiders() {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")));
+        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")), None);
         as_caller("mallory.testnet", NearToken::from_near(1));
         m.register_clone(acc("clone-1.mallory.testnet"), Temperament::Greedy, None);
     }
@@ -694,7 +863,7 @@ mod tests {
     #[test]
     fn a_hosted_town_takes_its_guests() {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")));
+        let mut m = Market::new(U64(SEED), Some(acc("house.testnet")), None);
         as_caller("g1.house.testnet", NearToken::from_near(1));
         m.register_clone(acc("clone-1.g1.house.testnet"), Temperament::Greedy, None);
         assert_eq!(m.get_town().clones_in_town, 1);
@@ -723,7 +892,7 @@ mod tests {
     #[should_panic(expected = "not the next night")]
     fn nights_open_in_order() {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         m.open_night(U64(9), 2);
     }
 
@@ -781,6 +950,99 @@ mod tests {
     }
 
     #[test]
+    fn seeded_prices_follow_the_rules_hour_by_hour() {
+        let mut m = town_with_clone();
+        as_caller("keeper.testnet", zero());
+        for r in 0..rules::ROUNDS {
+            assert_eq!(m.get_town().hours[r as usize], rules::prices_at(SEED, r));
+            m.advance_round(r);
+        }
+        assert_eq!(m.get_town().hours.len() as u32, rules::ROUNDS + 1);
+        assert_eq!(m.get_town().mood, Mood::from(rules::regime_of(SEED)));
+    }
+
+    #[test]
+    fn a_hosted_town_draws_prices_and_tomorrows_omen_from_the_chain() {
+        as_caller("keeper.testnet", zero());
+        let mut m = Market::new(U64(SEED), None, Some(true));
+        let posted = m.get_town().omen;
+        as_caller("keeper.testnet", zero());
+        m.open_night(U64(1), 1);
+        assert_eq!(
+            m.get_town().mood,
+            posted,
+            "tonight's mood is the omen posted yesterday"
+        );
+        assert!(m.get_town().chain_dice);
+        m.advance_round(0);
+        let h = m.get_town().hours;
+        assert_eq!(h.len(), 2);
+        assert!(h[1].iter().all(|p| *p >= 1));
+    }
+
+    #[test]
+    fn a_whisper_is_for_the_next_hour_once_a_night() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
+        let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
+        assert_eq!(c.whisper, Some((1, 1, Whisper::SellAll)));
+        assert!(c.whispered_tonight);
+    }
+
+    #[test]
+    #[should_panic(expected = "already whispered to this clone tonight")]
+    fn only_one_whisper_a_night() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::Hold);
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the player who sent this clone can whisper")]
+    fn strangers_cannot_whisper() {
+        let mut m = town_with_clone();
+        as_caller("mallory.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::Hold);
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown good")]
+    fn a_whisper_names_a_real_good() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(
+            acc("clone-1.alice.testnet"),
+            Whisper::Buy {
+                good: "gold".into(),
+            },
+        );
+    }
+
+    #[test]
+    fn retrain_between_nights() {
+        let mut m = town_with_clone();
+        ring_to_dawn(&mut m);
+        as_caller("alice.testnet", zero());
+        m.retrain(acc("clone-1.alice.testnet"), Temperament::Loyal);
+        assert_eq!(
+            m.get_clone(acc("clone-1.alice.testnet"))
+                .unwrap()
+                .temperament,
+            Temperament::Loyal
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "between nights")]
+    fn no_retraining_mid_night() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.retrain(acc("clone-1.alice.testnet"), Temperament::Loyal);
+    }
+
+    #[test]
     fn player_of_accepts_only_the_three_clone_names() {
         assert_eq!(player_of("clone-1.alice.testnet"), Some("alice.testnet"));
         assert_eq!(player_of("clone-3.bob.near"), Some("bob.near"));
@@ -803,7 +1065,7 @@ mod tests {
     #[should_panic(expected = "under the caller's own account")]
     fn cannot_register_someone_elses_clone() {
         as_caller("mallory.testnet", NearToken::from_near(1));
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal, None);
     }
 
@@ -819,7 +1081,7 @@ mod tests {
     #[should_panic(expected = "at least 0.1 NEAR")]
     fn stake_has_a_floor() {
         as_caller("alice.testnet", NearToken::from_millinear(10));
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, None);
     }
 
@@ -827,7 +1089,7 @@ mod tests {
     #[should_panic(expected = "at most 2 NEAR")]
     fn stake_has_a_ceiling() {
         as_caller("alice.testnet", NearToken::from_near(3));
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, None);
     }
 
@@ -835,7 +1097,7 @@ mod tests {
     #[should_panic(expected = "1 to 3 nights")]
     fn nights_are_one_to_three() {
         as_caller("alice.testnet", NearToken::from_near(1));
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, Some(4));
     }
 
@@ -1017,7 +1279,7 @@ mod tests {
     #[test]
     fn the_town_board_keeps_the_last_forty() {
         as_caller("keeper.testnet", zero());
-        let mut m = Market::new(U64(SEED), None);
+        let mut m = Market::new(U64(SEED), None, None);
         for i in 0..45 {
             let player = format!("p{i}.testnet");
             as_caller(&player, NearToken::from_millinear(100 + i));

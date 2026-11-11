@@ -12,7 +12,7 @@ use serde::Serialize;
 use serde_json::json;
 
 /// The seed the README, the tests and the replay page use.
-pub const DEMO_SEED: u64 = 853;
+pub const DEMO_SEED: u64 = 606;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]

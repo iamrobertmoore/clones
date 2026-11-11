@@ -110,7 +110,7 @@
   }
   function load() {
     var q = new URLSearchParams(location.search).get('night');
-    var tries = safePath(q) ? [q] : ['data/night.json', 'data/night-853-sandbox.json'];
+    var tries = safePath(q) ? [q] : ['data/night.json', 'data/night-sandbox.json'];
     var i = 0, lastLoadError = null;
     function next() {
       if (i >= tries.length) return Promise.reject(lastLoadError || new Error('no night log found'));

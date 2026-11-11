@@ -77,6 +77,21 @@
 .seg input:checked + span { color: #050407; background: var(--bone); border-color: var(--bone); }
 .seg input:focus-visible + span { outline: 2px solid var(--frost); outline-offset: 1px; }
 
+/* The omen */
+.omen { position: absolute; top: 14px; right: 14px; z-index: 5; max-width: 270px; text-align: right; padding: 6px 10px 7px; background: rgba(5, 4, 7, .78); border: 1px solid #45404c; box-shadow: 0 0 0 1px #000; }
+.omen[hidden] { display: none; }
+.omen small { display: block; font-family: var(--goth); font-size: 13px; color: var(--ash); }
+.omen b { display: block; font-family: var(--frak); font-weight: 400; font-size: 26px; line-height: 1; color: var(--bone); text-shadow: 0 0 12px rgba(215, 33, 43, .45); }
+.omen span { display: block; font-size: 13.5px; color: var(--ash); line-height: 1.25; margin-top: 2px; }
+
+/* Whisper, retrain, bring home */
+.clone .acts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 6px; }
+.clone .acts select { font-family: var(--goth); font-size: 14px; color: var(--bone); background: #0d0c10; border: 1px solid #6a6472; padding: 2px 4px; max-width: 100%; }
+.clone .acts select:focus-visible { outline: 2px solid var(--frost); }
+.clone .acts .btn { font-size: 14px; padding: 2px 8px; }
+.clone .whisper-note { font-family: var(--mono); font-size: 11.5px; color: var(--frost); margin-top: 3px; }
+.bubble.whispered { border-color: var(--frost); box-shadow: 0 0 0 1px #000, 0 0 16px rgba(159, 182, 207, .45); }
+
 /* The bell */
 .bell-row { position: relative; z-index: 4; margin: 16px auto 0; max-width: 520px; text-align: center; }
 .bell-row[hidden] { display: none; }
@@ -132,6 +147,8 @@
   .seg-label { min-width: 0; font-size: 12px; }
   .seg label span { font-size: 11.5px; padding: 3px 0; }
   .btn.bell { font-size: 19px; }
+  .omen { position: static; max-width: none; text-align: left; margin: 8px 8px 0; }
+  .clone .acts select { font-size: 12px; }
   .clone .run { font-size: 12.5px; padding: 2px 6px; }
 }
 

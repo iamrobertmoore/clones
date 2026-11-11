@@ -72,7 +72,7 @@ async function enlist(plan, env = process.env) {
   const temperaments = plan.map((c) => c.temperament);
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `crypt.${house}`;
+  const market = env.MARKET_ACCOUNT || `ossuary.${house}`;
   const guest = `${guestName()}.${house}`;
   const clones = temperaments.map((_, i) => `clone-${i + 1}.${guest}`);
 

@@ -6,7 +6,7 @@
 //!         <funder account> <house name, e.g. clonestown.testnet> <NEAR to fund it with | new-market>
 //!
 //! `new-market` keeps the house and deploys a fresh market as `<MARKET_NAME>.<house>` (default
-//! `crypt`), for when the market's stored state changes shape. NEAR refuses to delete an account
+//! `ossuary`), for when the market's stored state changes shape. NEAR refuses to delete an account
 //! holding a lot of state, so an old market is left where it is rather than deleted.
 
 use clones_replay::contracts;
@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let house_id: AccountId = args[1].parse()?;
     let key_file = dir.join(format!("{house_id}.json"));
 
-    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "crypt".into());
+    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "ossuary".into());
     let house = if args[2] == "new-market" {
         let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&key_file)?)?;
         let key: SecretKey = v["private_key"].as_str().unwrap_or_default().parse()?;
@@ -76,7 +76,8 @@ async fn main() -> anyhow::Result<()> {
         .into_result()?;
     market
         .call("new")
-        .args_json(json!({ "seed": "0", "guests_under": house_id }))
+        // The hosted town draws every hour's prices and tomorrow's mood from block randomness.
+        .args_json(json!({ "seed": "0", "guests_under": house_id, "chain_dice": true }))
         .transact()
         .await?
         .into_result()?;

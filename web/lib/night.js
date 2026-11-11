@@ -25,7 +25,7 @@ const short = (id) => id.split(".")[0];
 async function openTown(env = process.env) {
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `crypt.${house}`;
+  const market = env.MARKET_ACCOUNT || `ossuary.${house}`;
   const keyStore = new keyStores.InMemoryKeyStore();
   const near = await connect({
     networkId: "testnet",
@@ -67,22 +67,26 @@ async function readState(t) {
 // Play hour `town.round`: every clone in tonight takes its turn, then the keeper rings the hour.
 async function playHour(t, town, clones) {
   const round = town.round;
-  const book = rules.Book.at(town.seed, round, town.hour_stock);
+  // The usual prices come from the chain (in the hosted town, drawn from block randomness as the
+  // hour was rung), never from the seed.
+  const book = new rules.Book(town.hours[round], town.hour_stock);
   const events = [{ kind: "hour", round, prices: town.prices, stock: town.hour_stock }];
   const playing = clones.filter((c) => c.from_night <= town.night);
   await Promise.all(
     playing.map(async (c) => {
       if (c.last_turn && c.last_turn[0] === town.night && c.last_turn[1] === round) return;
-      const d = rules.decide(c.temperament, {
+      const view = {
         round,
         book,
         prices: town.prices,
         prev: town.prev_prices,
         ledger: { cash: c.cash, stock: c.stock.slice() },
         stake: c.stake,
-      });
+      };
+      const whispered = whisperFor(c, town.night, round);
+      const d = whispered ? rules.obey(whispered, view) : rules.decide(c.temperament, view);
       const who = { clone: short(c.id), player: c.player };
-      events.push({ kind: "bubble", round, ...who, say: d.say });
+      events.push({ kind: "bubble", round, ...who, say: d.say, whispered: Boolean(whispered) });
       if (!d.intents.length) return;
       const orders = d.intents.map((i) => ({ good: rules.GOODS[i.good], side: i.side, qty: i.qty, price: i.limit }));
       try {
@@ -127,6 +131,86 @@ async function playHour(t, town, clones) {
   return events;
 }
 
+// The whisper a clone obeys in this hour, if its player sent one for it.
+function whisperFor(c, night, round) {
+  return c.whisper && c.whisper[0] === night && c.whisper[1] === round ? c.whisper[2] : null;
+}
+
+// All of tonight's orders, from the market's order book.
+async function ordersTonight(t, from) {
+  const out = [];
+  for (let at = from; ; at += 100) {
+    const page = await patient(() => t.view("get_orders", { from: at, limit: 100 }));
+    out.push(...page);
+    if (page.length < 100) return out;
+  }
+}
+
+// Audit a finished night from chain state alone: start from every clone's holdings and the
+// merchant's stock at dusk, replay every recorded order through the rules at the hour's recorded
+// prices, and check (a) each clone's turn is what its temperament, or its player's whisper, says
+// it should be, (b) every fill price is the merchant's quote, and (c) what each clone is worth at
+// dawn is what the chain says.
+function audit(town, clones, orders) {
+  const played = clones.filter((c) => c.from_night <= town.night);
+  const ledgers = new Map(played.map((c) => [c.id, { cash: c.dusk_cash, stock: c.dusk_stock.slice() }]));
+  const turns = new Map();
+  for (const o of orders) {
+    if (o.night !== town.night) continue;
+    const k = `${o.round}|${o.clone}`;
+    turns.set(k, [...(turns.get(k) || []), o]);
+  }
+  const problems = [];
+  const counted = new Map(played.map((c) => [c.id, 0]));
+  let stock = town.dusk_stock.slice();
+  let prev = new rules.Book(town.hours[0], stock).board();
+  for (let round = 0; round < rules.ROUNDS; round++) {
+    const book = new rules.Book(town.hours[round], stock);
+    const board = book.board();
+    const moved = stock.slice();
+    for (const c of played) {
+      const l = ledgers.get(c.id);
+      const view = { round, book, prices: board, prev, ledger: { cash: l.cash, stock: l.stock.slice() }, stake: c.stake };
+      const w = whisperFor(c, town.night, round);
+      const want = (w ? rules.obey(w, view) : rules.decide(c.temperament, view)).intents;
+      const got = turns.get(`${round}|${c.id}`) || [];
+      const same =
+        want.length === got.length &&
+        want.every((i, k) => rules.GOODS[i.good] === got[k].good && i.side === got[k].side && i.qty === got[k].qty);
+      if (!same) problems.push(`${short(c.id)} hour ${round}: expected ${JSON.stringify(want)}, chain has ${JSON.stringify(got)}`);
+      if (!got.length) continue;
+      const intents = got.map((o) => ({ good: rules.GOODS.indexOf(o.good), side: o.side, qty: o.qty, limit: o.price }));
+      try {
+        const fills = rules.applyTurn(l, moved, book, intents);
+        fills.forEach((f, k) => {
+          if (f.price !== got[k].price || f.fee !== got[k].fee) problems.push(`${short(c.id)} hour ${round}: price or fee differs`);
+        });
+        counted.set(c.id, counted.get(c.id) + got.length);
+      } catch (e) {
+        problems.push(`${short(c.id)} hour ${round}: ${e.message}`);
+      }
+    }
+    stock = moved;
+    prev = board;
+  }
+  const dawn = new rules.Book(town.hours[rules.ROUNDS], stock);
+  const verdict = played.map((c) => {
+    const w = rules.worth(ledgers.get(c.id), dawn);
+    const broke = rules.isBroke(w, c.stake);
+    const expected = {
+      final_cash: w,
+      broke,
+      home: broke || c.nights_played >= c.nights,
+      orders: counted.get(c.id),
+    };
+    const chain = { final_cash: c.worth, broke: c.broke, home: c.due_home, orders: c.orders_placed - c.dusk_orders };
+    const matched = JSON.stringify(expected) === JSON.stringify(chain);
+    if (!matched) problems.push(`${short(c.id)} at dawn: expected ${JSON.stringify(expected)}, chain has ${JSON.stringify(chain)}`);
+    return { clone: short(c.id), player: c.player, temperament: c.temperament, stake: c.stake, expected, chain, matched };
+  });
+  return { verdict, problems, orders: orders.filter((o) => o.night === town.night).length };
+}
+
 // After the last hour: check the night against the answer key, computed from chain state alone,
 // and let every broke clone try to run off with what is left on its account.
 async function dawnVerdict(t) {
@@ -138,37 +222,25 @@ async function dawnVerdict(t) {
   }
   if (!town.asleep) throw new Error("the town never reached dawn");
   const played = clones.filter((c) => c.from_night <= town.night);
-  const entrants = played.map((c) => ({
-    name: c.id,
-    temperament: c.temperament,
-    stake: c.stake,
-    nights: c.nights,
-    played: c.nights_played - 1,
-    carried: { cash: c.dusk_cash, stock: c.dusk_stock },
-  }));
-  const key = rules.simulateTown(town.seed, town.dusk_stock, entrants);
-  const verdict = played.map((c, i) => {
-    const expected = key.outcomes[i];
-    const chain = {
-      final_cash: c.worth,
-      broke: c.broke,
-      home: c.due_home,
-      orders: c.orders_placed - c.dusk_orders,
-    };
-    const matched =
-      chain.final_cash === expected.final_cash &&
-      chain.broke === expected.broke &&
-      chain.home === expected.home &&
-      chain.orders === expected.orders;
-    return { clone: short(c.id), player: c.player, temperament: c.temperament, stake: c.stake, expected, chain, matched };
-  });
+  const { verdict, problems, orders } = audit(town, clones, await ordersTonight(t, town.dusk_order));
+  if (problems.length) console.error("audit:", problems.slice(0, 10));
   const events = [{ kind: "hour", round: rules.ROUNDS, prices: town.prices, stock: town.hour_stock }];
   for (const c of played.filter((x) => x.broke)) {
     const who = { clone: short(c.id), player: c.player };
     events.push({ kind: "bubble", round: rules.ROUNDS, ...who, say: "I'm broke. I'll just take what's left on my account and run." });
     events.push({ kind: "withdraw_refused", ...who, error: await tryToRun(t, c.id, c.player) });
   }
-  return { events, verdict, matched: verdict.every((v) => v.matched), seed: town.seed, night: town.night };
+  return {
+    events,
+    verdict,
+    matched: problems.length === 0,
+    audited: orders,
+    problems: problems.slice(0, 10),
+    seed: town.seed,
+    night: town.night,
+    mood: town.mood,
+    omen: town.omen,
+  };
 }
 
 // A clone tries to send 0.01 NEAR from its own account to its player. Its only key is a
@@ -276,6 +348,10 @@ async function ring(t, { start = false } = {}) {
         events: events.concat(dawn.events),
         verdict: dawn.verdict,
         matched: dawn.matched,
+        audited: dawn.audited,
+        problems: dawn.problems,
+        mood: dawn.mood,
+        omen: dawn.omen,
       };
     }
     return { phase: "hour", night: town.night, seed: town.seed, round: town.round + 1, events };
@@ -290,10 +366,21 @@ async function ring(t, { start = false } = {}) {
       phase: "dusk",
       night: after.town.night,
       round: after.town.round,
-      events: [{ kind: "dusk", night: after.town.night, prices: after.town.prices, stock: after.town.hour_stock }],
+      mood: after.town.mood,
+      omen: after.town.omen,
+      events: [
+        {
+          kind: "dusk",
+          night: after.town.night,
+          mood: after.town.mood,
+          omen: after.town.omen,
+          prices: after.town.prices,
+          stock: after.town.hour_stock,
+        },
+      ],
     };
   }
   return { phase: clones.length ? "waiting" : "empty", night: town.night, round: town.round, events: [] };
 }
 
-module.exports = { openTown, ring, readState, tryToRun, patient, message };
+module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit };

@@ -1,8 +1,26 @@
 {
   "functions": {
-    "api/enlist.js": { "maxDuration": 60, "includeFiles": "api/leash.wasm" },
-    "api/bell.js": { "maxDuration": 120 },
-    "api/escape.js": { "maxDuration": 30 },
-    "api/claim.js": { "maxDuration": 30 }
+    "api/enlist.js": {
+      "maxDuration": 60,
+      "includeFiles": "api/leash.wasm"
+    },
+    "api/bell.js": {
+      "maxDuration": 120
+    },
+    "api/escape.js": {
+      "maxDuration": 30
+    },
+    "api/claim.js": {
+      "maxDuration": 30
+    },
+    "api/whisper.js": {
+      "maxDuration": 60
+    },
+    "api/retrain.js": {
+      "maxDuration": 60
+    },
+    "api/recall.js": {
+      "maxDuration": 60
+    }
   }
 }

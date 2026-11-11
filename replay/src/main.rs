@@ -1,6 +1,6 @@
 //! One night in 60 seconds, headless.
 //!
-//!     cargo run -p clones-replay                 # seed 853, writes replay.json
+//!     cargo run -p clones-replay                 # seed 606, writes replay.json
 //!     cargo run -p clones-replay -- 42 out.json  # another seed, another file
 
 use clones_replay::{run_sandbox_night, Event, DEMO_SEED};

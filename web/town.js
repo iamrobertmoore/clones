@@ -10,7 +10,7 @@
 
   var RPC = 'https://test.rpc.fastnear.com';
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'crypt.' + HOUSE;
+  var MARKET = 'ossuary.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';
@@ -23,6 +23,12 @@
   var ORDER = ['cautious', 'greedy', 'loyal'];
   var GOODS = ['grain', 'salt', 'wool', 'iron', 'amber'];
   var STAKES = [[250, '0.25'], [500, '0.5'], [1000, '1']];
+  var MOODS = {
+    blight: { name: 'Blight', why: 'The luxuries rot all night; staples hold. Favours loyal.' },
+    boom: { name: 'Boom', why: 'Prices climb all night. Favours greedy.' },
+    slump: { name: 'Slump', why: 'Prices sink, then rebound before dawn. Favours cautious.' },
+    wild: { name: 'Wild', why: 'Big swings both ways. Greedy clones go broke; favours cautious.' }
+  };
   var NIGHTS = [1, 2, 3];
 
   var $ = function (id) { return document.getElementById(id); };
@@ -162,9 +168,19 @@
     if (prices) lastPrices = prices.slice();
     if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'live from the market contract, milliNEAR / unit; bars: the merchant\'s stock';
   }
+  function showOmen() {
+    if (!town || !MOODS[town.omen]) return;
+    var on = !town.asleep;
+    var m = MOODS[on ? town.mood : town.omen];
+    $('omen').hidden = false;
+    $('omenWhen').textContent = on ? 'tonight\'s mood (tomorrow: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the next night\'s omen';
+    $('omenMood').textContent = m.name;
+    $('omenWhy').textContent = m.why;
+  }
   function loadTown() {
     return view('get_town', {}).then(function (t) {
       town = t;
+      showOmen();
       if (!lastPrices) lastPrices = t.prev_prices;
       buildBoard(t.prices, t.stock);
       tickClock();
@@ -274,7 +290,7 @@
       $('progress').hidden = true;
       if (!validGuest(res.guest)) throw new Error('The town answered with an unexpected guest id.');
       store(STORE_KEY, res.guest);
-      if (res.claim) store('clones.claim.' + res.guest, res.claim);
+      if (res.claim) { store('clones.claim.' + res.guest, res.claim); store('clones.token.' + res.guest, res.claim); }
       store('clones.txs.' + res.guest, JSON.stringify(res.txs || []));
       location.href = 'town.html?g=' + encodeURIComponent(res.guest) + '&fresh=1';
     }).catch(function (err) {
@@ -340,6 +356,7 @@
       var carry = el('div', 'carry'); purse.appendChild(carry);
       var worth = el('div', 'worth'); purse.appendChild(worth);
       purse.appendChild(acctLink(c.id, 'acct'));
+      if (s) purse.appendChild(actsFor(c));
       if (s) {
         var run = el('button', 'btn small run', 'Try to run');
         run.type = 'button';
@@ -356,6 +373,53 @@
     clonesNow = list;
     drawLeashes();
   }
+  function token() { return stored('clones.token.' + guest) || stored('clones.claim.' + guest); }
+  function actsFor(c) {
+    var box = el('div', 'acts'), s = c.state, short = c.id.split('.')[0];
+    if (!token()) return box;
+    var during = town && !town.asleep;
+    if (during) {
+      if (s.whispered_tonight) {
+        box.appendChild(el('div', 'whisper-note', 'whispered tonight'));
+        return box;
+      }
+      var sel = el('select'); sel.setAttribute('aria-label', 'Whisper to ' + short);
+      [['', 'whisper...'], ['hold', 'hold this hour'], ['sell_all', 'sell everything']].concat(GOODS.map(function (g) { return ['buy:' + g, 'buy ' + g]; }))
+        .forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
+      sel.addEventListener('change', function () {
+        if (!sel.value) return;
+        var parts = sel.value.split(':'), w = parts[0] === 'buy' ? { do: 'buy', good: parts[1] } : { do: parts[0] };
+        sel.disabled = true;
+        post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
+          cry('You whispered to ' + short + ': ' + sel.options[sel.selectedIndex].text + '. It obeys in the next hour.', 'order-row');
+          box.textContent = ''; box.appendChild(el('div', 'whisper-note', 'whisper sent: ' + sel.options[sel.selectedIndex].text));
+        }).catch(function (err) { sel.disabled = false; cry(short + ': ' + err.message, 'warn'); });
+      });
+      box.appendChild(sel);
+    } else if (s.from_night <= (town ? town.night : 0) && !s.due_home) {
+      var rt = el('select'); rt.setAttribute('aria-label', 'Retrain ' + short);
+      [['', 'retrain...']].concat(ORDER.filter(function (t) { return t !== s.temperament; }).map(function (t) { return [t, 'make it ' + t]; }))
+        .forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; rt.appendChild(op); });
+      rt.addEventListener('change', function () {
+        if (!rt.value) return;
+        rt.disabled = true;
+        post('/api/retrain', { guest: guest, token: token(), clone: c.id, temperament: rt.value }).then(function () {
+          cry(short + ' is ' + rt.value + ' from the next night.', 'order-row'); loadGuest(true);
+        }).catch(function (err) { rt.disabled = false; cry(short + ': ' + err.message, 'warn'); });
+      });
+      box.appendChild(rt);
+      var home = el('button', 'btn small', 'Bring home now'); home.type = 'button';
+      home.addEventListener('click', function () {
+        home.disabled = true; home.textContent = 'Coming home...';
+        post('/api/recall', { guest: guest, token: token(), clone: c.id }).then(function (res) {
+          (res.events || []).forEach(function (e) { var line = describe(e); if (line) cry(line); });
+          loadGuest(true);
+        }).catch(function (err) { home.disabled = false; home.textContent = 'Bring home now'; cry(short + ': ' + err.message, 'warn'); });
+      });
+      box.appendChild(home);
+    }
+    return box;
+  }
   function paintPurse(short, s, r) {
     var u = units[short]; if (!u) return;
     u.cash.textContent = s ? near(s.cash) : r ? near(r.paid_out) : '-';
@@ -371,11 +435,12 @@
     }
     u.root.classList.toggle('broke', !!(s && s.broke));
   }
-  function say(short, text, alarm) {
+  function say(short, text, alarm, whispered) {
     var u = units[short]; if (!u) return;
     u.bub.textContent = text;
     u.bub.classList.add('on');
     u.bub.classList.toggle('alarm', !!alarm);
+    u.bub.classList.toggle('whispered', !!whispered);
   }
   function centerIn(rect, sr) { return { x: rect.left + rect.width / 2 - sr.left, y: rect.top + rect.height / 2 - sr.top }; }
   function drawLeashes() {
@@ -446,12 +511,17 @@
     var others = out.events.filter(function (e) { return e.player && e.player !== guest && e.kind === 'order'; }).length;
     out.events.forEach(function (e) {
       if (e.kind === 'hour' || e.kind === 'dusk') {
-        if (town) { town.round = e.round != null ? e.round : 0; town.asleep = e.round >= town.rounds; if (out.night) town.night = out.night; }
+        if (town) {
+          town.round = e.round != null ? e.round : 0; town.asleep = e.round >= town.rounds; if (out.night) town.night = out.night;
+          if (e.mood) { town.mood = e.mood; town.omen = e.omen; }
+          showOmen();
+        }
         buildBoard(e.prices, e.stock);
+        if (e.kind === 'dusk' && MOODS[e.mood]) cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why);
       }
     });
     mine.forEach(function (e) {
-      if (e.kind === 'bubble' && units[e.clone]) say(e.clone, e.say, /broke/.test(e.say));
+      if (e.kind === 'bubble' && units[e.clone]) say(e.clone, e.say, /broke/.test(e.say), e.whispered);
       var line = describe(e);
       if (line) cry(line, e.kind === 'withdraw_refused' ? 'refused-row' : e.kind === 'order' ? 'order-row' : '');
       if (e.kind === 'withdraw_refused') showRefusal(e.clone, e.error);
@@ -462,9 +532,9 @@
       $('verdict').hidden = false;
       $('verdict').className = 'result-key ' + (out.matched ? 'yes' : 'no');
       $('verdict').textContent = out.matched
-        ? 'Answer key matched: the chain paid every clone exactly what the rules computed from chain state alone.'
-        : 'Answer key mismatch: the chain and the rules disagree. Details in the console.';
-      if (!out.matched) console.warn('answer key', out.verdict);
+        ? 'Audit passed: ' + (out.audited || 0) + ' orders replayed from chain state. Every clone did what its temperament or your whisper said, and every price, fee and payout is what the rules say.'
+        : 'Audit failed: the chain and the rules disagree. Details in the console.';
+      if (!out.matched) console.warn('audit', out.problems, out.verdict);
     }
     tickClock();
   }
@@ -482,6 +552,7 @@
         tries = 0;
         if (out.phase === 'dusk' || out.phase === 'hour' || out.phase === 'dawn') opened = true;
         handleStep(out);
+        if (out.phase === 'dusk') loadGuest(true);
         btn.textContent = out.phase === 'dawn' ? 'Dawn: bringing them home' : out.phase === 'home' ? 'Home' : 'Night ' + out.night + ', hour ' + Math.min(out.round + 1, 12) + ' of 12';
         return refreshMine().then(function () {
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
@@ -661,7 +732,9 @@
       $('claimCard').hidden = !(stored('clones.claim.' + guest) && window.crypto && crypto.subtle);
 
       if (inTown.length) {
-        if (nightOn()) {
+        if (ringing) {
+          setStatus('The bell is ringing', 'Every clone in town is trading. Whisper to a clone with the box under its purse: it obeys in the next hour, once a night.');
+        } else if (nightOn()) {
           setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Ring the bell to carry it on and watch, or it finishes on its own.');
         } else if (!afterBell) {
           setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now and watch it, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). Press "Try to run" on any clone to watch the chain refuse its withdrawal.');

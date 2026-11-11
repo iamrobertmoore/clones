@@ -62,30 +62,96 @@ pub fn mix(mut z: u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// One hour's move for one good: a shock between -20% and +20% in whole percent (amber twice as
-/// hard), plus a pull back toward the usual price of a fifth of the gap. Prices wander and return,
-/// so buying cheap and selling dear pays over a night and chasing a rise usually does not.
-fn step(seed: u64, round: u32, good: usize, prev: u64) -> u64 {
-    let h = mix(seed ^ ((round as u64) << 8) ^ good as u64);
-    let mut pct = (h % 41) as i64 - 20;
+/// The mood of a night's market. Each favours a different temperament, and tomorrow's mood is
+/// posted a night ahead, so choosing who to send is a real decision.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Regime {
+    /// The luxuries (wool, iron, amber) rot all night while the staples hold: only trading grain
+    /// and salt pays (loyal).
+    Blight,
+    /// Prices climb all night: chasing the riser pays (greedy).
+    Boom,
+    /// Prices sink, then rebound before dawn: buying cheap and selling the recovery pays
+    /// (cautious).
+    Slump,
+    /// Big swings both ways that drift back.
+    Wild,
+}
+
+pub const REGIMES: [Regime; 4] = [Regime::Blight, Regime::Boom, Regime::Slump, Regime::Wild];
+
+/// The mood a number draws: in seeded play, from the seed; in the hosted town, from the chain's
+/// block randomness.
+pub fn regime_of(x: u64) -> Regime {
+    REGIMES[(mix(x ^ 0x6F6D_656E) % 4) as usize]
+}
+
+impl Regime {
+    /// (size of the hourly shock in %, the mood's push in %, pull back toward usual in % of the
+    /// gap) for good `good` in hour `round`.
+    pub fn shape(self, round: u32, good: usize) -> (i64, i64, i64) {
+        match self {
+            Regime::Blight if good < 2 => (BLIGHT_AMP, BLIGHT_STAPLE_PUSH, BLIGHT_PULL),
+            Regime::Blight => (BLIGHT_AMP, -BLIGHT_ROT, 0),
+            Regime::Boom => (BOOM_AMP, BOOM_PUSH, BOOM_PULL),
+            Regime::Slump => (
+                SLUMP_AMP,
+                if round <= SLUMP_TURN {
+                    -SLUMP_DOWN
+                } else {
+                    SLUMP_UP
+                },
+                SLUMP_PULL,
+            ),
+            Regime::Wild => (WILD_AMP, 0, WILD_PULL),
+        }
+    }
+}
+
+pub const BLIGHT_AMP: i64 = 8;
+pub const BLIGHT_STAPLE_PUSH: i64 = 2;
+pub const BLIGHT_PULL: i64 = 40;
+pub const BLIGHT_ROT: i64 = 5;
+pub const BOOM_AMP: i64 = 14;
+pub const BOOM_PUSH: i64 = 6;
+pub const BOOM_PULL: i64 = 0;
+pub const SLUMP_AMP: i64 = 12;
+pub const SLUMP_DOWN: i64 = 5;
+pub const SLUMP_UP: i64 = 12;
+pub const SLUMP_TURN: u32 = 6;
+pub const SLUMP_PULL: i64 = 0;
+pub const WILD_AMP: i64 = 20;
+pub const WILD_PULL: i64 = 25;
+
+/// One hour's move for one good, from a random draw `h`: a shock of up to the mood's size (amber
+/// twice as hard), the mood's push, and a pull back toward the usual price.
+pub fn step_with(h: u64, regime: Regime, round: u32, good: usize, prev: u64) -> u64 {
+    let (amp, push, pull) = regime.shape(round, good);
+    let mut pct = (h % (2 * amp as u64 + 1)) as i64 - amp;
     if good == 4 {
         pct *= 2;
     }
+    pct += push;
     let base = BASE_PRICE[good] as i64;
-    pct += (base - prev as i64) * REVERSION_PCT / base;
+    pct += (base - prev as i64) * pull / base;
     let next = prev as i64 * (100 + pct) / 100;
     next.max(1) as u64
 }
 
-/// How hard a price is pulled back toward usual each hour, in percent of the gap.
-pub const REVERSION_PCT: i64 = 25;
+/// The random draw for one good in one hour of a seeded night.
+pub fn seeded_draw(seed: u64, round: u32, good: usize) -> u64 {
+    mix(seed ^ ((round as u64) << 8) ^ good as u64)
+}
 
-/// The usual price of each good at a given hour, before the merchant's stock counts.
+/// The usual price of each good at a given hour of a seeded night (its mood comes from the seed),
+/// before the merchant's stock counts.
 pub fn prices_at(seed: u64, round: u32) -> [u64; 5] {
+    let regime = regime_of(seed);
     let mut p = BASE_PRICE;
     for r in 1..=round {
         for (g, price) in p.iter_mut().enumerate() {
-            *price = step(seed, r, g, *price);
+            *price = step_with(seeded_draw(seed, r, g), regime, r, g, *price);
         }
     }
     p
@@ -326,30 +392,44 @@ pub fn decide(t: Temperament, v: &View) -> Decision {
     d
 }
 
-/// Chases whatever rose most this hour, with everything it has.
+/// Chases whatever rose most this hour, with everything it has. Only jumps ship when something
+/// else is rising at least `GREEDY_SWITCH` points faster than what it holds.
 fn greedy(v: &View) -> Decision {
     let best = (0..5).max_by_key(|g| (change_pct(v, *g), *g)).unwrap();
+    let holding = (0..5).find(|g| v.ledger.stock[*g] > 0);
+    if let Some(h) = holding {
+        if h != best && change_pct(v, best) - change_pct(v, h) < GREEDY_SWITCH {
+            return Decision {
+                intents: Vec::new(),
+                say: format!("{} will do. Holding.", GOODS[h]),
+            };
+        }
+    }
+    let target = best;
     let mut intents: Vec<Intent> = (0..5)
-        .filter(|g| *g != best && v.ledger.stock[*g] > 0)
+        .filter(|g| *g != target && v.ledger.stock[*g] > 0)
         .map(|g| sell_all(v, g))
         .collect();
     let cash = v.ledger.cash + intents.iter().map(proceeds).sum::<u64>();
-    let qty = affordable(cash, &v.book, best);
-    let up = change_pct(v, best);
+    let qty = affordable(cash, &v.book, target);
+    let up = change_pct(v, target);
     let say = if qty > 0 {
-        intents.push(buy(v, best, qty));
+        intents.push(buy(v, target, qty));
         if up > 0 {
-            format!("{} is up {}%. Everything in.", GOODS[best], up)
+            format!("{} is up {}%. Everything in.", GOODS[target], up)
         } else {
-            format!("Nothing's rising, so {} it is. All of it.", GOODS[best])
+            format!("Nothing's rising, so {} it is. All of it.", GOODS[target])
         }
-    } else if v.ledger.stock[best] > 0 {
-        format!("All in on {} already. Hold.", GOODS[best])
+    } else if v.ledger.stock[target] > 0 {
+        format!("All in on {} already. Hold.", GOODS[target])
     } else {
         "Out of cash. Need a way out of this town.".to_string()
     };
     Decision { intents, say }
 }
+
+/// How much faster another good must be rising before greedy switches, in points.
+pub const GREEDY_SWITCH: i64 = 12;
 
 /// Buys only what is cheap against its usual price, a quarter of its cash at a time, and takes
 /// profit at +10%.

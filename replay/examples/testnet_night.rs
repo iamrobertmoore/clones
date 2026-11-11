@@ -2,7 +2,7 @@
 //! Testnet NEAR only.
 //!
 //!     CLONES_KEYS_DIR=/private/keys TOWN_FUNDER=a.testnet PLAYER_FUNDER=b.testnet \
-//!         cargo run -p clones-replay --example testnet_night -- 853 night.json
+//!         cargo run -p clones-replay --example testnet_night -- 606 night.json
 //!
 //! The funders are existing testnet accounts whose keys are in CLONES_KEYS_DIR as
 //! `<account>.json` ({"account_id", "private_key"}). A fresh town and a fresh player are created

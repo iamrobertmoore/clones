@@ -1,7 +1,7 @@
 {
-  "seed": 853,
+  "seed": 606,
   "network": "sandbox",
-  "market": "dev-20261111103826-18605088454919.test.near",
+  "market": "dev-20261111110633-57601416484408.test.near",
   "player": "player.test.near",
   "rounds": 12,
   "goods": [
@@ -16,27 +16,27 @@
       "name": "clone-1",
       "temperament": "cautious",
       "stake": 2000,
-      "final_cash": 2595,
+      "final_cash": 2613,
       "broke": false,
-      "orders": 8,
+      "orders": 9,
       "home": true
     },
     {
       "name": "clone-2",
       "temperament": "greedy",
       "stake": 2000,
-      "final_cash": 438,
+      "final_cash": 484,
       "broke": true,
-      "orders": 19,
+      "orders": 15,
       "home": true
     },
     {
       "name": "clone-3",
       "temperament": "loyal",
       "stake": 2000,
-      "final_cash": 2030,
+      "final_cash": 2053,
       "broke": false,
-      "orders": 7,
+      "orders": 4,
       "home": true
     }
   ],
@@ -45,27 +45,27 @@
       "name": "clone-1",
       "temperament": "cautious",
       "stake": 2000,
-      "final_cash": 2595,
+      "final_cash": 2613,
       "broke": false,
-      "orders": 8,
+      "orders": 9,
       "home": true
     },
     {
       "name": "clone-2",
       "temperament": "greedy",
       "stake": 2000,
-      "final_cash": 438,
+      "final_cash": 484,
       "broke": true,
-      "orders": 19,
+      "orders": 15,
       "home": true
     },
     {
       "name": "clone-3",
       "temperament": "loyal",
       "stake": 2000,
-      "final_cash": 2030,
+      "final_cash": 2053,
       "broke": false,
-      "orders": 7,
+      "orders": 4,
       "home": true
     }
   ],
@@ -74,37 +74,37 @@
       "kind": "clone_created",
       "clone": "clone-1",
       "temperament": "cautious",
-      "tx": "onwpCr7cWCAR3ZDxsbEuMzZnfCUoYjHGqnigd9Kpeqy"
+      "tx": "B35RbzBL6q4Y7Fk3gYi8bBj1E64a6dzjEug9FpG6p9fy"
     },
     {
       "kind": "sent_in",
       "clone": "clone-1",
       "stake": 2000,
-      "tx": "BuzMopNLmi5M1W8B4wBQ8U2EQo11qKtt8UDbQPaqzDAk"
+      "tx": "5JCSQj8Yz6VE6Dez8CcMZBBBHLnsi2iFTgsKJAJjQud6"
     },
     {
       "kind": "clone_created",
       "clone": "clone-2",
       "temperament": "greedy",
-      "tx": "FTUhfAagK2AuxMvKQAguDQgCrNoFv3VVUDoJoxes13k9"
+      "tx": "DLcSSWPFv3aMyqYL1xBAbkCUgDLKKULMfUmz5hF9L4gu"
     },
     {
       "kind": "sent_in",
       "clone": "clone-2",
       "stake": 2000,
-      "tx": "iKQgzigd8iHbvm1Jz6AwZJnGkyvn3tMh1hiyxGuztvQ"
+      "tx": "4ugT5bULE5nMdPLsBmDfdoKXLJSk7wyrniV9WRaHYWDz"
     },
     {
       "kind": "clone_created",
       "clone": "clone-3",
       "temperament": "loyal",
-      "tx": "A31KSwXWCAoyNsvudcbbwJc4AbB9S6SvV7Ut4CDPkiQV"
+      "tx": "7UpJuAjGjtwWD9MXt1RpN35cUNvBupEGam56ok2jntqp"
     },
     {
       "kind": "sent_in",
       "clone": "clone-3",
       "stake": 2000,
-      "tx": "5oGmvsTqPt6GT7BHDdj6s4tvVGE19oswYaon52AWL1v7"
+      "tx": "4Letfo6YzfDsRpvnCKG7LuXp4EPu63MYQXDX8pyrzH3c"
     },
     {
       "kind": "hour",
@@ -137,7 +137,7 @@
       "side": "buy",
       "qty": 15,
       "price": 128,
-      "tx": "6nS7ucFBBPJQsdEuTdjiocin5tHbj3kA6dbGu1TrRuqP"
+      "tx": "2pWfLh4uas93mRAYJt7MvLySpoEkMLETe8p9GcgmtYtg"
     },
     {
       "kind": "bubble",
@@ -150,594 +150,514 @@
       "round": 1,
       "prices": [
         19,
-        32,
-        50,
-        84,
-        86
-      ]
-    },
-    {
-      "kind": "bubble",
-      "round": 1,
-      "clone": "clone-1",
-      "say": "Amber is cheap, buying a little."
-    },
-    {
-      "kind": "order",
-      "round": 1,
-      "clone": "clone-1",
-      "good": "amber",
-      "side": "buy",
-      "qty": 5,
-      "price": 88,
-      "tx": "AkEogmfUCv2mzhFqSeiVstDUCkakwFXCTwdymc95rmbK"
-    },
-    {
-      "kind": "bubble",
-      "round": 1,
-      "clone": "clone-2",
-      "say": "Salt is up 6%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 1,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "sell",
-      "qty": 15,
-      "price": 81,
-      "tx": "7WLNonug3ZJAR5D7TBP3XzbmK6uPHMrgVLifujqxBTFs"
-    },
-    {
-      "kind": "order",
-      "round": 1,
-      "clone": "clone-2",
-      "good": "salt",
-      "side": "buy",
-      "qty": 36,
-      "price": 33,
-      "tx": "7WLNonug3ZJAR5D7TBP3XzbmK6uPHMrgVLifujqxBTFs"
-    },
-    {
-      "kind": "bubble",
-      "round": 1,
-      "clone": "clone-3",
-      "say": "Grain is below usual, a small buy."
-    },
-    {
-      "kind": "order",
-      "round": 1,
-      "clone": "clone-3",
-      "good": "grain",
-      "side": "buy",
-      "qty": 17,
-      "price": 19,
-      "tx": "A4WVw9uxRtMn3wfGLZzixwKC6LQPGoxv5MT6yDyqEv8L"
-    },
-    {
-      "kind": "hour",
-      "round": 2,
-      "prices": [
-        21,
         28,
-        58,
-        97,
-        105
-      ]
-    },
-    {
-      "kind": "bubble",
-      "round": 2,
-      "clone": "clone-1",
-      "say": "Nothing worth the risk this hour."
-    },
-    {
-      "kind": "bubble",
-      "round": 2,
-      "clone": "clone-2",
-      "say": "Amber is up 22%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 2,
-      "clone": "clone-2",
-      "good": "salt",
-      "side": "sell",
-      "qty": 36,
-      "price": 27,
-      "tx": "G8kZwxyZYH6hvqaFCm2PsyYg4YcEBnYusswPbiLWm5j7"
-    },
-    {
-      "kind": "order",
-      "round": 2,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "buy",
-      "qty": 8,
-      "price": 108,
-      "tx": "G8kZwxyZYH6hvqaFCm2PsyYg4YcEBnYusswPbiLWm5j7"
-    },
-    {
-      "kind": "bubble",
-      "round": 2,
-      "clone": "clone-3",
-      "say": "Selling grain above its usual price; salt is below usual, a small buy."
-    },
-    {
-      "kind": "order",
-      "round": 2,
-      "clone": "clone-3",
-      "good": "grain",
-      "side": "sell",
-      "qty": 17,
-      "price": 21,
-      "tx": "FM9pncQW1P4F5zu3d7CG1EgRBVeZpfDAYsb51qU6CvWW"
-    },
-    {
-      "kind": "order",
-      "round": 2,
-      "clone": "clone-3",
-      "good": "salt",
-      "side": "buy",
-      "qty": 9,
-      "price": 28,
-      "tx": "FM9pncQW1P4F5zu3d7CG1EgRBVeZpfDAYsb51qU6CvWW"
-    },
-    {
-      "kind": "hour",
-      "round": 3,
-      "prices": [
-        19,
-        25,
-        62,
-        82,
-        135
-      ]
-    },
-    {
-      "kind": "bubble",
-      "round": 3,
-      "clone": "clone-1",
-      "say": "Amber is 10% over usual, taking profit; salt is cheap, buying a little."
-    },
-    {
-      "kind": "order",
-      "round": 3,
-      "clone": "clone-1",
-      "good": "amber",
-      "side": "sell",
-      "qty": 5,
-      "price": 132,
-      "tx": "697L7UxMVKsgDj56o6yTX3hXuVgLDfimgTyvWjrqGqwr"
-    },
-    {
-      "kind": "order",
-      "round": 3,
-      "clone": "clone-1",
-      "good": "salt",
-      "side": "buy",
-      "qty": 15,
-      "price": 25,
-      "tx": "697L7UxMVKsgDj56o6yTX3hXuVgLDfimgTyvWjrqGqwr"
-    },
-    {
-      "kind": "bubble",
-      "round": 3,
-      "clone": "clone-2",
-      "say": "All in on amber already. Hold."
-    },
-    {
-      "kind": "bubble",
-      "round": 3,
-      "clone": "clone-3",
-      "say": "Grain is below usual, a small buy."
-    },
-    {
-      "kind": "order",
-      "round": 3,
-      "clone": "clone-3",
-      "good": "grain",
-      "side": "buy",
-      "qty": 15,
-      "price": 19,
-      "tx": "DLsM8fpx3MQbYaWwmNjLj8LLCQjGNpt4FeM7WPsWy8dz"
-    },
-    {
-      "kind": "hour",
-      "round": 4,
-      "prices": [
-        22,
-        30,
-        62,
-        71,
+        53,
+        66,
         157
       ]
     },
     {
       "kind": "bubble",
-      "round": 4,
+      "round": 1,
       "clone": "clone-1",
       "say": "Iron is cheap, buying a little."
     },
     {
       "kind": "order",
-      "round": 4,
+      "round": 1,
       "clone": "clone-1",
       "good": "iron",
       "side": "buy",
-      "qty": 6,
-      "price": 72,
-      "tx": "AqnWBAn1mzAh5Fx3d3RCxUrkEXAJi7vMkJKyY7hDmm3e"
+      "qty": 7,
+      "price": 67,
+      "tx": "CBxfxZL4PnzEitfDm3cYXAaqhVqDksvjQ3ZNs7EU7MD4"
     },
     {
       "kind": "bubble",
-      "round": 4,
+      "round": 1,
       "clone": "clone-2",
-      "say": "Salt is up 20%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 4,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "sell",
-      "qty": 8,
-      "price": 152,
-      "tx": "5W9szEmcVkGHBMwqZj8vKs2DeVNHeCjkyGNDS4iheoQw"
-    },
-    {
-      "kind": "order",
-      "round": 4,
-      "clone": "clone-2",
-      "good": "salt",
-      "side": "buy",
-      "qty": 39,
-      "price": 32,
-      "tx": "5W9szEmcVkGHBMwqZj8vKs2DeVNHeCjkyGNDS4iheoQw"
+      "say": "All in on amber already. Hold."
     },
     {
       "kind": "bubble",
-      "round": 4,
+      "round": 1,
       "clone": "clone-3",
-      "say": "Selling grain above its usual price."
+      "say": "Grain is below usual, a small buy; salt is below usual, a small buy."
     },
     {
       "kind": "order",
-      "round": 4,
+      "round": 1,
       "clone": "clone-3",
       "good": "grain",
-      "side": "sell",
-      "qty": 15,
-      "price": 22,
-      "tx": "2tpMopWWBuBTZ4o5WMZqmETPoG8NpHMcS1h49KfntBPd"
+      "side": "buy",
+      "qty": 17,
+      "price": 19,
+      "tx": "C3oyeb8fYrMsZwAqrX8SS2ZuX61xsgGSF1AUM93ToZAP"
+    },
+    {
+      "kind": "order",
+      "round": 1,
+      "clone": "clone-3",
+      "good": "salt",
+      "side": "buy",
+      "qty": 11,
+      "price": 28,
+      "tx": "C3oyeb8fYrMsZwAqrX8SS2ZuX61xsgGSF1AUM93ToZAP"
     },
     {
       "kind": "hour",
-      "round": 5,
+      "round": 2,
       "prices": [
+        16,
         25,
-        37,
-        53,
-        75,
-        88
+        49,
+        82,
+        155
       ]
     },
     {
       "kind": "bubble",
-      "round": 5,
+      "round": 2,
       "clone": "clone-1",
-      "say": "Salt is 10% over usual, taking profit; amber is cheap, buying a little."
+      "say": "Grain is cheap, buying a little."
     },
     {
       "kind": "order",
-      "round": 5,
+      "round": 2,
       "clone": "clone-1",
-      "good": "salt",
+      "good": "grain",
+      "side": "buy",
+      "qty": 23,
+      "price": 16,
+      "tx": "4E8uwQqA2n8pNW21cv4s9JAkTuJNrxAJELJpqCdAwhQw"
+    },
+    {
+      "kind": "bubble",
+      "round": 2,
+      "clone": "clone-2",
+      "say": "Iron is up 24%. Everything in."
+    },
+    {
+      "kind": "order",
+      "round": 2,
+      "clone": "clone-2",
+      "good": "amber",
       "side": "sell",
       "qty": 15,
-      "price": 36,
-      "tx": "BYUFXnc9HKhz7CA313UHWwUfsLaZx1sAmsZchLrSLA6z"
+      "price": 146,
+      "tx": "CJ4maqhXgCVVmXLLoZsR87zTpZWiZh7eb3rgygrHFh1j"
     },
     {
       "kind": "order",
-      "round": 5,
-      "clone": "clone-1",
-      "good": "amber",
+      "round": 2,
+      "clone": "clone-2",
+      "good": "iron",
       "side": "buy",
-      "qty": 3,
-      "price": 89,
-      "tx": "BYUFXnc9HKhz7CA313UHWwUfsLaZx1sAmsZchLrSLA6z"
+      "qty": 24,
+      "price": 88,
+      "tx": "CJ4maqhXgCVVmXLLoZsR87zTpZWiZh7eb3rgygrHFh1j"
     },
     {
       "kind": "bubble",
-      "round": 5,
-      "clone": "clone-2",
-      "say": "All in on salt already. Hold."
-    },
-    {
-      "kind": "bubble",
-      "round": 5,
-      "clone": "clone-3",
-      "say": "Selling salt above its usual price."
-    },
-    {
-      "kind": "order",
-      "round": 5,
-      "clone": "clone-3",
-      "good": "salt",
-      "side": "sell",
-      "qty": 9,
-      "price": 37,
-      "tx": "ES8UDGEsWtDePvxahesHjwEkaNyiw7e6B9ttXuUWptdb"
-    },
-    {
-      "kind": "hour",
-      "round": 6,
-      "prices": [
-        24,
-        30,
-        59,
-        83,
-        127
-      ]
-    },
-    {
-      "kind": "bubble",
-      "round": 6,
-      "clone": "clone-1",
-      "say": "Nothing worth the risk this hour."
-    },
-    {
-      "kind": "bubble",
-      "round": 6,
-      "clone": "clone-2",
-      "say": "Amber is up 44%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 6,
-      "clone": "clone-2",
-      "good": "salt",
-      "side": "sell",
-      "qty": 39,
-      "price": 29,
-      "tx": "7BpKacVbaQj3keKrBhWZLYy63k3CMDS2ww3ykVxeuz8b"
-    },
-    {
-      "kind": "order",
-      "round": 6,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "buy",
-      "qty": 8,
-      "price": 132,
-      "tx": "7BpKacVbaQj3keKrBhWZLYy63k3CMDS2ww3ykVxeuz8b"
-    },
-    {
-      "kind": "bubble",
-      "round": 6,
+      "round": 2,
       "clone": "clone-3",
       "say": "Keeping your money safe. Staples only."
     },
     {
       "kind": "hour",
-      "round": 7,
+      "round": 3,
       "prices": [
-        24,
-        31,
-        67,
-        96,
-        79
+        18,
+        21,
+        52,
+        87,
+        109
       ]
     },
     {
       "kind": "bubble",
-      "round": 7,
+      "round": 3,
+      "clone": "clone-1",
+      "say": "Salt is cheap, buying a little."
+    },
+    {
+      "kind": "order",
+      "round": 3,
+      "clone": "clone-1",
+      "good": "salt",
+      "side": "buy",
+      "qty": 13,
+      "price": 21,
+      "tx": "sTGUcKspoMmGeM7VavBsjhny6uzDQRVc2tKsAccHJj3"
+    },
+    {
+      "kind": "bubble",
+      "round": 3,
+      "clone": "clone-2",
+      "say": "Iron will do. Holding."
+    },
+    {
+      "kind": "bubble",
+      "round": 3,
+      "clone": "clone-3",
+      "say": "Keeping your money safe. Staples only."
+    },
+    {
+      "kind": "hour",
+      "round": 4,
+      "prices": [
+        18,
+        20,
+        46,
+        98,
+        126
+      ]
+    },
+    {
+      "kind": "bubble",
+      "round": 4,
       "clone": "clone-1",
       "say": "Iron is 10% over usual, taking profit."
     },
     {
       "kind": "order",
-      "round": 7,
+      "round": 4,
       "clone": "clone-1",
       "good": "iron",
       "side": "sell",
-      "qty": 6,
-      "price": 95,
-      "tx": "P3HH8NNL2QbXg2nvCy4SEgr9FBJJDaZdMX63tdBHyCU"
+      "qty": 7,
+      "price": 96,
+      "tx": "BYuydQftT5U6rbAiJy4NZ5nNbdNYrhKB3nLGbPcLMdDY"
     },
     {
       "kind": "bubble",
-      "round": 7,
+      "round": 4,
       "clone": "clone-2",
-      "say": "Iron is up 15%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 7,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "sell",
-      "qty": 8,
-      "price": 76,
-      "tx": "2STEL4s5qa234JiaTwZ6cPymioLdRzhpnPLj7gGqwy8Z"
-    },
-    {
-      "kind": "order",
-      "round": 7,
-      "clone": "clone-2",
-      "good": "iron",
-      "side": "buy",
-      "qty": 6,
-      "price": 98,
-      "tx": "2STEL4s5qa234JiaTwZ6cPymioLdRzhpnPLj7gGqwy8Z"
+      "say": "Iron will do. Holding."
     },
     {
       "kind": "bubble",
-      "round": 7,
+      "round": 4,
       "clone": "clone-3",
       "say": "Keeping your money safe. Staples only."
     },
     {
       "kind": "hour",
-      "round": 8,
+      "round": 5,
       "prices": [
-        18,
-        35,
-        54,
-        81,
-        96
+        17,
+        20,
+        40,
+        100,
+        122
       ]
     },
     {
       "kind": "bubble",
-      "round": 8,
+      "round": 5,
       "clone": "clone-1",
       "say": "Nothing worth the risk this hour."
     },
     {
       "kind": "bubble",
-      "round": 8,
+      "round": 5,
       "clone": "clone-2",
-      "say": "Amber is up 21%. Everything in."
-    },
-    {
-      "kind": "order",
-      "round": 8,
-      "clone": "clone-2",
-      "good": "iron",
-      "side": "sell",
-      "qty": 6,
-      "price": 80,
-      "tx": "3XxC8nnRw2BDfpfgJEBgCw9biGdYqMD35cN6XBu6MBmH"
-    },
-    {
-      "kind": "order",
-      "round": 8,
-      "clone": "clone-2",
-      "good": "amber",
-      "side": "buy",
-      "qty": 5,
-      "price": 98,
-      "tx": "3XxC8nnRw2BDfpfgJEBgCw9biGdYqMD35cN6XBu6MBmH"
+      "say": "All in on iron already. Hold."
     },
     {
       "kind": "bubble",
-      "round": 8,
+      "round": 5,
       "clone": "clone-3",
-      "say": "Grain is below usual, a small buy."
-    },
-    {
-      "kind": "order",
-      "round": 8,
-      "clone": "clone-3",
-      "good": "grain",
-      "side": "buy",
-      "qty": 19,
-      "price": 18,
-      "tx": "DHwndtKtUecXjjrzndNZWqT7fYZZ6baLCxc149b53PcR"
+      "say": "Keeping your money safe. Staples only."
     },
     {
       "kind": "hour",
-      "round": 9,
+      "round": 6,
       "prices": [
         18,
-        39,
-        44,
-        85,
-        98
+        21,
+        50,
+        76,
+        148
       ]
     },
     {
       "kind": "bubble",
-      "round": 9,
+      "round": 6,
       "clone": "clone-1",
       "say": "Nothing worth the risk this hour."
     },
     {
       "kind": "bubble",
-      "round": 9,
+      "round": 6,
       "clone": "clone-2",
-      "say": "Salt is up 11%. Everything in."
+      "say": "Wool is up 25%. Everything in."
     },
     {
       "kind": "order",
-      "round": 9,
+      "round": 6,
       "clone": "clone-2",
-      "good": "amber",
+      "good": "iron",
       "side": "sell",
-      "qty": 5,
-      "price": 96,
-      "tx": "cH2bYpPT4yAmVSeb5VBShTfx8Td77MYhB135swx5ftW"
+      "qty": 24,
+      "price": 71,
+      "tx": "6bzRkW7h98aSp8aKNgENCtAchpNJJCGU8Q3e6QBNb7yP"
     },
     {
       "kind": "order",
-      "round": 9,
+      "round": 6,
+      "clone": "clone-2",
+      "good": "wool",
+      "side": "buy",
+      "qty": 32,
+      "price": 52,
+      "tx": "6bzRkW7h98aSp8aKNgENCtAchpNJJCGU8Q3e6QBNb7yP"
+    },
+    {
+      "kind": "bubble",
+      "round": 6,
+      "clone": "clone-3",
+      "say": "Keeping your money safe. Staples only."
+    },
+    {
+      "kind": "hour",
+      "round": 7,
+      "prices": [
+        17,
+        25,
+        44,
+        63,
+        90
+      ]
+    },
+    {
+      "kind": "bubble",
+      "round": 7,
+      "clone": "clone-1",
+      "say": "Amber is cheap, buying a little."
+    },
+    {
+      "kind": "order",
+      "round": 7,
+      "clone": "clone-1",
+      "good": "amber",
+      "side": "buy",
+      "qty": 4,
+      "price": 91,
+      "tx": "H9Jc4m9kxY1x1baku6is1cJZbFY2MEsd7K8BQSviPTSd"
+    },
+    {
+      "kind": "bubble",
+      "round": 7,
+      "clone": "clone-2",
+      "say": "Salt is up 19%. Everything in."
+    },
+    {
+      "kind": "order",
+      "round": 7,
+      "clone": "clone-2",
+      "good": "wool",
+      "side": "sell",
+      "qty": 32,
+      "price": 42,
+      "tx": "BzNpVEGvsDjB9gEz1fzVgGxecjv7Fvs7CWbKVoS4oTN4"
+    },
+    {
+      "kind": "order",
+      "round": 7,
       "clone": "clone-2",
       "good": "salt",
       "side": "buy",
-      "qty": 11,
-      "price": 39,
-      "tx": "cH2bYpPT4yAmVSeb5VBShTfx8Td77MYhB135swx5ftW"
+      "qty": 47,
+      "price": 27,
+      "tx": "BzNpVEGvsDjB9gEz1fzVgGxecjv7Fvs7CWbKVoS4oTN4"
     },
     {
       "kind": "bubble",
-      "round": 9,
+      "round": 7,
       "clone": "clone-3",
       "say": "Keeping your money safe. Staples only."
     },
     {
       "kind": "hour",
-      "round": 10,
+      "round": 8,
       "prices": [
-        19,
-        38,
-        39,
-        72,
+        14,
+        30,
+        40,
+        54,
+        133
+      ]
+    },
+    {
+      "kind": "bubble",
+      "round": 8,
+      "clone": "clone-1",
+      "say": "Amber is 10% over usual, taking profit; iron is cheap, buying a little."
+    },
+    {
+      "kind": "order",
+      "round": 8,
+      "clone": "clone-1",
+      "good": "amber",
+      "side": "sell",
+      "qty": 4,
+      "price": 131,
+      "tx": "8XhDz6H2pvVvk7WuYZjTRPx2X7GSUmvfA3XaUTjmkUsX"
+    },
+    {
+      "kind": "order",
+      "round": 8,
+      "clone": "clone-1",
+      "good": "iron",
+      "side": "buy",
+      "qty": 5,
+      "price": 54,
+      "tx": "8XhDz6H2pvVvk7WuYZjTRPx2X7GSUmvfA3XaUTjmkUsX"
+    },
+    {
+      "kind": "bubble",
+      "round": 8,
+      "clone": "clone-2",
+      "say": "Amber is up 47%. Everything in."
+    },
+    {
+      "kind": "order",
+      "round": 8,
+      "clone": "clone-2",
+      "good": "salt",
+      "side": "sell",
+      "qty": 47,
+      "price": 28,
+      "tx": "Crx2JUWpnkP4AB2hs6FdjzxHc99gn4vzA7CPoAqHAX6y"
+    },
+    {
+      "kind": "order",
+      "round": 8,
+      "clone": "clone-2",
+      "good": "amber",
+      "side": "buy",
+      "qty": 9,
+      "price": 138,
+      "tx": "Crx2JUWpnkP4AB2hs6FdjzxHc99gn4vzA7CPoAqHAX6y"
+    },
+    {
+      "kind": "bubble",
+      "round": 8,
+      "clone": "clone-3",
+      "say": "Keeping your money safe. Staples only."
+    },
+    {
+      "kind": "hour",
+      "round": 9,
+      "prices": [
+        13,
+        33,
+        49,
+        53,
         108
       ]
     },
     {
       "kind": "bubble",
-      "round": 10,
+      "round": 9,
       "clone": "clone-1",
-      "say": "Wool is cheap, buying a little."
+      "say": "Salt is 10% over usual, taking profit."
     },
     {
       "kind": "order",
-      "round": 10,
+      "round": 9,
       "clone": "clone-1",
+      "good": "salt",
+      "side": "sell",
+      "qty": 13,
+      "price": 33,
+      "tx": "GHeHf7aUMpnFbsrVLnByedoVCa5L6sVFSxaE4waVj6Xc"
+    },
+    {
+      "kind": "bubble",
+      "round": 9,
+      "clone": "clone-2",
+      "say": "Wool is up 22%. Everything in."
+    },
+    {
+      "kind": "order",
+      "round": 9,
+      "clone": "clone-2",
+      "good": "amber",
+      "side": "sell",
+      "qty": 9,
+      "price": 104,
+      "tx": "7NHqrz2AFC3RvCVnWTkBrjLSQVfKDuHwfvXbdAyCfP8Z"
+    },
+    {
+      "kind": "order",
+      "round": 9,
+      "clone": "clone-2",
       "good": "wool",
       "side": "buy",
-      "qty": 13,
-      "price": 39,
-      "tx": "GdEGhvoX1DSLqNSWQ3GX6RRrUXLJowVWdbCMpH2kMtHz"
+      "qty": 18,
+      "price": 50,
+      "tx": "7NHqrz2AFC3RvCVnWTkBrjLSQVfKDuHwfvXbdAyCfP8Z"
+    },
+    {
+      "kind": "bubble",
+      "round": 9,
+      "clone": "clone-3",
+      "say": "Selling salt above its usual price."
+    },
+    {
+      "kind": "order",
+      "round": 9,
+      "clone": "clone-3",
+      "good": "salt",
+      "side": "sell",
+      "qty": 11,
+      "price": 33,
+      "tx": "LLTp5sbJoNDX5rs2ArFCeQvMfGFQrEGRs47maEvMpUc"
+    },
+    {
+      "kind": "hour",
+      "round": 10,
+      "prices": [
+        13,
+        34,
+        41,
+        46,
+        96
+      ]
+    },
+    {
+      "kind": "bubble",
+      "round": 10,
+      "clone": "clone-1",
+      "say": "Nothing worth the risk this hour."
     },
     {
       "kind": "bubble",
       "round": 10,
       "clone": "clone-2",
-      "say": "Amber is up 10%. Everything in."
+      "say": "Salt is up 3%. Everything in."
+    },
+    {
+      "kind": "order",
+      "round": 10,
+      "clone": "clone-2",
+      "good": "wool",
+      "side": "sell",
+      "qty": 18,
+      "price": 40,
+      "tx": "FvL7vbnahJWETwtbyxdhNhKKd2zV9fvkbdNQ2hC1Shnh"
     },
     {
       "kind": "order",
       "round": 10,
       "clone": "clone-2",
       "good": "salt",
-      "side": "sell",
-      "qty": 11,
-      "price": 38,
-      "tx": "8WoZPyJuNuwBtQHKXxriTEbaAYzyz4p8wDG68oxaYtAt"
-    },
-    {
-      "kind": "order",
-      "round": 10,
-      "clone": "clone-2",
-      "good": "amber",
       "side": "buy",
-      "qty": 3,
-      "price": 109,
-      "tx": "8WoZPyJuNuwBtQHKXxriTEbaAYzyz4p8wDG68oxaYtAt"
+      "qty": 21,
+      "price": 34,
+      "tx": "FvL7vbnahJWETwtbyxdhNhKKd2zV9fvkbdNQ2hC1Shnh"
     },
     {
       "kind": "bubble",
@@ -749,34 +669,44 @@
       "kind": "hour",
       "round": 11,
       "prices": [
-        15,
-        33,
-        35,
-        71,
-        100
+        16,
+        27,
+        40,
+        58,
+        68
       ]
     },
     {
       "kind": "bubble",
       "round": 11,
       "clone": "clone-1",
-      "say": "Nothing worth the risk this hour."
+      "say": "Amber is cheap, buying a little."
+    },
+    {
+      "kind": "order",
+      "round": 11,
+      "clone": "clone-1",
+      "good": "amber",
+      "side": "buy",
+      "qty": 6,
+      "price": 69,
+      "tx": "4gNFzGguvfGNXQg79QjcLNrWNfbRKfEkWQf2a8ci4eHY"
     },
     {
       "kind": "bubble",
       "round": 11,
       "clone": "clone-2",
-      "say": "Nothing's rising, so iron it is. All of it."
+      "say": "Iron is up 26%. Everything in."
     },
     {
       "kind": "order",
       "round": 11,
       "clone": "clone-2",
-      "good": "amber",
+      "good": "salt",
       "side": "sell",
-      "qty": 3,
-      "price": 99,
-      "tx": "EgaPjraRfHmdB2iaPACVpHcLtB3QAwpEVW47frrUAhTp"
+      "qty": 21,
+      "price": 27,
+      "tx": "DnTaQRwuLm2U5aLZF59fzyq2bqaszJ4pQWUdfHiqRrVX"
     },
     {
       "kind": "order",
@@ -784,25 +714,35 @@
       "clone": "clone-2",
       "good": "iron",
       "side": "buy",
-      "qty": 5,
-      "price": 72,
-      "tx": "EgaPjraRfHmdB2iaPACVpHcLtB3QAwpEVW47frrUAhTp"
+      "qty": 9,
+      "price": 60,
+      "tx": "DnTaQRwuLm2U5aLZF59fzyq2bqaszJ4pQWUdfHiqRrVX"
     },
     {
       "kind": "bubble",
       "round": 11,
       "clone": "clone-3",
-      "say": "Keeping your money safe. Staples only."
+      "say": "Salt is below usual, a small buy."
+    },
+    {
+      "kind": "order",
+      "round": 11,
+      "clone": "clone-3",
+      "good": "salt",
+      "side": "buy",
+      "qty": 10,
+      "price": 27,
+      "tx": "ErZCMsio1H4fiBTD7pXkJF4to8WfjRriJPhdHBFTBhMK"
     },
     {
       "kind": "hour",
       "round": 12,
       "prices": [
-        14,
-        38,
-        42,
-        84,
-        134
+        19,
+        31,
+        45,
+        54,
+        94
       ]
     },
     {
@@ -819,45 +759,45 @@
     {
       "kind": "settled",
       "clone": "clone-1",
-      "paid_out": 2595,
+      "paid_out": 2613,
       "broke": false,
-      "tx": "4HDNBj83CosF3kCk8Gdb8eTv9h4AKXmp7E2cSFLY68kT"
+      "tx": "6fYsXykgie18gb7m3KjnfBcW17543pT4XWAAJbeGyZBt"
     },
     {
       "kind": "merged",
       "clone": "clone-1",
-      "tx": "5AnyqnU5ZRzpEBYsvggMPP6M4sM73oRmFrekqSWaKYK",
+      "tx": "GrU1URrdmQLeiitJDQL4gYZ4SXRGnybpiueYyaaBehAs",
       "clone_deleted": true
     },
     {
       "kind": "settled",
       "clone": "clone-2",
-      "paid_out": 438,
+      "paid_out": 484,
       "broke": true,
-      "tx": "4J74qbZ6126qZ3VXpmQoeHxbGwNvMNp3FYDkF2Vm4G37"
+      "tx": "5YXrsiLd9Tjdm7xT4oVVeGa559b3kytLWtRZjCKanPR7"
     },
     {
       "kind": "merged",
       "clone": "clone-2",
-      "tx": "2sRteGFsGRCaZde6tq3MxPnWCQ3rX8NdTDu9gEqLGiuY",
+      "tx": "3UZ1cvr4cFzZaHxo6FKR3Qmo8NEwEfiSbJHn83ECiAS6",
       "clone_deleted": true
     },
     {
       "kind": "settled",
       "clone": "clone-3",
-      "paid_out": 2030,
+      "paid_out": 2053,
       "broke": false,
-      "tx": "CHmaX2MjeFfGkJXf4Ley4g2U9b3FzoNQzo4FbJsJvrJG"
+      "tx": "2dYMiPgvRcH96rQdkTaSPJHTtjtrK4Hrnk3yGb5NjnFu"
     },
     {
       "kind": "merged",
       "clone": "clone-3",
-      "tx": "BBJhYbv8oNBPhhEfPVexFMvg54HSaBBg1u91FrGhq9Jr",
+      "tx": "5QuEGcuzD8HCYsfUUdHzeMzqqBBR6HLvBWgrp7Ue73Zv",
       "clone_deleted": true
     }
   ],
   "player_balance_before": 20000,
-  "player_balance_after": 19033,
+  "player_balance_after": 19120,
   "night": 1,
   "dusk_stock": [
     1200,
@@ -883,80 +823,80 @@
     ],
     [
       1183,
-      864,
+      889,
       600,
-      360,
-      235
+      353,
+      225
     ],
     [
-      1200,
-      891,
+      1160,
+      889,
       600,
-      360,
-      227
-    ],
-    [
-      1185,
-      876,
-      600,
-      360,
-      232
-    ],
-    [
-      1200,
-      837,
-      600,
-      354,
+      329,
       240
     ],
     [
-      1200,
-      861,
+      1160,
+      876,
       600,
-      354,
-      237
+      329,
+      240
     ],
     [
-      1200,
-      900,
+      1160,
+      876,
       600,
-      354,
-      229
+      336,
+      240
     ],
     [
-      1200,
-      900,
+      1160,
+      876,
       600,
-      354,
-      237
+      336,
+      240
     ],
     [
-      1181,
-      900,
+      1160,
+      876,
+      568,
+      360,
+      240
+    ],
+    [
+      1160,
+      829,
       600,
       360,
-      232
+      236
     ],
     [
-      1181,
-      889,
+      1160,
+      876,
       600,
-      360,
-      237
-    ],
-    [
-      1181,
-      900,
-      587,
-      360,
-      234
-    ],
-    [
-      1181,
-      900,
-      587,
       355,
-      237
+      231
+    ],
+    [
+      1160,
+      900,
+      582,
+      355,
+      240
+    ],
+    [
+      1160,
+      879,
+      600,
+      355,
+      240
+    ],
+    [
+      1160,
+      890,
+      600,
+      346,
+      234
     ]
   ]
 }

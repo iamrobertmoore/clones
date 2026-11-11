@@ -15,7 +15,15 @@ const FEE_BPS = 200;
 const ROUNDS = 12;
 const BROKE_DIVISOR = 4;
 const MAX_NIGHTS = 3;
-const REVERSION_PCT = 25;
+const REGIMES = ["blight", "boom", "slump", "wild"];
+// Mirrors the constants in core/src/lib.rs.
+const C = {
+  BLIGHT_AMP: 8, BLIGHT_STAPLE_PUSH: 2, BLIGHT_PULL: 40, BLIGHT_ROT: 5,
+  BOOM_AMP: 14, BOOM_PUSH: 6, BOOM_PULL: 0,
+  SLUMP_AMP: 12, SLUMP_DOWN: 5, SLUMP_UP: 12, SLUMP_TURN: 6, SLUMP_PULL: 0,
+  WILD_AMP: 20, WILD_PULL: 25,
+  GREEDY_SWITCH: 12,
+};
 
 const div = (a, b) => Math.trunc(a / b);
 
@@ -28,20 +36,42 @@ function mix(z) {
   return z ^ (z >> 31n);
 }
 
-function step(seed, round, good, prev) {
-  const h = mix(BigInt(seed) ^ (BigInt(round) << 8n) ^ BigInt(good));
-  let pct = Number(h % 41n) - 20;
+function regimeOf(x) {
+  return REGIMES[Number(mix(BigInt(x) ^ 0x6f6d656en) % 4n)];
+}
+
+function shape(regime, round, good) {
+  switch (regime) {
+    case "blight":
+      return good < 2 ? [C.BLIGHT_AMP, C.BLIGHT_STAPLE_PUSH, C.BLIGHT_PULL] : [C.BLIGHT_AMP, -C.BLIGHT_ROT, 0];
+    case "boom":
+      return [C.BOOM_AMP, C.BOOM_PUSH, C.BOOM_PULL];
+    case "slump":
+      return [C.SLUMP_AMP, round <= C.SLUMP_TURN ? -C.SLUMP_DOWN : C.SLUMP_UP, C.SLUMP_PULL];
+    default:
+      return [C.WILD_AMP, 0, C.WILD_PULL];
+  }
+}
+
+// One hour's move for one good from a random draw h (a BigInt).
+function stepWith(h, regime, round, good, prev) {
+  const [amp, push, pull] = shape(regime, round, good);
+  let pct = Number(BigInt(h) % BigInt(2 * amp + 1)) - amp;
   if (good === 4) pct *= 2;
+  pct += push;
   const base = BASE_PRICE[good];
-  pct += div((base - prev) * REVERSION_PCT, base);
+  pct += div((base - prev) * pull, base);
   const next = div(prev * (100 + pct), 100);
   return Math.max(next, 1);
 }
 
+const seededDraw = (seed, round, good) => mix(BigInt(seed) ^ (BigInt(round) << 8n) ^ BigInt(good));
+
 function pricesAt(seed, round) {
+  const regime = regimeOf(seed);
   const p = BASE_PRICE.slice();
   for (let r = 1; r <= round; r++) {
-    for (let g = 0; g < 5; g++) p[g] = step(seed, r, g, p[g]);
+    for (let g = 0; g < 5; g++) p[g] = stepWith(seededDraw(seed, r, g), regime, r, g, p[g]);
   }
   return p;
 }
@@ -149,6 +179,11 @@ function greedy(v) {
   for (let g = 1; g < 5; g++) {
     // max by (change, index): a later good wins a tie.
     if (changePct(v, g) >= changePct(v, best)) best = g;
+  }
+  let holding = -1;
+  for (let g = 0; g < 5; g++) if (v.ledger.stock[g] > 0) { holding = g; break; }
+  if (holding >= 0 && holding !== best && changePct(v, best) - changePct(v, holding) < C.GREEDY_SWITCH) {
+    return { intents: [], say: `${GOODS[holding]} will do. Holding.` };
   }
   const intents = [];
   for (let g = 0; g < 5; g++) if (g !== best && v.ledger.stock[g] > 0) intents.push(sellAll(v, g));
@@ -272,6 +307,24 @@ function simulateTown(seed, dusk, entrants) {
   return { outcomes, prices, stock: stocks, stock_end: stock, held };
 }
 
+// What a clone does with a whisper from its player instead of its temperament for one hour.
+function obey(whisper, v) {
+  const w = whisper || {};
+  if (w.do === "sell_all") {
+    const intents = [];
+    for (let g = 0; g < 5; g++) if (v.ledger.stock[g] > 0) intents.push(sellAll(v, g));
+    return { intents, say: intents.length ? "You said sell. Selling everything." : "You said sell, but I hold nothing." };
+  }
+  if (w.do === "buy") {
+    const g = GOODS.indexOf(w.good);
+    const qty = g < 0 ? 0 : affordable(Math.floor(v.ledger.cash / 2), v.book, g);
+    return qty > 0
+      ? { intents: [buy(v, g, qty)], say: `You said ${w.good}. Half my cash on it.` }
+      : { intents: [], say: `You said ${w.good}, but I can't afford any.` };
+  }
+  return { intents: [], say: "You said hold. Holding." };
+}
+
 module.exports = {
   GOODS,
   BASE_PRICE,
@@ -279,6 +332,10 @@ module.exports = {
   ROUNDS,
   MAX_NIGHTS,
   mix,
+  REGIMES,
+  regimeOf,
+  stepWith,
+  seededDraw,
   pricesAt,
   stockedPrice,
   restock,
@@ -290,6 +347,7 @@ module.exports = {
   isBroke,
   affordable,
   decide,
+  obey,
   applyTurn,
   simulateTown,
   comesHome,
