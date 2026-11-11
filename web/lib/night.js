@@ -614,7 +614,8 @@ async function ring(t, { start = false } = {}) {
         ...(fee ? [fee] : []),
         {
           kind: "dusk",
-          fee_bps: dusk.town.fee_bps,
+          // Tonight's fee is what the deed holder set before dusk (a node can lag the opening).
+          fee_bps: after.town.next_fee_bps || (fee && fee.bps) || rules.FEE_BPS,
           night: dusk.town.night,
           mood: dusk.town.mood,
           omen: dusk.town.omen,
