@@ -462,7 +462,7 @@
     var e = String(error || '');
     $('refusalErr').textContent = /RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError: RequiresFullAccess' : e.split(':')[0];
     $('refusalWhy').textContent = short + ' tried to send NEAR from its own account. Its only key can call trade on the market, and moving NEAR needs a full-access key, so the chain refused the transaction. Nothing left the clone.';
-    $('refusalRaw').textContent = 'The chain said: ' + e.replace(/^[^:]*:\s*/, '');
+    $('refusalRaw').textContent = 'A function-call key can only sign a call to the one contract and method it names. A transfer is a different action, so the chain rejects it before it reaches a block (nearcore reports this as RequiresFullAccess).';
     $('refusal').hidden = false;
     var seal = document.querySelector('#refusal .seal');
     var scene = $('scene');
@@ -579,7 +579,8 @@
     var latest = rows.reduce(function (m, r) { return Math.max(m, Number(r.night) || 0); }, 0);
     var night = rows.filter(function (r) { return (Number(r.night) || 0) === latest; });
     $('morning').hidden = false;
-    $('morningSub').textContent = 'Night ' + latest + ', seed ' + (night[0] ? night[0].seed : '?') + '. Read from the market contract: stake against what each clone paid out when it came home.';
+    var moodNote = town && town.chain_dice ? '' : ', seed ' + (night[0] ? night[0].seed : '?');
+    $('morningSub').textContent = 'Night ' + latest + moodNote + '. Read from the market contract: stake against what each clone paid out when it came home.';
     var ul = $('morningRows'); ul.textContent = '';
     var stake = 0, paid = 0;
     night.forEach(function (r) {
