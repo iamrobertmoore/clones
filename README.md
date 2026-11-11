@@ -4,7 +4,7 @@
 
 **A trading game on NEAR where copies of you trade while you sleep. They can trade, but they can never withdraw.**
 
-[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/barrow.clonestown.testnet)
+[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/cairn.clonestown.testnet)
 
 You send up to three copies of yourself into a market town. You choose each one's temperament
 (cautious, greedy, loyal, or possessed: a NEAR AI model that follows one sentence you write), how
@@ -42,7 +42,7 @@ Here the promise is an access key, and the chain checks it on every transaction.
 | [Open the town](https://clones-tau-nine.vercel.app/town.html) and press **Send them in** | No login, no wallet. About 20 seconds later you have a guest account on testnet with up to three clones in town, each holding the stake you chose. |
 | Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key. The chain refuses it with `InvalidAccessKeyError: RequiresFullAccess`, and the page shows the chain's words. |
 | Read the omen (top right), then press **Ring the bell** | The whole town trades a night, hour by hour, in about a minute: speech bubbles, orders, prices moving with the merchant's stock. At dawn the page audits the night from chain state alone, then the clones that are due merge home. |
-| Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour. The instruction is stored on chain with the clone, and its key is the same trade-only leash. |
+| Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour. The instruction is stored on chain with the clone, and its key is the same trade-only leash. If the model doesn't answer, the clone trades as cautious and its bubble says "the voice is silent". |
 | Look at **On the explorer, with their keys** | Your guest account has one full-access key (yours) and one function-call key for the house that can only call `whisper`, `retrain` and `settle`. |
 | Watch dawn | The contract hands the crown (every fee the merchant took that night) to the clone with the best return, yours or a rival's. The standings rank every player. |
 | During the night, pick **whisper...** under a clone | Your order is stored on chain (one per clone per night). The clone obeys it for the next hour, and the dawn audit checks it did. |
@@ -77,7 +77,8 @@ Here the promise is an access key, and the chain checks it on every transaction.
 ## How a night works
 
 - **Moods.** Each night is a boom (prices climb), a slump (prices sink, then rebound before dawn), a blight (the luxuries rot while grain and salt hold) or wild (big swings both ways). The next night's mood is posted in advance; in the hosted town the omen comes true seven nights in ten.
-- **The crown and the deed.** At dawn the contract hands the night's fees to the clone with the biggest profit (ties to the lower account id). Its player then holds the merchant's deed for the next night and is paid a quarter of that night's fees.
+- **The crown and the deed.** At dawn the contract hands the night's fees to the clone with the biggest profit (ties to the lower account id). Its player then holds the merchant's deed for the next night: they are paid a quarter of that night's fees, and they name one good the merchant restocks in full at dusk, which opens it cheap for everyone.
+- **Whispers bind.** A whisper is stored on chain for the coming hour, and the contract refuses any turn that contradicts it (a hold, a sell-up, or a buy of the named good). Twice a night the bell pauses and shows what each of your clones means to do next.
 - **The regulars.** The Widow is possessed (a NEAR AI model on her instruction); the Abbot sends a careful clone; the Hound sends a greedy one. They play every night someone rings the bell.
 - **Prices.** Each good's usual price moves hour by hour with the mood. The merchant scales it by its stock: short of a good, it charges more. A big order is quoted at the price after the trade, so a clone can't profit from its own buying.
 - **Turns.** Each hour every clone reads the board and its purse and decides. Cautious buys what's cheap and takes profit at +10%. Greedy puts everything into whatever is rising fastest, and only switches when something else is rising clearly faster. Loyal trades only grain and salt and never risks more than a third. A whisper replaces that decision for one hour. Every order in an hour is quoted from the merchant's stock when the hour began, so the order clones act in never changes the result.
@@ -98,7 +99,7 @@ The demo night (seed 606, a wild night): cautious 2.000 to 3.112 NEAR (2.613 plu
 
 ## The hosted town
 
-`clonestown.testnet` runs a market, `barrow.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The
+`clonestown.testnet` runs a market, `cairn.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The
 sign-up function creates a guest account and its clones and sends them in, funded with testnet NEAR
 by the house. The bell (`web/api/bell.js`) plays one step of the night per call; the town page
 calls it until dawn. If nobody rings it, a GitHub Actions job rings the same code around 02:00 UTC
@@ -127,7 +128,7 @@ to `web/data/night-mainnet.json`.
 - My first version of that let a clone make free money: buy, watch its own buying raise the price, sell. The merchant now quotes a big order at the price after the trade, and a test proves buying and selling back never pays (`buying_and_selling_back_never_pays`).
 - GitHub's scheduler started the nightly job seven hours late and skipped the backstop. A judge's clones could have sat unplayed all morning, so the night now runs whenever anyone rings the bell, and the schedule is only a fallback.
 - A lagging RPC node made the runner replay an hour. The contract already refused the duplicate trades; the runner now also waits until a node shows the new hour before it returns.
-- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `barrow.clonestown.testnet`.
+- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `cairn.clonestown.testnet`.
 - Earlier: the public RPC rate-limited the first testnet night (calls now retry on rate limits only), merging with maximum gas reserved more than a small player held (merge asks for 100 Tgas), and settling an already merged clone would have stranded its cash (`after_payout` pays the player instead).
 
 ## Known limits
@@ -156,7 +157,7 @@ and `lib/` (the night runner and a JavaScript copy of the rules). The recorded n
 ## How this maps to the judging criteria
 
 - **Game loop:** read the omen (and doubt it), choose temperament, stake and nights for each clone, ring the bell, whisper once a night to each clone, fight the regulars and other guests for the crown, see who comes home, retrain or recall the ones still out, ring again. Your clones share one merchant with everyone else's.
-- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 76 Rust tests, including three suites that play real nights on a local NEAR node, and 19 web tests (the night audit among them) run in CI on every push.
+- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 80 Rust tests, including three suites that play real nights on a local NEAR node, and 19 web tests (the night audit among them) run in CI on every push.
 - **NEAR integration:** the leash is a NEAR function-call access key, and every price, fill and payout is computed by the market contract.
 - **Design:** you lie asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the chain or a night log.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave.

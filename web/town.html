@@ -40,7 +40,7 @@
         <div class="counter" id="counter">
           <span class="candle c1" aria-hidden="true"></span><span class="candle c2" aria-hidden="true"></span>
           <span class="merchant-label">the merchant</span>
-          <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener">barrow.clonestown.testnet</a>
+          <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener">cairn.clonestown.testnet</a>
         </div>
       </div>
 
@@ -73,6 +73,13 @@
       <div class="bell-row" id="bellRow" hidden>
         <button class="btn big bell" id="bellBtn" type="button">Ring the bell: play the night now</button>
         <p class="send-note" id="bellNote">Every clone in town trades twelve hours, about a minute. Anyone can ring it.</p>
+      </div>
+
+      <div class="pause-card" id="pauseCard" hidden role="dialog" aria-labelledby="pauseTitle">
+        <h3 id="pauseTitle">The bell waits</h3>
+        <p class="sub">Here is what each of your clones means to do in the coming hour. Let it be, or whisper (under its purse) to change it.</p>
+        <ul class="plans" id="planList"></ul>
+        <button class="btn" id="carryOn" type="button">Carry on the night</button>
       </div>
 
       <svg class="leashes" id="leashes" aria-hidden="true"></svg>
@@ -119,9 +126,10 @@
 
   <section class="paper townboard" id="townBoard" hidden aria-labelledby="boardTitle">
     <h2 id="boardTitle">The town's standings</h2>
-    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (reads the omen), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the biggest profit (the crown), and its player holds the merchant's deed for the next night. Read from the market contract (<code>get_recent</code>, <code>crowned</code>).</p>
+    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (possessed: a NEAR AI model on her instruction), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the biggest profit (the crown), and its player holds the merchant's deed for the next night. Read from the market contract (<code>get_recent</code>, <code>crowned</code>).</p>
     <p class="sub" id="crownNote"></p>
     <p class="sub" id="deedNote"></p>
+    <div class="result-actions" id="restockRow" hidden><label for="restockSel" class="watch-note">You hold the deed: order a full restock for the next night</label><select id="restockSel"><option value="">choose a good...</option><option>grain</option><option>salt</option><option>wool</option><option>iron</option><option>amber</option></select></div>
     <ol class="board-rows" id="standRows"></ol>
     <h3 class="board-sub">Best clones lately</h3>
     <ol class="board-rows" id="boardRows"></ol>
@@ -145,7 +153,7 @@
   </section>
 
   <section class="paper temperaments" id="temperaments" aria-labelledby="tempTitle">
-    <h2 id="tempTitle">The three temperaments</h2>
+    <h2 id="tempTitle">The four temperaments</h2>
     <ul class="temp-list">
       <li><b class="t-chip" style="--tint:#7aa2c8">cautious</b> buys what is cheap and takes profit at +10%. Best in a <b>slump</b> (about +10% a night) and steady in a <b>wild</b> night; loses badly in a <b>blight</b>, buying luxuries all the way down.</li>
       <li><b class="t-chip" style="--tint:#d9a53a">greedy</b> chases whatever is rising fastest, all in. Best by far in a <b>boom</b> (about +19% a night); goes broke one <b>wild</b> night in four.</li>
@@ -165,7 +173,8 @@
       <li><b>The bell.</b> Ring it and every clone in town trades a night of twelve hours, one transaction per clone per hour, cleared by the contract at the merchant's price. Nobody rings it? It rings by itself around 02:00 UTC.</li>
       <li><b>The crown.</b> Every fee the merchant takes during a night goes, at dawn, to the clone with the biggest profit. The contract picks it. You compete with every other guest and the three regulars for it.</li>
       <li><b>Whisper.</b> Three times a night, each of your clones will take one order from you for its next hour: hold, sell everything, or buy a good. The contract stores each whisper and allows three per clone per night; the dawn audit checks the clone obeyed.</li>
-      <li><b>The deed.</b> Whoever's clone takes the crown holds the merchant's deed for the next night: a quarter of that night's fees is paid straight to their account at dawn, and the crown is the rest.</li>
+      <li><b>The deed.</b> Whoever's clone takes the crown holds the merchant's deed for the next night: a quarter of that night's fees is paid straight to their account at dawn, and they name one good the merchant restocks in full at dusk, which opens it cheap for everyone.</li>
+      <li><b>The bell waits.</b> Twice a night the bell pauses and shows what each of your clones means to do next. Let it be, or whisper.</li>
       <li><b>Between nights.</b> Retrain a clone that is staying out, or bring it home early.</li>
       <li><b>Dawn.</b> A clone comes home after the nights you chose, or as soon as it goes broke: it settles, then merges back into your guest account (a real DeleteAccount). A clone with nights left keeps its goods and plays the next night.</li>
     </ul>
@@ -174,7 +183,7 @@
 </main>
 
 <footer class="foot">
-  <p>Everything on this page is read from <code>barrow.clonestown.testnet</code> through a public testnet RPC.</p>
+  <p>Everything on this page is read from <code>cairn.clonestown.testnet</code> through a public testnet RPC.</p>
 </footer>
 
 <script src="art.js"></script>

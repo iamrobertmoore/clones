@@ -21,6 +21,12 @@
     },
     "api/recall.js": {
       "maxDuration": 60
+    },
+    "api/peek.js": {
+      "maxDuration": 30
+    },
+    "api/restock.js": {
+      "maxDuration": 30
     }
   }
 }

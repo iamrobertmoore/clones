@@ -10,7 +10,7 @@
 
   var RPC = 'https://test.rpc.fastnear.com';
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'barrow.' + HOUSE;
+  var MARKET = 'cairn.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';
@@ -404,7 +404,7 @@
         var parts = sel.value.split(':'), w = parts[0] === 'buy' ? { do: 'buy', good: parts[1] } : { do: parts[0] };
         sel.disabled = true;
         post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
-          cry('You whispered to ' + short + ': ' + sel.options[sel.selectedIndex].text + '. It obeys in the next hour.', 'order-row');
+          cry('You whispered to ' + short + ': ' + sel.options[sel.selectedIndex].text + '. It obeys in the coming hour.', 'order-row');
           var left = (s.whispers_left != null ? s.whispers_left : 3) - 1; s.whispers_left = left;
           var said = sel.options[sel.selectedIndex].text;
           var fresh = actsFor(c); box.replaceWith(fresh);
@@ -570,7 +570,7 @@
     btn.disabled = true;
     $('refusal').hidden = true;
     $('crier').textContent = '';
-    var opened = false, tries = 0;
+    var opened = false, tries = 0, paused = {};
     btn.textContent = 'Ringing...';
     setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds, each one a transaction per clone, cleared by the market contract.');
     function step() {
@@ -583,6 +583,10 @@
         return refreshMine().then(function () {
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
           if (out.phase === 'waiting' || (out.phase === 'home' && !out.next)) return 'stop';
+          if (out.phase === 'hour' && (out.round === 4 || out.round === 8) && !paused[out.round]) {
+            paused[out.round] = true;
+            return waitForPlayer(out.round).then(step);
+          }
           if (out.phase === 'home') setStatus('The regulars are coming', 'Last night\'s clones are home. The Widow, the Abbot and the Hound are sending clones in; the night opens in a few seconds.');
           return sleep(reduceMotion ? 200 : 900).then(step);
         });
@@ -606,6 +610,33 @@
   function nameOf(player) {
     var short = String(player).split('.')[0];
     return player === guest ? 'you' : RIVAL_TITLES[short] || short;
+  }
+
+  // Twice a night the bell waits: show each of my clones' plan for the coming hour.
+  function waitForPlayer(round) {
+    var card = $('pauseCard'), list = $('planList');
+    list.textContent = '';
+    list.appendChild(el('li', null, 'Reading the board...'));
+    $('pauseTitle').textContent = 'The bell waits: hour ' + (round + 1);
+    card.hidden = false;
+    if (!reduceMotion) card.scrollIntoView({ block: 'nearest' });
+    post('/api/peek', { guest: guest }).then(function (res) {
+      list.textContent = '';
+      (res.plans || []).forEach(function (p) {
+        var li = el('li');
+        li.appendChild(el('b', null, p.clone + ': '));
+        li.appendChild(document.createTextNode(p.say + ' '));
+        if (p.orders && p.orders.length) li.appendChild(el('code', null, p.orders.join('; ')));
+        list.appendChild(li);
+      });
+      if (!res.plans || !res.plans.length) list.appendChild(el('li', null, 'None of your clones is trading tonight.'));
+    }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; carry on or whisper as you like.')); });
+    return new Promise(function (resolve) {
+      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearTimeout(auto); resolve(); };
+      var auto = setTimeout(go, 45000);
+      $('carryOn').addEventListener('click', go);
+      $('carryOn').focus();
+    });
   }
 
   /* ---------- after dawn ---------- */
@@ -686,7 +717,8 @@
         li.appendChild(el('span', 'b-det', near(r.stake) + ' → ' + near(r.paid_out) + ', ' + r.nights_played + 'n' + (r.broke ? ', broke' : '')));
         ol.appendChild(li);
       });
-      if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn).';
+      if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn' + (town.restock_order ? '; ordered a full restock of ' + town.restock_order : '') + ').';
+      $('restockRow').hidden = !(town && town.deed === guest && town.asleep && token());
       if (town && town.crowned) {
         $('crownNote').textContent = 'Last crown: ' + String(town.crowned[0]).split('.')[0] + ' of ' + nameOf(String(town.crowned[0]).slice(String(town.crowned[0]).indexOf('.') + 1)) + ', night ' + town.crowned[2] + ', ' + near(town.crowned[1]) + ' NEAR of fees.';
       }
@@ -859,6 +891,13 @@
   $('bellBtn').addEventListener('click', ringBell);
   $('refusalClose').addEventListener('click', function () { $('refusal').hidden = true; });
   $('claimBtn').addEventListener('click', claim);
+  $('restockSel').addEventListener('change', function () {
+    var g = $('restockSel').value; if (!g) return;
+    $('restockSel').disabled = true;
+    post('/api/restock', { guest: guest, token: token(), good: g }).then(function () {
+      $('deedNote').textContent = 'You ordered a full restock of ' + g + ' for the next night.';
+    }).catch(function (err) { $('restockSel').disabled = false; cry(err.message, 'warn'); });
+  });
 
   var params = new URLSearchParams(location.search);
   var g = params.get('g');

@@ -99,6 +99,15 @@
 .knobs .instr:focus-visible { outline: 2px solid var(--frost); }
 .bubble.ai { border-color: #b48ad8; box-shadow: 0 0 0 1px #000, 0 0 16px rgba(180, 138, 216, .45); }
 
+/* The bell waits */
+.pause-card { position: relative; z-index: 6; margin: 14px auto 0; max-width: 560px; padding: 10px 16px 14px; background: rgba(5, 4, 7, .92); border: 1px solid #6a6472; box-shadow: 0 0 0 1px #000, 0 0 26px rgba(159, 182, 207, .25); }
+.pause-card[hidden] { display: none; }
+.pause-card h3 { font-family: var(--frak); font-weight: 400; font-size: 28px; margin: 2px 0 4px; }
+.plans { list-style: none; padding: 0; margin: 6px 0 10px; display: grid; gap: 4px; font-size: 15px; }
+.plans li b { font-family: var(--goth); }
+.plans li code { font-family: var(--mono); font-size: 12.5px; color: var(--frost); }
+#restockSel { font-family: var(--goth); font-size: 15px; color: var(--bone); background: #0d0c10; border: 1px solid #6a6472; padding: 3px 6px; }
+
 /* The bell */
 .bell-row { position: relative; z-index: 4; margin: 16px auto 0; max-width: 520px; text-align: center; }
 .bell-row[hidden] { display: none; }

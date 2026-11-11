@@ -280,6 +280,8 @@ pub struct TownView {
     pub deed: Option<AccountId>,
     /// The last deed share paid: (player, milliNEAR, night).
     pub deed_paid: Option<(AccountId, u64, u32)>,
+    /// The good the deed holder has ordered fully restocked at the next dusk, if any.
+    pub restock_order: Option<String>,
     pub fees_collected: u64,
     pub clones_in_town: u32,
 }
@@ -307,6 +309,7 @@ pub struct Market {
     crowned: Option<(AccountId, u64, u32)>,
     deed: Option<AccountId>,
     deed_paid: Option<(AccountId, u64, u32)>,
+    restock_order: Option<u8>,
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
@@ -370,6 +373,7 @@ impl Market {
             crowned: None,
             deed: None,
             deed_paid: None,
+            restock_order: None,
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
@@ -429,6 +433,10 @@ impl Market {
         self.dusk_order = self.orders.len();
         self.night_fees = 0;
         self.stock = rules::restock(&self.stock);
+        // The deed holder's order: one good back to the merchant's full normal stock.
+        if let Some(g) = self.restock_order.take() {
+            self.stock[g as usize] = self.stock[g as usize].max(rules::NORMAL_STOCK[g as usize]);
+        }
         self.hour_stock = self.stock;
         self.dusk_stock = self.stock;
         self.prev_prices = self.book().board();
@@ -625,6 +633,28 @@ impl Market {
                 limit: o.price,
             })
             .collect();
+        // A whisper for this hour binds the turn: the contract refuses anything else.
+        if let Some((n, h, w)) = &rec.whisper {
+            if (*n, *h) == (night, hour) {
+                match w {
+                    Whisper::Hold => env::panic_str("your player said hold this hour"),
+                    Whisper::SellAll => require!(
+                        intents.iter().all(|i| i.side == rules::Side::Sell)
+                            && (0..5).all(|g| {
+                                rec.stock[g] == 0
+                                    || intents.iter().any(|i| i.good == g && i.qty == rec.stock[g])
+                            }),
+                        "your player said sell everything this hour"
+                    ),
+                    Whisper::Buy { good } => require!(
+                        intents.len() == 1
+                            && intents[0].side == rules::Side::Buy
+                            && rules::GOODS[intents[0].good] == good.as_str(),
+                        "your player said buy something else this hour"
+                    ),
+                }
+            }
+        }
         let mut ledger = rec.ledger();
         let fills = rules::apply_turn(&mut ledger, &mut self.stock, &book, &intents)
             .unwrap_or_else(|e| env::panic_str(e));
@@ -657,11 +687,9 @@ impl Market {
     /// The night runner obeys it instead of the clone's temperament for that hour.
     pub fn whisper(&mut self, clone_id: AccountId, whisper: Whisper) {
         require!(!self.asleep(), "whisper while the night is on");
-        let (night, next) = (self.night, self.round + 1);
-        require!(
-            next < rules::ROUNDS,
-            "too late tonight: the last hour has begun"
-        );
+        // The coming hour: the one the keeper has opened and the clones have yet to trade (a
+        // whisper that lands after the clone's turn simply has no effect).
+        let (night, next) = (self.night, self.round);
         if let Whisper::Buy { good } = &whisper {
             require!(rules::good_index(good).is_some(), "unknown good");
         }
@@ -688,6 +716,18 @@ impl Market {
         );
         rec.whisper = Some((night, next, whisper));
         rec.whispers = (night, used + 1);
+    }
+
+    /// Called by the holder of the merchant's deed between nights: name one good the merchant
+    /// restocks in full at the next dusk (so it opens cheap). Deed holder only.
+    pub fn order_restock(&mut self, good: String) {
+        require!(self.asleep(), "order the restock between nights");
+        require!(
+            self.deed.as_ref() == Some(&env::predecessor_account_id()),
+            "only the holder of the merchant's deed can order the restock"
+        );
+        let g = rules::good_index(&good).unwrap_or_else(|| env::panic_str("unknown good"));
+        self.restock_order = Some(g as u8);
     }
 
     /// Called by the player between nights: change a clone's temperament for the nights it has
@@ -889,6 +929,9 @@ impl Market {
             crowned: self.crowned.clone(),
             deed: self.deed.clone(),
             deed_paid: self.deed_paid.clone(),
+            restock_order: self
+                .restock_order
+                .map(|g| rules::GOODS[g as usize].to_string()),
             fees_collected: self.fees,
             clones_in_town: self.clones.len(),
         }
@@ -1136,7 +1179,7 @@ mod tests {
         as_caller("alice.testnet", zero());
         m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
         let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
-        assert_eq!(c.whisper, Some((1, 1, Whisper::SellAll)));
+        assert_eq!(c.whisper, Some((1, 0, Whisper::SellAll)));
         assert_eq!(c.whispers_left, 2);
     }
 
@@ -1290,6 +1333,63 @@ mod tests {
             None,
             Some("x".repeat(161)),
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "your player said hold this hour")]
+    fn a_hold_whisper_binds_the_turn() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::Hold);
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 1, 1000)]);
+    }
+
+    #[test]
+    #[should_panic(expected = "said buy something else")]
+    fn a_buy_whisper_binds_the_good() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(
+            acc("clone-1.alice.testnet"),
+            Whisper::Buy {
+                good: "grain".into(),
+            },
+        );
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 1, 1000)]);
+    }
+
+    #[test]
+    fn the_deed_holder_orders_a_full_restock() {
+        let mut m = town_with_clone();
+        as_clone();
+        let book = rules::Book::at(SEED, 0, rules::NORMAL_STOCK);
+        m.trade(
+            0,
+            vec![order(
+                "amber",
+                Side::Buy,
+                5,
+                book.quote(4, rules::Side::Buy, 5),
+            )],
+        );
+        ring_to_dawn(&mut m);
+        as_caller("alice.testnet", zero());
+        m.order_restock("amber".into());
+        assert_eq!(m.get_town().restock_order.as_deref(), Some("amber"));
+        open(&mut m);
+        assert_eq!(m.get_town().stock[4], rules::NORMAL_STOCK[4]);
+        assert_eq!(m.get_town().restock_order, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the holder of the merchant's deed")]
+    fn only_the_deed_holder_orders_the_restock() {
+        let mut m = town_with_clone();
+        ring_to_dawn(&mut m);
+        as_caller("bob.testnet", zero());
+        m.order_restock("amber".into());
     }
 
     #[test]
