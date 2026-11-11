@@ -57,7 +57,7 @@ async fn town() -> anyhow::Result<Town> {
 
     player
         .call(market.id(), "register_clone")
-        .args_json(json!({ "clone_id": clone.id(), "temperament": "greedy" }))
+        .args_json(json!({ "clone_id": clone.id(), "temperament": "possessed" }))
         .deposit(NearToken::from_near(2))
         .transact()
         .await?

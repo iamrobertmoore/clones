@@ -6,7 +6,7 @@
 //!         <funder account> <house name, e.g. clonestown.testnet> <NEAR to fund it with | new-market>
 //!
 //! `new-market` keeps the house and deploys a fresh market as `<MARKET_NAME>.<house>` (default
-//! `cairn`), for when the market's stored state changes shape. NEAR refuses to delete an account
+//! `grave`), for when the market's stored state changes shape. NEAR refuses to delete an account
 //! holding a lot of state, so an old market is left where it is rather than deleted.
 
 use clones_replay::contracts;
@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let house_id: AccountId = args[1].parse()?;
     let key_file = dir.join(format!("{house_id}.json"));
 
-    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "cairn".into());
+    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "grave".into());
     let house = if args[2] == "new-market" {
         let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&key_file)?)?;
         let key: SecretKey = v["private_key"].as_str().unwrap_or_default().parse()?;
@@ -64,26 +64,25 @@ async fn main() -> anyhow::Result<()> {
     let key = house.secret_key().clone();
 
     let (market_wasm, _) = contracts().await?;
-    let market = house
-        .create_subaccount(&market_name)
-        .initial_balance(NearToken::from_near(5))
-        .keys(key)
-        .transact()
-        .await?
-        .into_result()?
+    // The market is created, funded, deployed and initialised in one transaction with no access
+    // key at all: nobody, the house included, can redeploy it or move the clones' cash. The house
+    // calls `new`, so the house is its keeper (it may only open nights and ring hours).
+    let market_id: AccountId = format!("{market_name}.{house_id}").parse()?;
+    house
+        .batch(&market_id)
+        .create_account()
+        .transfer(NearToken::from_near(3))
         .deploy(&market_wasm)
-        .await?
-        .into_result()?;
-    market
-        .call("new")
-        // The hosted town draws every hour's prices and tomorrow's mood from block randomness.
-        .args_json(json!({ "seed": "0", "guests_under": house_id, "chain_dice": true }))
+        .call(
+            near_workspaces::operations::Function::new("new")
+                .args_json(json!({ "seed": "0", "guests_under": house_id, "chain_dice": true })),
+        )
         .transact()
         .await?
         .into_result()?;
-    println!(
-        "market  https://testnet.nearblocks.io/address/{}",
-        market.id()
-    );
+    let keys = worker.view_access_keys(&market_id).await?;
+    anyhow::ensure!(keys.is_empty(), "the market has {} keys", keys.len());
+    let _ = key;
+    println!("market  https://testnet.nearblocks.io/address/{market_id}  (no access keys)");
     Ok(())
 }

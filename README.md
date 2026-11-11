@@ -4,7 +4,7 @@
 
 **A trading game on NEAR where copies of you trade while you sleep. They can trade, but they can never withdraw.**
 
-[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/cairn.clonestown.testnet)
+[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/grave.clonestown.testnet)
 
 You send up to three copies of yourself into a market town. You choose each one's temperament
 (cautious, greedy, loyal, or possessed: a NEAR AI model that follows one sentence you write), how
@@ -99,7 +99,7 @@ The demo night (seed 606, a wild night): cautious 2.000 to 3.112 NEAR (2.613 plu
 
 ## The hosted town
 
-`clonestown.testnet` runs a market, `cairn.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The
+`clonestown.testnet` runs a market, `grave.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The market has no access key at all: it was created, deployed and initialised in one transaction, so nobody, the house included, can redeploy it or move the cash in its ledger. The house is only its keeper (it may open nights and ring hours). Each clone has its own key, derived from the house secret, and the contract refuses any turn that isn't what the clone's temperament (or your whisper) says; a possessed clone may make one legal move an hour. The
 sign-up function creates a guest account and its clones and sends them in, funded with testnet NEAR
 by the house. The bell (`web/api/bell.js`) plays one step of the night per call; the town page
 calls it until dawn. If nobody rings it, a GitHub Actions job rings the same code around 02:00 UTC
@@ -128,7 +128,7 @@ to `web/data/night-mainnet.json`.
 - My first version of that let a clone make free money: buy, watch its own buying raise the price, sell. The merchant now quotes a big order at the price after the trade, and a test proves buying and selling back never pays (`buying_and_selling_back_never_pays`).
 - GitHub's scheduler started the nightly job seven hours late and skipped the backstop. A judge's clones could have sat unplayed all morning, so the night now runs whenever anyone rings the bell, and the schedule is only a fallback.
 - A lagging RPC node made the runner replay an hour. The contract already refused the duplicate trades; the runner now also waits until a node shows the new hour before it returns.
-- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `cairn.clonestown.testnet`.
+- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `grave.clonestown.testnet`.
 - Earlier: the public RPC rate-limited the first testnet night (calls now retry on rate limits only), merging with maximum gas reserved more than a small player held (merge asks for 100 Tgas), and settling an already merged clone would have stranded its cash (`after_payout` pays the player instead).
 
 ## Known limits
@@ -157,7 +157,7 @@ and `lib/` (the night runner and a JavaScript copy of the rules). The recorded n
 ## How this maps to the judging criteria
 
 - **Game loop:** read the omen (and doubt it), choose temperament, stake and nights for each clone, ring the bell, whisper once a night to each clone, fight the regulars and other guests for the crown, see who comes home, retrain or recall the ones still out, ring again. Your clones share one merchant with everyone else's.
-- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 80 Rust tests, including three suites that play real nights on a local NEAR node, and 19 web tests (the night audit among them) run in CI on every push.
+- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 82 Rust tests, including three suites that play real nights on a local NEAR node, and 19 web tests (the night audit among them) run in CI on every push.
 - **NEAR integration:** the leash is a NEAR function-call access key, and every price, fill and payout is computed by the market contract.
 - **Design:** you lie asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the chain or a night log.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave.

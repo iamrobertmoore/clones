@@ -19,6 +19,7 @@ const crypto = require("crypto");
 const { connect, keyStores, KeyPair, utils, transactions } = require("near-api-js");
 const rules = require("./rules.js");
 const mind = require("./mind.js");
+const { cloneKey, isClone } = require("./keys.js");
 
 const TGAS = 1_000_000_000_000n;
 const short = (id) => id.split(".")[0];
@@ -26,7 +27,7 @@ const short = (id) => id.split(".")[0];
 async function openTown(env = process.env) {
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `cairn.${house}`;
+  const market = env.MARKET_ACCOUNT || `grave.${house}`;
   const keyStore = new keyStores.InMemoryKeyStore();
   // Accounts are spread across public RPC endpoints, so a busy town does not trip one node's
   // rate limit. Views go to the first.
@@ -37,7 +38,8 @@ async function openTown(env = process.env) {
   const spread = (id) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % nears.length;
   const as = async (id) => {
     if (!accounts.has(id)) {
-      await keyStore.setKey("testnet", id, keyPair);
+      // A clone signs with its own derived key; everyone else here with the house key.
+      await keyStore.setKey("testnet", id, isClone(id) ? cloneKey(env.HOUSE_KEY, id) : keyPair);
       accounts.set(id, await nears[spread(id)].account(id));
     }
     return accounts.get(id);
@@ -153,7 +155,8 @@ async function playHour(t, town, clones) {
       if (!m.includes("already traded this hour")) events.push({ kind: "order_failed", round, ...x.who, error: m.slice(0, 300) });
     }
   }
-  const keeper = await t.as(t.market);
+  // The house is the market's keeper: the market itself has no key.
+  const keeper = await t.as(t.house);
   try {
     await patient(() =>
       keeper.functionCall({ contractId: t.market, methodName: "advance_round", args: { round }, gas: 100n * TGAS }),
@@ -491,7 +494,8 @@ function newSeed() {
 }
 
 async function openNight(t, town) {
-  const keeper = await t.as(t.market);
+  // The house is the market's keeper: the market itself has no key.
+  const keeper = await t.as(t.house);
   const seed = newSeed();
   try {
     await patient(() =>

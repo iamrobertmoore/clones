@@ -634,6 +634,46 @@ impl Market {
             })
             .collect();
         // A whisper for this hour binds the turn: the contract refuses anything else.
+        let whispered = matches!(&rec.whisper, Some((n, h, _)) if (*n, *h) == (night, hour));
+        if !whispered {
+            // Without a whisper, the clone's temperament binds it: a cautious, greedy or loyal
+            // clone's turn must be exactly what its rules decide from this hour's board, and a
+            // possessed clone's must be one legal move (sell everything, or one buy).
+            let temperament: rules::Temperament = rec.temperament.into();
+            if temperament == rules::Temperament::Possessed {
+                let sell_up = intents.iter().all(|i| i.side == rules::Side::Sell)
+                    && (0..5).all(|g| {
+                        rec.stock[g] == 0
+                            || intents.iter().any(|i| i.good == g && i.qty == rec.stock[g])
+                    });
+                let one_buy = intents.len() == 1 && intents[0].side == rules::Side::Buy;
+                require!(
+                    sell_up || one_buy,
+                    "a possessed clone makes one move an hour"
+                );
+            } else {
+                let want = rules::decide(
+                    temperament,
+                    &rules::View {
+                        round: hour,
+                        book,
+                        prices: book.board(),
+                        prev: self.prev_prices,
+                        ledger: rec.ledger(),
+                        stake: rec.stake,
+                    },
+                )
+                .intents;
+                require!(
+                    want.len() == intents.len()
+                        && want
+                            .iter()
+                            .zip(&intents)
+                            .all(|(w, i)| (w.good, w.side, w.qty) == (i.good, i.side, i.qty)),
+                    "that is not what this clone's temperament does this hour"
+                );
+            }
+        }
         if let Some((n, h, w)) = &rec.whisper {
             if (*n, *h) == (night, hour) {
                 match w {
@@ -991,14 +1031,15 @@ mod tests {
         }
     }
 
-    /// A town with alice's greedy clone in it and the first night open.
+    /// A town with alice's possessed clone in it (free to make any one legal move an hour, so the
+    /// tests can choose its orders) and the first night open.
     fn town_with_clone() -> Market {
         as_caller("keeper.testnet", zero());
         let mut m = Market::new(U64(SEED), None, None);
         as_caller("alice.testnet", NearToken::from_near(2));
         m.register_clone(
             acc("clone-1.alice.testnet"),
-            Temperament::Greedy,
+            Temperament::Possessed,
             None,
             None,
         );
@@ -1407,7 +1448,7 @@ mod tests {
         let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
         assert_eq!(c.player, acc("alice.testnet"));
         assert_eq!((c.cash, c.stake, c.nights), (2000, 2000, 1));
-        assert_eq!(c.temperament, Temperament::Greedy);
+        assert_eq!(c.temperament, Temperament::Possessed);
         assert!(!c.broke);
     }
 
@@ -1523,15 +1564,71 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not enough cash")]
-    fn a_turn_is_whole_or_nothing() {
+    #[should_panic(expected = "not what this clone's temperament does")]
+    fn a_clone_cannot_stray_from_its_temperament() {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(2));
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Greedy, None, None);
+        ring_to_dawn(&mut m);
+        open(&mut m);
+        as_caller("clone-1.bob.testnet", zero());
+        m.trade(0, vec![order("salt", Side::Buy, 1, 1000)]);
+    }
+
+    #[test]
+    fn a_clone_trades_exactly_as_its_temperament_decides() {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(2));
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Greedy, None, None);
+        ring_to_dawn(&mut m);
+        open(&mut m);
+        let t = m.get_town();
+        let book = rules::Book {
+            usual: t.hours[0],
+            stock: t.hour_stock,
+        };
+        let d = rules::decide(
+            rules::Temperament::Greedy,
+            &rules::View {
+                round: 0,
+                book,
+                prices: book.board(),
+                prev: t.prev_prices,
+                ledger: rules::Ledger {
+                    cash: 2000,
+                    stock: [0; 5],
+                },
+                stake: 2000,
+            },
+        );
+        let orders: Vec<OrderIn> = d
+            .intents
+            .iter()
+            .map(|i| OrderIn {
+                good: rules::GOODS[i.good].into(),
+                side: if i.side == rules::Side::Buy {
+                    Side::Buy
+                } else {
+                    Side::Sell
+                },
+                qty: i.qty,
+                price: i.limit,
+            })
+            .collect();
+        as_caller("clone-1.bob.testnet", zero());
+        assert_eq!(m.trade(0, orders).len(), d.intents.len());
+    }
+
+    #[test]
+    #[should_panic(expected = "one move an hour")]
+    fn a_possessed_clone_makes_one_move() {
         let mut m = town_with_clone();
         as_clone();
         m.trade(
             0,
             vec![
                 order("salt", Side::Buy, 1, 30),
-                order("amber", Side::Buy, 40, 1000),
+                order("grain", Side::Buy, 1, 30),
             ],
         );
     }

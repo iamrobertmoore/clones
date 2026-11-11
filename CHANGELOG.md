@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The hosted market is keyless (`grave.clonestown.testnet`), with the house as keeper only. The contract enforces each temperament's turn (and a possessed clone's one move an hour). Each clone has its own derived key. Possessed clones run on Gemini 2.5 Flash-Lite through NEAR AI Cloud.
 - Review round 5. Possessed clones: a NEAR AI model trades on the player's one-sentence instruction, stored on chain; the Widow is possessed. Custody by default: the browser's key is the guest's only full-access key and the house key is cut to market calls. The market merges a clone home after paying it (the leash trusts the market it is bound to, and always pays the player). Three whispers a night, enforced by the contract. The deed: a quarter of the next night's fees and a full restock of one good. The bell pauses twice a night to show each clone's plan. The crown goes to the biggest profit. New market `cairn.clonestown.testnet`. Mainnet night script (`replay/examples/mainnet_night.rs`).
 - Review round 3 fixes. The crown: each night's fees go at dawn to the clone with the best return, picked by the contract and checked by the audit. Omens come true seven nights in ten. Three regulars (the Widow, the Abbot, the Hound) play every night. Standings by player. The refusal is told in the story: "the chains held". New market `charnel.clonestown.testnet`.
 - The night runner throttles its turns, retries rate-limited calls longer, resends missed turns before ringing the hour, and spreads accounts over two RPC hostnames.

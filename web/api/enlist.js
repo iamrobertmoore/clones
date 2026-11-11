@@ -76,14 +76,15 @@ async function enlist(plan, env = process.env, opts = {}) {
   const temperaments = plan.map((c) => c.temperament);
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `cairn.${house}`;
+  const market = env.MARKET_ACCOUNT || `grave.${house}`;
   const guest = opts.guest || `${guestName()}.${house}`;
   const clones = temperaments.map((_, i) => `clone-${i + 1}.${guest}`);
 
   const keyStore = new keyStores.InMemoryKeyStore();
-  for (const id of [house, guest, ...clones]) {
+  for (const id of [house, guest]) {
     await keyStore.setKey("testnet", id, keyPair);
   }
+  const { cloneKey } = require("../lib/keys.js");
   const near = await connect({
     networkId: "testnet",
     nodeUrl: env.NEAR_RPC || "https://test.rpc.fastnear.com",
@@ -148,7 +149,7 @@ async function enlist(plan, env = process.env, opts = {}) {
             transactions.createAccount(),
             transactions.transfer(BigInt(CLONE_ACCOUNT)),
             transactions.addKey(
-              pk,
+              cloneKey(env.HOUSE_KEY, clones[i]).getPublicKey(),
               transactions.functionCallAccessKey(
                 market,
                 ["trade"],
