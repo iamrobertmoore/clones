@@ -1,8 +1,8 @@
 {
   "seed": 606,
   "network": "testnet",
-  "market": "town395089.dev-20261109143721-70449629265523.testnet",
-  "player": "p395089.dev-20261109143739-10825377460877.testnet",
+  "market": "town397710.dev-20261109143721-70449629265523.testnet",
+  "player": "p397710.dev-20261109143739-10825377460877.testnet",
   "rounds": 12,
   "goods": [
     "grain",
@@ -16,10 +16,11 @@
       "name": "clone-1",
       "temperament": "cautious",
       "stake": 2000,
-      "final_cash": 2613,
+      "final_cash": 3112,
       "broke": false,
       "orders": 9,
-      "home": true
+      "home": true,
+      "crown": 499
     },
     {
       "name": "clone-2",
@@ -28,7 +29,8 @@
       "final_cash": 484,
       "broke": true,
       "orders": 15,
-      "home": true
+      "home": true,
+      "crown": 0
     },
     {
       "name": "clone-3",
@@ -37,7 +39,8 @@
       "final_cash": 2053,
       "broke": false,
       "orders": 4,
-      "home": true
+      "home": true,
+      "crown": 0
     }
   ],
   "outcomes": [
@@ -45,10 +48,11 @@
       "name": "clone-1",
       "temperament": "cautious",
       "stake": 2000,
-      "final_cash": 2613,
+      "final_cash": 3112,
       "broke": false,
       "orders": 9,
-      "home": true
+      "home": true,
+      "crown": 499
     },
     {
       "name": "clone-2",
@@ -57,7 +61,8 @@
       "final_cash": 484,
       "broke": true,
       "orders": 15,
-      "home": true
+      "home": true,
+      "crown": 0
     },
     {
       "name": "clone-3",
@@ -66,7 +71,8 @@
       "final_cash": 2053,
       "broke": false,
       "orders": 4,
-      "home": true
+      "home": true,
+      "crown": 0
     }
   ],
   "events": [
@@ -74,37 +80,37 @@
       "kind": "clone_created",
       "clone": "clone-1",
       "temperament": "cautious",
-      "tx": "9Xbg4JQRQzDD9gTrHRMWMvT8Gcg8mJuWH1md6nPDNCKi"
+      "tx": "8D6Wqo551ThkjA73h77Z8vvwPQApmhqrchweDhE7dqtR"
     },
     {
       "kind": "sent_in",
       "clone": "clone-1",
       "stake": 2000,
-      "tx": "EKQBbPT6GfJXJB6ktmk8X9wfx61Lc8h3V61wJRqrauxg"
+      "tx": "HngErX73rMsRQALZv2M73cgiV625zn5z63Pyp98PBDTX"
     },
     {
       "kind": "clone_created",
       "clone": "clone-2",
       "temperament": "greedy",
-      "tx": "6a6cdEktNUiH1MPLfioBEJdAEsKbQrwycUdzDtbKQSXZ"
+      "tx": "8nDyqWbaeoRthRgiE3Gy2ZsKUtmiDSCdGd7HxuxtS5jB"
     },
     {
       "kind": "sent_in",
       "clone": "clone-2",
       "stake": 2000,
-      "tx": "JZUnsM4g7Fx266gdiQSeqjHR4efjKAkQ5EvnwnGZZei"
+      "tx": "AzyrTaHM4Ei1ACBETxc1N5BzUKqTKRqdWVFQbY4a1NtK"
     },
     {
       "kind": "clone_created",
       "clone": "clone-3",
       "temperament": "loyal",
-      "tx": "GbyXMyKrWkUTdp7tpnVgCaLLsHAbGCcbnwTLdubdexG5"
+      "tx": "GFEumJhKmYf8BWNByU32gBobWJtiB1QUNmgacKKi51tz"
     },
     {
       "kind": "sent_in",
       "clone": "clone-3",
       "stake": 2000,
-      "tx": "6cW9gnNa2nMsRBS7csyJdwdgA7cXfocb3Ebyv5ioVKbv"
+      "tx": "C4t4Y5MHoSNfePa1cTKbZmsddzRgfBEmUYRYHeRWJj7W"
     },
     {
       "kind": "hour",
@@ -137,7 +143,7 @@
       "side": "buy",
       "qty": 15,
       "price": 128,
-      "tx": "rpa9pSy4qVDVU4X9dLpxVeg7cseWKnTMS7mQSMC6WEM"
+      "tx": "CWXUWXqtQ3uwSggiiEcwNFrngfHfqqzxf5PGYwri4J2m"
     },
     {
       "kind": "bubble",
@@ -170,7 +176,7 @@
       "side": "buy",
       "qty": 7,
       "price": 67,
-      "tx": "3SxAaEWgtENdFG1xnD2VW3nLVDBQwQVN4oudcLc2236u"
+      "tx": "GStmYjt9taMc8QcH9KjYZDH3wTkfpvoeNKHquSSm7NSp"
     },
     {
       "kind": "bubble",
@@ -192,7 +198,7 @@
       "side": "buy",
       "qty": 17,
       "price": 19,
-      "tx": "F4TREEnPqUAM1woNtcSbeEPRw7xTY14S4NycnRxyNAgN"
+      "tx": "9PAMxEe7Tx8MrnE9skxGaqEgw6U2DuDefuWMGY6gXjAM"
     },
     {
       "kind": "order",
@@ -202,7 +208,7 @@
       "side": "buy",
       "qty": 11,
       "price": 28,
-      "tx": "F4TREEnPqUAM1woNtcSbeEPRw7xTY14S4NycnRxyNAgN"
+      "tx": "9PAMxEe7Tx8MrnE9skxGaqEgw6U2DuDefuWMGY6gXjAM"
     },
     {
       "kind": "hour",
@@ -229,7 +235,7 @@
       "side": "buy",
       "qty": 23,
       "price": 16,
-      "tx": "JmFr8CgcaNRmax3TPeCyWgBtoyZsEZD3oB21yuEZa2Z"
+      "tx": "5eR5yefPn3mtoRLSarjmavCur6KYPCTHEv12UfCFC7EQ"
     },
     {
       "kind": "bubble",
@@ -245,7 +251,7 @@
       "side": "sell",
       "qty": 15,
       "price": 146,
-      "tx": "GrwcznZfsXPCQZwwtKVqJFZG3kn5pKMECRiXR4kVWhkY"
+      "tx": "yyaJ2899V63yMJjYhPDpeJPg3ss5d4pLM2pEebqvWxS"
     },
     {
       "kind": "order",
@@ -255,7 +261,7 @@
       "side": "buy",
       "qty": 24,
       "price": 88,
-      "tx": "GrwcznZfsXPCQZwwtKVqJFZG3kn5pKMECRiXR4kVWhkY"
+      "tx": "yyaJ2899V63yMJjYhPDpeJPg3ss5d4pLM2pEebqvWxS"
     },
     {
       "kind": "bubble",
@@ -288,7 +294,7 @@
       "side": "buy",
       "qty": 13,
       "price": 21,
-      "tx": "88Je5JKv78RQXE8Z5h2BFJ4TWr5LQ7paCNabrsk4moox"
+      "tx": "9Edu8jpUjUa8L3MUvDnSQJprV41TLuuKVY5PbttLNuZP"
     },
     {
       "kind": "bubble",
@@ -327,7 +333,7 @@
       "side": "sell",
       "qty": 7,
       "price": 96,
-      "tx": "FNpj3h1KxXGDPdzaTCRBm4oERDAybebRoDXv9Pv38kgK"
+      "tx": "DJuM2r9sA7By1i2BMkC22NRbTASZeZ4KBpcUsqgwQSLL"
     },
     {
       "kind": "bubble",
@@ -401,7 +407,7 @@
       "side": "sell",
       "qty": 24,
       "price": 71,
-      "tx": "7Mq1cLdgSyw2hCey2X1P1ZdstJiLWrFSxPdZhzsvpHKM"
+      "tx": "7NMRkHBZ2qXGNofr1KGcBrXmt11Jpi8uwHTPPLykTp92"
     },
     {
       "kind": "order",
@@ -411,7 +417,7 @@
       "side": "buy",
       "qty": 32,
       "price": 52,
-      "tx": "7Mq1cLdgSyw2hCey2X1P1ZdstJiLWrFSxPdZhzsvpHKM"
+      "tx": "7NMRkHBZ2qXGNofr1KGcBrXmt11Jpi8uwHTPPLykTp92"
     },
     {
       "kind": "bubble",
@@ -444,7 +450,7 @@
       "side": "buy",
       "qty": 4,
       "price": 91,
-      "tx": "HC3fEM6HFqLuV4jRC88nsp8NohmWVi2u5hy3SvqT5D35"
+      "tx": "2Ws1DbTSGMaokJiofKSNNE9DbrsnEbT2knk2QKMwTPjy"
     },
     {
       "kind": "bubble",
@@ -460,7 +466,7 @@
       "side": "sell",
       "qty": 32,
       "price": 42,
-      "tx": "7meEoNdim7oyoFBp8nXU7q3kA8bjV1naf4XPBHkxuiCt"
+      "tx": "GBUF5nfa9MTXkoewktkYL9gxLURZF4PdeSaakHAKXTY7"
     },
     {
       "kind": "order",
@@ -470,7 +476,7 @@
       "side": "buy",
       "qty": 47,
       "price": 27,
-      "tx": "7meEoNdim7oyoFBp8nXU7q3kA8bjV1naf4XPBHkxuiCt"
+      "tx": "GBUF5nfa9MTXkoewktkYL9gxLURZF4PdeSaakHAKXTY7"
     },
     {
       "kind": "bubble",
@@ -503,7 +509,7 @@
       "side": "sell",
       "qty": 4,
       "price": 131,
-      "tx": "FqUSf71ndNHgd2F4AgfS8JnoMPSZmks3uCRLG7QY4fz4"
+      "tx": "6NYyijcqL6knNfVM57HBXjATiDFX8Fcj1NUxpKdaQCUr"
     },
     {
       "kind": "order",
@@ -513,7 +519,7 @@
       "side": "buy",
       "qty": 5,
       "price": 54,
-      "tx": "FqUSf71ndNHgd2F4AgfS8JnoMPSZmks3uCRLG7QY4fz4"
+      "tx": "6NYyijcqL6knNfVM57HBXjATiDFX8Fcj1NUxpKdaQCUr"
     },
     {
       "kind": "bubble",
@@ -529,7 +535,7 @@
       "side": "sell",
       "qty": 47,
       "price": 28,
-      "tx": "2sqm6XmTFP1w7QHNdBq1G3XZbNtnxNKQz1eoKRDd53Jp"
+      "tx": "Enpzkemb6G6cawMS7YJ5dCoXE6qqm1kXxtvLzqyinRUV"
     },
     {
       "kind": "order",
@@ -539,7 +545,7 @@
       "side": "buy",
       "qty": 9,
       "price": 138,
-      "tx": "2sqm6XmTFP1w7QHNdBq1G3XZbNtnxNKQz1eoKRDd53Jp"
+      "tx": "Enpzkemb6G6cawMS7YJ5dCoXE6qqm1kXxtvLzqyinRUV"
     },
     {
       "kind": "bubble",
@@ -572,7 +578,7 @@
       "side": "sell",
       "qty": 13,
       "price": 33,
-      "tx": "AqeHFtnG2eQrxoLTgiLiDJ5aUzRuhmCf6N5JuXCLMnpo"
+      "tx": "GkEcA4CC6Bo4pmsGBfWpyqyX2ZWVeSrDWoE5H6C8DVB4"
     },
     {
       "kind": "bubble",
@@ -588,7 +594,7 @@
       "side": "sell",
       "qty": 9,
       "price": 104,
-      "tx": "EukCFB1gnLt4oXmFRLd5yRPMiVWThfJh1qBo4yQTdNuo"
+      "tx": "DCzUjTDykyio6JEUBRF8QHTzrTNELQ9cMy8bkQXft8r6"
     },
     {
       "kind": "order",
@@ -598,7 +604,7 @@
       "side": "buy",
       "qty": 18,
       "price": 50,
-      "tx": "EukCFB1gnLt4oXmFRLd5yRPMiVWThfJh1qBo4yQTdNuo"
+      "tx": "DCzUjTDykyio6JEUBRF8QHTzrTNELQ9cMy8bkQXft8r6"
     },
     {
       "kind": "bubble",
@@ -614,7 +620,7 @@
       "side": "sell",
       "qty": 11,
       "price": 33,
-      "tx": "CUTmAQxdEDTda6U8VB5cWLD86VPKsMHVHiYBpmDSdssX"
+      "tx": "49g7KK6Xbdwu8hrPmvLqjL4jYhnjxaWkCffLQQ5JVh58"
     },
     {
       "kind": "hour",
@@ -647,7 +653,7 @@
       "side": "sell",
       "qty": 18,
       "price": 40,
-      "tx": "EjTcaDrpPVcKgXvHnFPLcdqMmPMWzpEE1NRGGRZ3Yby2"
+      "tx": "9ndkqhDSqstzVYtWNAGvT2eBjDtuZPtMjRc53RW9HoRX"
     },
     {
       "kind": "order",
@@ -657,7 +663,7 @@
       "side": "buy",
       "qty": 21,
       "price": 34,
-      "tx": "EjTcaDrpPVcKgXvHnFPLcdqMmPMWzpEE1NRGGRZ3Yby2"
+      "tx": "9ndkqhDSqstzVYtWNAGvT2eBjDtuZPtMjRc53RW9HoRX"
     },
     {
       "kind": "bubble",
@@ -690,7 +696,7 @@
       "side": "buy",
       "qty": 6,
       "price": 69,
-      "tx": "5LgHxotrVM4iChzAcf3SYvZgpQwC4fqTRMzD1dGiU3v5"
+      "tx": "6mBUXRV1q48gKeoocFVrNqv43sz3g4y6EABg7jgAr5dA"
     },
     {
       "kind": "bubble",
@@ -706,7 +712,7 @@
       "side": "sell",
       "qty": 21,
       "price": 27,
-      "tx": "3PiNxbsdr4vUxy1gEsUPH2FvqxUSrZkGumBuEqCAwdmx"
+      "tx": "H62aS7W9JvELf7Ye4BRo76JZSz4TcbaJrQfpi8GHXnEK"
     },
     {
       "kind": "order",
@@ -716,7 +722,7 @@
       "side": "buy",
       "qty": 9,
       "price": 60,
-      "tx": "3PiNxbsdr4vUxy1gEsUPH2FvqxUSrZkGumBuEqCAwdmx"
+      "tx": "H62aS7W9JvELf7Ye4BRo76JZSz4TcbaJrQfpi8GHXnEK"
     },
     {
       "kind": "bubble",
@@ -732,7 +738,7 @@
       "side": "buy",
       "qty": 10,
       "price": 27,
-      "tx": "AERUXbVWbUHGKHZsnSxocNc3EwLZzLHUVrqhX5ixY4K"
+      "tx": "6zb1o5RQwUgNv13FSJLo6Pm6jrGzaCEJ4crzXqx8wDgu"
     },
     {
       "kind": "hour",
@@ -759,14 +765,14 @@
     {
       "kind": "settled",
       "clone": "clone-1",
-      "paid_out": 2613,
+      "paid_out": 3112,
       "broke": false,
-      "tx": "4Ufjh4ryZanjH6qNVHAwSQzANuXzzUnZCvPVW3kzx8qS"
+      "tx": "51q1DUG916kGvBvUCjRqLQmaqgSRMvHtzC4zTzdXyWMQ"
     },
     {
       "kind": "merged",
       "clone": "clone-1",
-      "tx": "5hCWdwEoFWvxY42LgwtWyViJbcu97HjxFZwrAGNSTcG9",
+      "tx": "C7nwiVEisTtcjLpiLwg4VNrhRSumhgD1cwTi6TQZXujz",
       "clone_deleted": true
     },
     {
@@ -774,12 +780,12 @@
       "clone": "clone-2",
       "paid_out": 484,
       "broke": true,
-      "tx": "GPtpLnKbJx6yD9Cm98439evmFYEPLXvb2VvSacWQZa5d"
+      "tx": "3H3En9fMZ7ZqdnAMu5otm4jKwZGgh8XHrqK8Ao53Cqs2"
     },
     {
       "kind": "merged",
       "clone": "clone-2",
-      "tx": "Bm7L8QhzbXdxiFrNp95uKa8MgRcKfLBbhE65Z5Y8t5r9",
+      "tx": "3gdn6QfmuqsZJnfHUaS515jkvg1zNvZKzJgha2rdLCPS",
       "clone_deleted": true
     },
     {
@@ -787,17 +793,17 @@
       "clone": "clone-3",
       "paid_out": 2053,
       "broke": false,
-      "tx": "7bM5L71rxpH8r3F6YTL4MB2rAvnMFD7QkRMdPMBk5i9G"
+      "tx": "5cFEjEaudkx4DAea9LRwzHu2nEugp9RcLgTNCQAy7K7q"
     },
     {
       "kind": "merged",
       "clone": "clone-3",
-      "tx": "AtuniVkm3GHfTLYQVCpd3NZVUFtrAAtGzEEdQKkPwZWT",
+      "tx": "CauqcciSGbYzs2zCsFB4Q2g1cHUJPpfbtgtwzZdGcsbU",
       "clone_deleted": true
     }
   ],
   "player_balance_before": 8200,
-  "player_balance_after": 7320,
+  "player_balance_after": 7819,
   "night": 1,
   "dusk_stock": [
     1200,
