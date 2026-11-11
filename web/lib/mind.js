@@ -9,7 +9,7 @@ const rules = require("./rules.js");
 const URL = "https://cloud-api.near.ai/v1/chat/completions";
 // A fast model that answers directly (a reasoning model spends its tokens thinking and returns an
 // empty answer at this length).
-const MODEL = process.env.NEARAI_MODEL || "google/gemini-2.5-flash";
+const MODEL = process.env.NEARAI_MODEL || "google/gemini-2.5-flash-lite";
 
 function prompt(instruction, v, mood) {
   const goods = rules.GOODS.map((g, i) => {
