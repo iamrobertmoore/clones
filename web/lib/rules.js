@@ -264,16 +264,16 @@ function applyTurn(ledger, stock, book, intents) {
   return fills;
 }
 
-// The crown: the night's fees go to the clone with the best return on its stake; ties to the
-// lower account id. entries: [{name, worth, stake}]. Returns the winner's index or -1.
+// The crown: the night's pot goes to the clone with the biggest profit (worth less stake); ties to
+// the lower account id. entries: [{name, worth, stake}]. Returns the winner's index or -1.
 function crownWinner(entries) {
   let best = -1;
   entries.forEach((e, i) => {
     if (best < 0) return void (best = i);
-    const r = (BigInt(e.worth) * 1000000n) / BigInt(Math.max(e.stake, 1));
+    const p = e.worth - e.stake;
     const b = entries[best];
-    const br = (BigInt(b.worth) * 1000000n) / BigInt(Math.max(b.stake, 1));
-    if (r > br || (r === br && e.name < b.name)) best = i;
+    const bp = b.worth - b.stake;
+    if (p > bp || (p === bp && e.name < b.name)) best = i;
   });
   return best;
 }

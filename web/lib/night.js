@@ -382,7 +382,7 @@ async function sweep(t, guest) {
 
 // The town's regulars: three house players who send clones in every night someone rings the
 // bell, so a guest is never alone at the merchant and the crown is always contested. Each has a
-// style; the Widow reads the omen (and, given a NEAR AI key, asks a model what to send).
+// style: the Widow reads the omen and sends what it favours.
 const RIVALS = [
   { name: "widow", title: "the Widow", plan: (omen) => widowPlan(omen) },
   { name: "abbot", title: "the Abbot", plan: () => [{ temperament: "cautious", stake: 500, nights: 1 }] },

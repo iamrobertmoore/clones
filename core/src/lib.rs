@@ -577,19 +577,20 @@ pub struct Outcome {
     pub crown: u64,
 }
 
-/// The crown: at dawn, every fee the town took during the night goes to the clone with the best
-/// return on its stake (ties to the lower account id). Clones compete for it, so other players'
-/// clones are rivals, not just weather. Returns the winner's index.
+/// The crown: at dawn, the night's pot of fees goes to the clone with the biggest profit (worth at
+/// dawn less its stake; ties to the lower account id). Clones compete for it, so other players'
+/// clones are rivals, not just weather, and because it is profit, not return, a bigger stake can
+/// win more and lose more. Returns the winner's index.
 pub fn crown_winner(entries: &[(&str, u64, u64)]) -> Option<usize> {
     let mut best: Option<usize> = None;
     for (i, (name, worth, stake)) in entries.iter().enumerate() {
-        let ratio = *worth as u128 * 1_000_000 / (*stake).max(1) as u128;
+        let profit = *worth as i128 - *stake as i128;
         best = match best {
             None => Some(i),
             Some(b) => {
                 let (bn, bw, bs) = entries[b];
-                let br = bw as u128 * 1_000_000 / bs.max(1) as u128;
-                if ratio > br || (ratio == br && *name < bn) {
+                let bp = bw as i128 - bs as i128;
+                if profit > bp || (profit == bp && *name < bn) {
                     Some(i)
                 } else {
                     Some(b)
@@ -599,6 +600,10 @@ pub fn crown_winner(entries: &[(&str, u64, u64)]) -> Option<usize> {
     }
     best
 }
+
+/// The share of each night's fees paid to the holder of the merchant's deed (last night's crown
+/// winner), in percent. The rest is the crown.
+pub const DEED_PCT: u64 = 25;
 
 /// Whether a clone comes home at this dawn.
 pub fn comes_home(e: &Entrant, broke: bool) -> bool {

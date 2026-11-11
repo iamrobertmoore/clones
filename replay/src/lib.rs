@@ -335,6 +335,10 @@ pub async fn enlist<T: Network + 'static>(
                     ),
                 )
                 .deploy(leash_wasm)
+                .call(
+                    near_workspaces::operations::Function::new("bind")
+                        .args(market.id().as_bytes().to_vec()),
+                )
                 .transact()
                 .await
         )?;
@@ -630,6 +634,7 @@ pub async fn run_night<T: Network + 'static>(
                 }
                 let (paid_out, broke, tx) =
                     settle(market, &guest.player, seat.account.id()).await?;
+                let tx_of_settle = tx.clone();
                 events.push(Event::Settled {
                     clone: seat.entrant.name.clone(),
                     paid_out,
@@ -646,16 +651,23 @@ pub async fn run_night<T: Network + 'static>(
                     home: true,
                     crown: crown_of(seat.account.id()),
                 });
-                let out = retry!(
-                    guest
-                        .player
-                        .call(seat.account.id(), "merge")
-                        .gas(Gas::from_tgas(100))
-                        .transact()
-                        .await
-                )?;
-                let tx = tx_hash(&out);
-                out.into_result()?;
+                // The market merges a bound clone home right after paying it out; merge here only
+                // if it is still there.
+                let tx = if account_exists(worker, seat.account.id()).await? {
+                    let out = retry!(
+                        guest
+                            .player
+                            .call(seat.account.id(), "merge")
+                            .gas(Gas::from_tgas(100))
+                            .transact()
+                            .await
+                    )?;
+                    let tx = tx_hash(&out);
+                    out.into_result()?;
+                    tx
+                } else {
+                    tx_of_settle.clone()
+                };
                 events.push(Event::Merged {
                     clone: seat.entrant.name.clone(),
                     tx,

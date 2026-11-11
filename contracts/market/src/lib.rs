@@ -708,19 +708,35 @@ impl Market {
         }
         self.recent_count += 1;
         let amount = NearToken::from_yoctonear(ledger.cash as u128 * YOCTO_PER_MILLI);
-        Promise::new(clone_id).transfer(amount).then(
+        Promise::new(clone_id.clone()).transfer(amount).then(
             Self::ext(env::current_account_id())
-                .with_static_gas(Gas::from_tgas(10))
-                .after_payout(rec.player, amount),
+                .with_static_gas(Gas::from_tgas(40))
+                .after_payout(rec.player, clone_id, amount),
         )
     }
 
-    /// If the clone account was already gone, the payout bounced back here: send it to the
-    /// player instead, so nothing is stranded in the market.
+    /// After the payout: ask the clone to merge home (its leash allows this market if the player
+    /// bound it, and always pays the player). If the clone account was already gone, the payout
+    /// bounced back here: send it to the player instead, so nothing is stranded in the market.
     #[private]
-    pub fn after_payout(&mut self, player: AccountId, amount: NearToken) -> Option<Promise> {
+    pub fn after_payout(
+        &mut self,
+        player: AccountId,
+        clone: AccountId,
+        amount: NearToken,
+    ) -> Option<Promise> {
         match env::promise_result_checked(0, 0) {
-            Ok(_) => None,
+            Ok(_) => {
+                // Scheduled on its own: a clone that was never bound to this market refuses, and
+                // that leaves the settlement itself untouched.
+                let _ = Promise::new(clone).function_call(
+                    "merge",
+                    Vec::new(),
+                    NearToken::from_yoctonear(0),
+                    Gas::from_tgas(20),
+                );
+                None
+            }
             Err(_) => {
                 env::log_str(&format!(
                     "clone account was gone; paid {amount} to {player}"

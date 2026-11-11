@@ -52,7 +52,7 @@ async fn two_guests_one_night_everyone_home() -> anyhow::Result<()> {
     ] {
         let player = house
             .create_subaccount(name)
-            .initial_balance(NearToken::from_near(3))
+            .initial_balance(NearToken::from_near(4))
             .keys(key.clone())
             .transact()
             .await?
@@ -64,7 +64,7 @@ async fn two_guests_one_night_everyone_home() -> anyhow::Result<()> {
                 player,
                 &leash_wasm,
                 &entrants(&ts),
-                NearToken::from_millinear(450),
+                NearToken::from_millinear(600),
                 Some(key.clone()),
             )
             .await?,

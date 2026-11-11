@@ -24,7 +24,7 @@ const {
 const TEMPERAMENTS = ["cautious", "greedy", "loyal"];
 const STAKES = [250, 500, 1000]; // milliNEAR a player can send a clone in with
 const DEFAULT_STAKE = 500;
-const CLONE_ACCOUNT = utils.format.parseNearAmount("0.45");
+const CLONE_ACCOUNT = utils.format.parseNearAmount("0.6");
 const GAS_FLOAT = utils.format.parseNearAmount("0.3");
 const ALLOWANCE = utils.format.parseNearAmount("1");
 const MAX_CLONES_TONIGHT = 45; // what the house float can carry
