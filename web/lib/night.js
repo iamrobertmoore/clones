@@ -18,6 +18,7 @@
 const crypto = require("crypto");
 const { connect, keyStores, KeyPair, utils, transactions } = require("near-api-js");
 const rules = require("./rules.js");
+const mind = require("./mind.js");
 
 const TGAS = 1_000_000_000_000n;
 const short = (id) => id.split(".")[0];
@@ -25,7 +26,7 @@ const short = (id) => id.split(".")[0];
 async function openTown(env = process.env) {
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `charnel.${house}`;
+  const market = env.MARKET_ACCOUNT || `barrow.${house}`;
   const keyStore = new keyStores.InMemoryKeyStore();
   // Accounts are spread across public RPC endpoints, so a busy town does not trip one node's
   // rate limit. Views go to the first.
@@ -105,9 +106,13 @@ async function playHour(t, town, clones) {
         stake: c.stake,
       };
       const whispered = whisperFor(c, town.night, round);
-      const d = whispered ? rules.obey(whispered, view) : rules.decide(c.temperament, view);
+      const d = whispered
+        ? rules.obey(whispered, view)
+        : c.temperament === "possessed"
+          ? await mind.think(c.instruction || "Trade carefully.", view, town.mood)
+          : rules.decide(c.temperament, view);
       const who = { clone: short(c.id), player: c.player };
-      events.push({ kind: "bubble", round, ...who, say: d.say, whispered: Boolean(whispered) });
+      events.push({ kind: "bubble", round, ...who, say: d.say, whispered: Boolean(whispered), ai: Boolean(d.ai) });
       if (!d.intents.length) return;
       const orders = d.intents.map((i) => ({ good: rules.GOODS[i.good], side: i.side, qty: i.qty, price: i.limit }));
       try {
@@ -207,11 +212,13 @@ function audit(town, clones, orders) {
       const l = ledgers.get(c.id);
       const view = { round, book, prices: board, prev, ledger: { cash: l.cash, stock: l.stock.slice() }, stake: c.stake };
       const w = whisperFor(c, town.night, round);
-      const want = (w ? rules.obey(w, view) : rules.decide(c.temperament, view)).intents;
       const got = turns.get(`${round}|${c.id}`) || [];
+      // A possessed clone's moves come from its model, so only their prices and fees are checked.
+      const want = w ? rules.obey(w, view).intents : c.temperament === "possessed" ? null : rules.decide(c.temperament, view).intents;
       const same =
-        want.length === got.length &&
-        want.every((i, k) => rules.GOODS[i.good] === got[k].good && i.side === got[k].side && i.qty === got[k].qty);
+        !want ||
+        (want.length === got.length &&
+          want.every((i, k) => rules.GOODS[i.good] === got[k].good && i.side === got[k].side && i.qty === got[k].qty));
       if (!same) problems.push(`${short(c.id)} hour ${round}: expected ${JSON.stringify(want)}, chain has ${JSON.stringify(got)}`);
       if (!got.length) continue;
       const intents = got.map((o) => ({ good: rules.GOODS.indexOf(o.good), side: o.side, qty: o.qty, limit: o.price }));
@@ -232,8 +239,12 @@ function audit(town, clones, orders) {
   const dawn = new rules.Book(town.hours[rules.ROUNDS], stock);
   // The crown: tonight's fees to the best return on stake.
   const w = pot > 0 ? rules.crownWinner(played.map((c) => ({ name: c.id, worth: rules.worth(ledgers.get(c.id), dawn), stake: c.stake }))) : -1;
-  const crown = w >= 0 ? { clone: played[w].id, pot } : null;
-  if (crown) ledgers.get(crown.clone).cash += pot;
+  // A quarter goes to the deed holder (last crown's player), if there was one at dusk.
+  const paid = town.deed_paid && town.deed_paid[2] === town.night ? { player: town.deed_paid[0], share: town.deed_paid[1] } : null;
+  const share = paid ? Math.floor((pot * 25) / 100) : 0;
+  if (paid && paid.share !== share) problems.push(`deed: expected ${share}, chain paid ${paid.share}`);
+  const crown = w >= 0 ? { clone: played[w].id, pot: pot - share } : null;
+  if (crown) ledgers.get(crown.clone).cash += crown.pot;
   const onChain = town.crowned && town.crowned[2] === town.night ? { clone: town.crowned[0], pot: town.crowned[1] } : null;
   if (JSON.stringify(crown) !== JSON.stringify(onChain)) problems.push(`crown: expected ${JSON.stringify(crown)}, chain has ${JSON.stringify(onChain)}`);
   const verdict = played.map((c) => {
@@ -250,7 +261,7 @@ function audit(town, clones, orders) {
     if (!matched) problems.push(`${short(c.id)} at dawn: expected ${JSON.stringify(expected)}, chain has ${JSON.stringify(chain)}`);
     return { clone: short(c.id), player: c.player, temperament: c.temperament, stake: c.stake, expected, chain, matched };
   });
-  return { verdict, problems, crown, orders: orders.filter((o) => o.night === town.night).length };
+  return { verdict, problems, crown, deed: paid, orders: orders.filter((o) => o.night === town.night).length };
 }
 
 // After the last hour: check the night against the answer key, computed from chain state alone,
@@ -264,9 +275,10 @@ async function dawnVerdict(t) {
   }
   if (!town.asleep) throw new Error("the town never reached dawn");
   const played = clones.filter((c) => c.from_night <= town.night);
-  const { verdict, problems, orders, crown } = audit(town, clones, await ordersTonight(t, town.dusk_order));
+  const { verdict, problems, orders, crown, deed } = audit(town, clones, await ordersTonight(t, town.dusk_order));
   if (problems.length) console.error("audit:", problems.slice(0, 10));
   const events = [{ kind: "hour", round: rules.ROUNDS, prices: town.prices, stock: town.hour_stock }];
+  if (deed) events.push({ kind: "deed", player: deed.player, share: deed.share });
   if (crown) {
     const c = played.find((x) => x.id === crown.clone);
     events.push({ kind: "crowned", clone: short(crown.clone), player: c ? c.player : null, pot: crown.pot });
@@ -373,7 +385,10 @@ async function bringHome(t, clones) {
 async function sweep(t, guest) {
   const keys = await guest.getAccessKeys();
   const full = keys.filter((k) => k.access_key.permission === "FullAccess");
-  if (full.length > 1) return;
+  const houseKey = t.keyPair.getPublicKey().toString();
+  // The player holds the account (their own key; the house key is trade-and-settle only), or has
+  // added a key of their own: the winnings are theirs.
+  if (full.length > 1 || !full.some((k) => k.public_key === houseKey)) return;
   const state = await guest.state();
   // Keep enough for the gas of whispers and homecomings next time.
   const send = BigInt(state.amount) - BigInt(utils.format.parseNearAmount("0.3"));
@@ -382,9 +397,12 @@ async function sweep(t, guest) {
 
 // The town's regulars: three house players who send clones in every night someone rings the
 // bell, so a guest is never alone at the merchant and the crown is always contested. Each has a
-// style: the Widow reads the omen and sends what it favours.
+// style: the Widow is possessed (a NEAR AI model trading on her instruction), the Abbot careful,
+// the Hound greedy.
 const RIVALS = [
-  { name: "widow", title: "the Widow", plan: (omen) => widowPlan(omen) },
+  { name: "widow", title: "the Widow", plan: () => [
+    { temperament: "possessed", stake: 1000, nights: 1, instruction: "Trust tonight's mood unless the board says otherwise; never put more than half your cash in one good." },
+  ] },
   { name: "abbot", title: "the Abbot", plan: () => [{ temperament: "cautious", stake: 500, nights: 1 }] },
   { name: "hound", title: "the Hound", plan: () => [{ temperament: "greedy", stake: 1000, nights: 1 }] },
 ];

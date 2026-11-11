@@ -37,6 +37,12 @@ pub const RECENT_KEPT: u32 = 40;
 pub const MIN_STAKE_MILLI: u64 = 100;
 pub const MAX_STAKE_MILLI: u64 = 2_000;
 
+/// Longest instruction a possessed clone can carry, in bytes.
+pub const MAX_INSTRUCTION: usize = 160;
+
+/// Whispers a player may send each clone each night.
+pub const WHISPERS_A_NIGHT: u32 = 3;
+
 /// Most orders in one clone's turn.
 pub const MAX_ORDERS_PER_TURN: usize = 6;
 
@@ -49,6 +55,7 @@ pub enum Temperament {
     Cautious,
     Greedy,
     Loyal,
+    Possessed,
 }
 
 impl From<Temperament> for rules::Temperament {
@@ -57,6 +64,7 @@ impl From<Temperament> for rules::Temperament {
             Temperament::Cautious => rules::Temperament::Cautious,
             Temperament::Greedy => rules::Temperament::Greedy,
             Temperament::Loyal => rules::Temperament::Loyal,
+            Temperament::Possessed => rules::Temperament::Possessed,
         }
     }
 }
@@ -155,7 +163,10 @@ pub struct CloneRecord {
     pub dusk_orders: u32,
     /// A whisper for (night, hour), and the last night it was whispered to.
     pub whisper: Option<(u32, u32, Whisper)>,
-    pub whispered_night: u32,
+    /// (night, whispers used that night).
+    pub whispers: (u32, u32),
+    /// A possessed clone's instruction from its player, public on chain.
+    pub instruction: Option<String>,
 }
 
 impl CloneRecord {
@@ -191,10 +202,12 @@ pub struct CloneView {
     pub dusk_cash: u64,
     pub dusk_stock: [u32; 5],
     pub dusk_orders: u32,
-    /// The whisper waiting for it as (night, hour, order), if any, and whether its player has
-    /// whispered to it tonight.
+    /// The whisper waiting for it as (night, hour, order), if any, and how many whispers its
+    /// player has left for it tonight.
     pub whisper: Option<(u32, u32, Whisper)>,
-    pub whispered_tonight: bool,
+    pub whispers_left: u32,
+    /// A possessed clone's instruction from its player.
+    pub instruction: Option<String>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -262,6 +275,11 @@ pub struct TownView {
     pub night_fees: u64,
     /// The last crown: (clone, pot in milliNEAR, night).
     pub crowned: Option<(AccountId, u64, u32)>,
+    /// Who holds the merchant's deed (the player whose clone took the last crown): they are paid
+    /// a quarter of each night's fees at dawn.
+    pub deed: Option<AccountId>,
+    /// The last deed share paid: (player, milliNEAR, night).
+    pub deed_paid: Option<(AccountId, u64, u32)>,
     pub fees_collected: u64,
     pub clones_in_town: u32,
 }
@@ -287,6 +305,8 @@ pub struct Market {
     dusk_order: u32,
     night_fees: u64,
     crowned: Option<(AccountId, u64, u32)>,
+    deed: Option<AccountId>,
+    deed_paid: Option<(AccountId, u64, u32)>,
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
@@ -348,6 +368,8 @@ impl Market {
             dusk_order: 0,
             night_fees: 0,
             crowned: None,
+            deed: None,
+            deed_paid: None,
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
@@ -467,12 +489,26 @@ impl Market {
             .collect();
         if let Some(w) = rules::crown_winner(&refs) {
             let id: AccountId = entries[w].0.parse().unwrap();
-            let pot = self.night_fees;
+            // The deed holder's share first, paid straight to the player's account.
+            let share = if self.deed.is_some() {
+                self.night_fees * rules::DEED_PCT / 100
+            } else {
+                0
+            };
+            if let (Some(holder), true) = (self.deed.clone(), share > 0) {
+                let _ = Promise::new(holder.clone())
+                    .transfer(NearToken::from_yoctonear(share as u128 * YOCTO_PER_MILLI));
+                env::log_str(&format!("deed {holder}: {share} mNEAR"));
+                self.deed_paid = Some((holder, share, night));
+            }
+            let pot = self.night_fees - share;
+            let winner_player = self.clones.get(&id).map(|r| r.player.clone());
             if let Some(rec) = self.clones.get_mut(&id) {
                 rec.cash += pot;
             }
             env::log_str(&format!("crowned {id}: {pot} mNEAR"));
             self.crowned = Some((id, pot, night));
+            self.deed = winner_player;
             self.night_fees = 0;
         }
     }
@@ -486,7 +522,19 @@ impl Market {
         clone_id: AccountId,
         temperament: Temperament,
         nights: Option<u32>,
+        instruction: Option<String>,
     ) {
+        require!(
+            instruction
+                .as_ref()
+                .is_none_or(|i| i.len() <= MAX_INSTRUCTION),
+            "an instruction is at most 160 characters"
+        );
+        let instruction = if temperament == Temperament::Possessed {
+            instruction
+        } else {
+            None
+        };
         let player = env::predecessor_account_id();
         require!(
             player_of(clone_id.as_str()) == Some(player.as_str()),
@@ -537,7 +585,8 @@ impl Market {
                 dusk_stock: [0; 5],
                 dusk_orders: 0,
                 whisper: None,
-                whispered_night: 0,
+                whispers: (0, 0),
+                instruction,
             },
         );
     }
@@ -628,12 +677,17 @@ impl Market {
             rec.from_night <= night,
             "this clone starts trading next night"
         );
+        let used = if rec.whispers.0 == night {
+            rec.whispers.1
+        } else {
+            0
+        };
         require!(
-            rec.whispered_night != night,
-            "you have already whispered to this clone tonight"
+            used < WHISPERS_A_NIGHT,
+            "you have used this clone's three whispers tonight"
         );
         rec.whisper = Some((night, next, whisper));
-        rec.whispered_night = night;
+        rec.whispers = (night, used + 1);
     }
 
     /// Called by the player between nights: change a clone's temperament for the nights it has
@@ -801,7 +855,13 @@ impl Market {
             dusk_stock: r.dusk_stock,
             dusk_orders: r.dusk_orders,
             whisper: r.whisper.clone(),
-            whispered_tonight: r.whispered_night == self.night && self.night > 0,
+            instruction: r.instruction.clone(),
+            whispers_left: WHISPERS_A_NIGHT
+                - if r.whispers.0 == self.night {
+                    r.whispers.1
+                } else {
+                    0
+                },
         }
     }
 
@@ -827,6 +887,8 @@ impl Market {
             dusk_order: self.dusk_order,
             night_fees: self.night_fees,
             crowned: self.crowned.clone(),
+            deed: self.deed.clone(),
+            deed_paid: self.deed_paid.clone(),
             fees_collected: self.fees,
             clones_in_town: self.clones.len(),
         }
@@ -891,7 +953,12 @@ mod tests {
         as_caller("keeper.testnet", zero());
         let mut m = Market::new(U64(SEED), None, None);
         as_caller("alice.testnet", NearToken::from_near(2));
-        m.register_clone(acc("clone-1.alice.testnet"), Temperament::Greedy, None);
+        m.register_clone(
+            acc("clone-1.alice.testnet"),
+            Temperament::Greedy,
+            None,
+            None,
+        );
         open(&mut m);
         m
     }
@@ -924,7 +991,12 @@ mod tests {
         as_caller("keeper.testnet", zero());
         let mut m = Market::new(U64(SEED), Some(acc("house.testnet")), None);
         as_caller("mallory.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.mallory.testnet"), Temperament::Greedy, None);
+        m.register_clone(
+            acc("clone-1.mallory.testnet"),
+            Temperament::Greedy,
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -932,7 +1004,12 @@ mod tests {
         as_caller("keeper.testnet", zero());
         let mut m = Market::new(U64(SEED), Some(acc("house.testnet")), None);
         as_caller("g1.house.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.g1.house.testnet"), Temperament::Greedy, None);
+        m.register_clone(
+            acc("clone-1.g1.house.testnet"),
+            Temperament::Greedy,
+            None,
+            None,
+        );
         assert_eq!(m.get_town().clones_in_town, 1);
     }
 
@@ -940,7 +1017,12 @@ mod tests {
     fn lists_the_clones_in_town() {
         let mut m = town_with_clone();
         as_caller("bob.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-2.bob.testnet"), Temperament::Loyal, Some(2));
+        m.register_clone(
+            acc("clone-2.bob.testnet"),
+            Temperament::Loyal,
+            Some(2),
+            None,
+        );
         let all = m.list_clones(0, 10);
         assert_eq!(all.len(), 2);
         assert_eq!(all[1].0, acc("clone-2.bob.testnet"));
@@ -1055,16 +1137,22 @@ mod tests {
         m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
         let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
         assert_eq!(c.whisper, Some((1, 1, Whisper::SellAll)));
-        assert!(c.whispered_tonight);
+        assert_eq!(c.whispers_left, 2);
     }
 
     #[test]
-    #[should_panic(expected = "already whispered to this clone tonight")]
-    fn only_one_whisper_a_night() {
+    #[should_panic(expected = "three whispers tonight")]
+    fn three_whispers_a_night() {
         let mut m = town_with_clone();
         as_caller("alice.testnet", zero());
-        m.whisper(acc("clone-1.alice.testnet"), Whisper::Hold);
-        m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
+        for w in [
+            Whisper::Hold,
+            Whisper::SellAll,
+            Whisper::Hold,
+            Whisper::SellAll,
+        ] {
+            m.whisper(acc("clone-1.alice.testnet"), w);
+        }
     }
 
     #[test]
@@ -1114,7 +1202,7 @@ mod tests {
     fn the_nights_fees_crown_the_best_return() {
         let mut m = town_with_clone();
         as_caller("bob.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None);
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None, None);
         // Bob's clone joins next night; tonight only alice trades and pays fees.
         as_clone();
         m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
@@ -1125,8 +1213,82 @@ mod tests {
         assert_eq!(t.crowned, Some((acc("clone-1.alice.testnet"), 2, 1)));
         assert_eq!(t.night_fees, 0);
         assert_eq!(
+            t.deed,
+            Some(acc("alice.testnet")),
+            "the crown's player takes the deed"
+        );
+        assert_eq!(t.deed_paid, None, "nobody held the deed on the first night");
+        assert_eq!(
             m.get_clone(acc("clone-1.alice.testnet")).unwrap().cash,
             2000 - 92 + 2
+        );
+    }
+
+    #[test]
+    fn the_deed_holder_takes_a_quarter_of_the_next_nights_fees() {
+        let mut m = town_with_clone();
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        assert_eq!(m.get_town().deed, Some(acc("alice.testnet")));
+        open(&mut m);
+        let book = rules::Book::at(SEED, 0, m.get_town().hour_stock);
+        let q = 30;
+        as_clone();
+        m.trade(
+            0,
+            vec![order(
+                "grain",
+                Side::Buy,
+                q,
+                book.quote(0, rules::Side::Buy, q),
+            )],
+        );
+        let fees = m.get_town().night_fees;
+        ring_to_dawn(&mut m);
+        let t = m.get_town();
+        let share = fees * rules::DEED_PCT / 100;
+        assert!(share > 0);
+        assert_eq!(t.deed_paid, Some((acc("alice.testnet"), share, 2)));
+        assert_eq!(t.crowned.unwrap().1, fees - share);
+    }
+
+    #[test]
+    fn a_possessed_clone_carries_its_players_instruction() {
+        as_caller("alice.testnet", NearToken::from_near(1));
+        let mut m = Market::new(U64(SEED), None, None);
+        m.register_clone(
+            acc("clone-1.alice.testnet"),
+            Temperament::Possessed,
+            None,
+            Some("Buy amber when it falls".into()),
+        );
+        m.register_clone(
+            acc("clone-2.alice.testnet"),
+            Temperament::Greedy,
+            None,
+            Some("ignored".into()),
+        );
+        let c1 = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
+        assert_eq!(c1.instruction.as_deref(), Some("Buy amber when it falls"));
+        assert_eq!(
+            m.get_clone(acc("clone-2.alice.testnet"))
+                .unwrap()
+                .instruction,
+            None
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "at most 160 characters")]
+    fn an_instruction_is_short() {
+        as_caller("alice.testnet", NearToken::from_near(1));
+        let mut m = Market::new(U64(SEED), None, None);
+        m.register_clone(
+            acc("clone-1.alice.testnet"),
+            Temperament::Possessed,
+            None,
+            Some("x".repeat(161)),
         );
     }
 
@@ -1154,7 +1316,7 @@ mod tests {
     fn cannot_register_someone_elses_clone() {
         as_caller("mallory.testnet", NearToken::from_near(1));
         let mut m = Market::new(U64(SEED), None, None);
-        m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal, None);
+        m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal, None, None);
     }
 
     #[test]
@@ -1162,7 +1324,7 @@ mod tests {
     fn cannot_register_twice() {
         let mut m = town_with_clone();
         as_caller("alice.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal, None);
+        m.register_clone(acc("clone-1.alice.testnet"), Temperament::Loyal, None, None);
     }
 
     #[test]
@@ -1170,7 +1332,12 @@ mod tests {
     fn stake_has_a_floor() {
         as_caller("alice.testnet", NearToken::from_millinear(10));
         let mut m = Market::new(U64(SEED), None, None);
-        m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, None);
+        m.register_clone(
+            acc("clone-2.alice.testnet"),
+            Temperament::Cautious,
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -1178,7 +1345,12 @@ mod tests {
     fn stake_has_a_ceiling() {
         as_caller("alice.testnet", NearToken::from_near(3));
         let mut m = Market::new(U64(SEED), None, None);
-        m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, None);
+        m.register_clone(
+            acc("clone-2.alice.testnet"),
+            Temperament::Cautious,
+            None,
+            None,
+        );
     }
 
     #[test]
@@ -1186,7 +1358,12 @@ mod tests {
     fn nights_are_one_to_three() {
         as_caller("alice.testnet", NearToken::from_near(1));
         let mut m = Market::new(U64(SEED), None, None);
-        m.register_clone(acc("clone-2.alice.testnet"), Temperament::Cautious, Some(4));
+        m.register_clone(
+            acc("clone-2.alice.testnet"),
+            Temperament::Cautious,
+            Some(4),
+            None,
+        );
     }
 
     #[test]
@@ -1264,7 +1441,7 @@ mod tests {
     fn a_clone_never_joins_a_night_under_way() {
         let mut m = town_with_clone();
         as_caller("bob.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None);
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None, None);
         as_caller("clone-1.bob.testnet", zero());
         m.trade(0, vec![order("salt", Side::Buy, 1, 30)]);
     }
@@ -1331,7 +1508,12 @@ mod tests {
     fn dawn_counts_the_night_and_marks_who_is_due_home() {
         let mut m = town_with_clone();
         as_caller("bob.testnet", NearToken::from_near(1));
-        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, Some(2));
+        m.register_clone(
+            acc("clone-1.bob.testnet"),
+            Temperament::Loyal,
+            Some(2),
+            None,
+        );
         ring_to_dawn(&mut m);
         let a = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
         assert_eq!((a.nights_played, a.due_home), (1, true));
@@ -1371,7 +1553,12 @@ mod tests {
         for i in 0..45 {
             let player = format!("p{i}.testnet");
             as_caller(&player, NearToken::from_millinear(100 + i));
-            m.register_clone(acc(&format!("clone-1.{player}")), Temperament::Loyal, None);
+            m.register_clone(
+                acc(&format!("clone-1.{player}")),
+                Temperament::Loyal,
+                None,
+                None,
+            );
             as_caller(&player, zero());
             let _ = m.settle(acc(&format!("clone-1.{player}")));
         }

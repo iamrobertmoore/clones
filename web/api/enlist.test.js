@@ -123,3 +123,10 @@ test("waits out the RPC's rate limit, which never lets a call through", async ()
   assert.strictEqual(out, "sent");
   assert.strictEqual(calls, 3);
 });
+
+test("a possessed clone carries a short instruction", () => {
+  const [c] = parsePlan({ clones: [{ temperament: "possessed", instruction: "  Buy   amber  " + "x".repeat(300) }] });
+  assert.strictEqual(c.temperament, "possessed");
+  assert.ok(c.instruction.startsWith("Buy amber"));
+  assert.strictEqual(c.instruction.length, 160);
+});

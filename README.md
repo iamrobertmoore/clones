@@ -4,7 +4,7 @@
 
 **A trading game on NEAR where copies of you trade while you sleep. They can trade, but they can never withdraw.**
 
-[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/charnel.clonestown.testnet)
+[Play the hosted town](https://clones-tau-nine.vercel.app/town.html) · [Watch a recorded night (60 s)](https://clones-tau-nine.vercel.app) · [The market on testnet](https://testnet.nearblocks.io/address/barrow.clonestown.testnet)
 
 You send up to three copies of yourself into a market town. You choose each one's temperament
 (cautious, greedy or loyal), how much NEAR it carries and how many nights it stays out. Each copy is
@@ -89,7 +89,7 @@ The demo night (seed 606, a wild night): cautious 2.000 to 3.112 NEAR (2.613 plu
 
 ## The hosted town
 
-`clonestown.testnet` runs a market, `charnel.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The
+`clonestown.testnet` runs a market, `barrow.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The
 sign-up function creates a guest account and its clones and sends them in, funded with testnet NEAR
 by the house. The bell (`web/api/bell.js`) plays one step of the night per call; the town page
 calls it until dawn. If nobody rings it, a GitHub Actions job rings the same code around 02:00 UTC
@@ -111,7 +111,7 @@ page. From then on your winnings stay with you, and you can remove the house key
 - My first version of that let a clone make free money: buy, watch its own buying raise the price, sell. The merchant now quotes a big order at the price after the trade, and a test proves buying and selling back never pays (`buying_and_selling_back_never_pays`).
 - GitHub's scheduler started the nightly job seven hours late and skipped the backstop. A judge's clones could have sat unplayed all morning, so the night now runs whenever anyone rings the bell, and the schedule is only a fallback.
 - A lagging RPC node made the runner replay an hour. The contract already refused the duplicate trades; the runner now also waits until a node shows the new hour before it returns.
-- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `charnel.clonestown.testnet`.
+- NEAR wouldn't delete the old market account, which held a lot of state, so the new market lives at `barrow.clonestown.testnet`.
 - Earlier: the public RPC rate-limited the first testnet night (calls now retry on rate limits only), merging with maximum gas reserved more than a small player held (merge asks for 100 Tgas), and settling an already merged clone would have stranded its cash (`after_payout` pays the player instead).
 
 ## Known limits

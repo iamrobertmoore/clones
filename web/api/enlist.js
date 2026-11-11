@@ -21,7 +21,7 @@ const {
   utils,
 } = require("near-api-js");
 
-const TEMPERAMENTS = ["cautious", "greedy", "loyal"];
+const TEMPERAMENTS = ["cautious", "greedy", "loyal", "possessed"];
 const STAKES = [250, 500, 1000]; // milliNEAR a player can send a clone in with
 const DEFAULT_STAKE = 500;
 const CLONE_ACCOUNT = utils.format.parseNearAmount("0.6");
@@ -76,7 +76,7 @@ async function enlist(plan, env = process.env, opts = {}) {
   const temperaments = plan.map((c) => c.temperament);
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `charnel.${house}`;
+  const market = env.MARKET_ACCOUNT || `barrow.${house}`;
   const guest = opts.guest || `${guestName()}.${house}`;
   const clones = temperaments.map((_, i) => `clone-${i + 1}.${guest}`);
 
@@ -156,6 +156,9 @@ async function enlist(plan, env = process.env, opts = {}) {
               ),
             ),
             transactions.deployContract(leash),
+            // Bind the clone to this market, so the market can merge it home after paying it
+            // (always to the player). The input is the market's account id, raw.
+            transactions.functionCall("bind", Buffer.from(market), BigInt("10000000000000"), 0n),
           ],
         }),
       );
@@ -168,7 +171,12 @@ async function enlist(plan, env = process.env, opts = {}) {
         guestAccount.functionCall({
           contractId: market,
           methodName: "register_clone",
-          args: { clone_id: clones[i], temperament: plan[i].temperament, nights: plan[i].nights },
+          args: {
+            clone_id: clones[i],
+            temperament: plan[i].temperament,
+            nights: plan[i].nights,
+            instruction: plan[i].instruction || null,
+          },
           gas: BigInt("30000000000000"),
           attachedDeposit: milli(plan[i].stake),
         }),
@@ -184,9 +192,31 @@ async function enlist(plan, env = process.env, opts = {}) {
     await rollBack(guestAccount, market, house, made, sentIn, !exists);
     throw e;
   }
+  // The player's own key: it becomes the guest account's full-access key, and the house's key is
+  // cut down to a function-call key that can only whisper, retrain and settle at the market. From
+  // here the house can run the clones but can never move the player's NEAR.
+  let custody = false;
+  if (opts.publicKey) {
+    const playerKey = utils.PublicKey.fromString(opts.publicKey);
+    out = await whenVisible(() =>
+      guestAccount.signAndSendTransaction({
+        receiverId: guest,
+        actions: [
+          transactions.addKey(playerKey, transactions.fullAccessKey()),
+          transactions.deleteKey(pk),
+          transactions.addKey(
+            pk,
+            transactions.functionCallAccessKey(market, ["whisper", "retrain", "settle"], BigInt(ALLOWANCE)),
+          ),
+        ],
+      }),
+    );
+    txs.push({ step: "your key added; house key leashed", tx: out.transaction.hash });
+    custody = true;
+  }
   return {
     status: 200,
-    body: { guest, market, clones, temperaments, plan, txs, claim: claimToken(guest, env) },
+    body: { guest, market, clones, temperaments, plan, txs, custody, claim: claimToken(guest, env) },
   };
 }
 
@@ -224,7 +254,7 @@ async function rollBack(guestAccount, market, house, made, sentIn, deleteGuest =
 
 function parseTemperaments(body) {
   const list =
-    body && Array.isArray(body.temperaments) ? body.temperaments : TEMPERAMENTS;
+    body && Array.isArray(body.temperaments) ? body.temperaments : TEMPERAMENTS.slice(0, 3);
   if (
     list.length < 1 ||
     list.length > 3 ||
@@ -244,6 +274,9 @@ function parsePlan(body) {
       temperament: c && c.temperament,
       stake: c && c.stake === undefined ? DEFAULT_STAKE : Number(c && c.stake),
       nights: c && c.nights === undefined ? 1 : Number(c && c.nights),
+      ...(c && c.temperament === "possessed"
+        ? { instruction: String(c.instruction || "Trade carefully and never risk more than half.").replace(/\s+/g, " ").trim().slice(0, 160) }
+        : {}),
     }));
     const ok = plan.every(
       (c) =>
@@ -281,7 +314,16 @@ module.exports = async function handler(req, res) {
     return;
   }
   try {
-    const { status, body: out } = await enlist(plan);
+    let publicKey;
+    if (body && body.publicKey) {
+      try {
+        publicKey = utils.PublicKey.fromString(String(body.publicKey)).toString();
+      } catch {
+        res.status(400).json({ error: "publicKey must be an ed25519 public key" });
+        return;
+      }
+    }
+    const { status, body: out } = await enlist(plan, process.env, { publicKey });
     res.status(status).json(out);
   } catch (e) {
     res

@@ -10,7 +10,7 @@
 
   var RPC = 'https://test.rpc.fastnear.com';
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'charnel.' + HOUSE;
+  var MARKET = 'barrow.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';
@@ -18,7 +18,8 @@
   var TEMPS = {
     cautious: { tint: '#7aa2c8', why: 'Buys what is cheap, takes profit at +10%.' },
     greedy: { tint: '#d9a53a', why: 'Chases whatever rose most. All in.' },
-    loyal: { tint: '#79a86a', why: 'Only grain and salt. Keeps your money safe.' }
+    loyal: { tint: '#79a86a', why: 'Only grain and salt. Keeps your money safe.' },
+    possessed: { tint: '#b48ad8', why: 'A NEAR AI model trades on your instruction, on the same leash.' }
   };
   var ORDER = ['cautious', 'greedy', 'loyal'];
   var GOODS = ['grain', 'salt', 'wool', 'iron', 'amber'];
@@ -208,7 +209,7 @@
       fs.appendChild(el('legend', null, 'clone-' + (i + 1)));
       var body = el('div', 'body'); body.appendChild(svgUse('person', 'fig')); fs.appendChild(body);
       var pick = el('div', 'picker');
-      var opts = ORDER.slice(); if (i > 0) opts.push('none');
+      var opts = ORDER.concat(['possessed']); if (i > 0) opts.push('none');
       opts.forEach(function (t) {
         var lab = el('label');
         var inp = el('input'); inp.type = 'radio'; inp.name = 'slot' + i; inp.value = t;
@@ -221,6 +222,10 @@
       var knobs = el('div', 'knobs');
       knobs.appendChild(segmented('stake' + i, STAKES, i === 1 ? 1000 : 500, 'NEAR'));
       knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), i === 0 ? 2 : 1, 'nights'));
+      var ins = el('input', 'instr'); ins.type = 'text'; ins.name = 'instr' + i; ins.maxLength = 160;
+      ins.placeholder = 'Your instruction, e.g. buy amber when it falls, never all in';
+      ins.setAttribute('aria-label', 'Instruction for clone-' + (i + 1));
+      knobs.appendChild(ins);
       pick.appendChild(knobs);
       fs.appendChild(pick);
       box.appendChild(fs);
@@ -235,7 +240,9 @@
       if (!c || c.value === 'none') continue;
       var st = document.querySelector('input[name="stake' + i + '"]:checked');
       var ni = document.querySelector('input[name="nights' + i + '"]:checked');
-      out.push({ temperament: c.value, stake: st ? Number(st.value) : 500, nights: ni ? Number(ni.value) : 1 });
+      var item = { temperament: c.value, stake: st ? Number(st.value) : 500, nights: ni ? Number(ni.value) : 1 };
+      if (c.value === 'possessed') item.instruction = (document.querySelector('input[name="instr' + i + '"]') || {}).value || '';
+      out.push(item);
     }
     return out;
   }
@@ -247,6 +254,7 @@
       fig.style.setProperty('--tunic', tint); fig.style.setProperty('--eye', tint);
       fs.querySelector('.why').textContent = TEMPS[t] ? TEMPS[t].why : 'This slot stays empty.';
       fs.querySelector('.knobs').hidden = t === 'none';
+      fs.querySelector('.instr').hidden = t !== 'possessed';
     });
     var plan = chosen(), total = plan.reduce(function (s, c) { return s + c.stake; }, 0);
     $('sendBtn').textContent = plan.length === 1 ? 'Send it in' : 'Send them in';
@@ -284,7 +292,12 @@
     $('sendBtn').disabled = true;
     $('statusError').hidden = true;
     var timer = showProgress();
-    post('/api/enlist', { clones: plan }).then(function (res) {
+    makeKey().catch(function () { return null; }).then(function (key) {
+      return post('/api/enlist', key ? { clones: plan, publicKey: key.publicKey } : { clones: plan }).then(function (res) {
+        if (key && res.custody) store('clones.secret.' + res.guest, JSON.stringify({ account_id: res.guest, public_key: key.publicKey, private_key: key.secret }));
+        return res;
+      });
+    }).then(function (res) {
       clearInterval(timer);
       $('barFill').style.width = '100%';
       $('progress').hidden = true;
@@ -379,12 +392,12 @@
     if (!token()) return box;
     var during = town && !town.asleep;
     if (during) {
-      if (s.whispered_tonight) {
-        box.appendChild(el('div', 'whisper-note', 'whispered tonight'));
+      if (s.whispers_left === 0) {
+        box.appendChild(el('div', 'whisper-note', 'no whispers left tonight'));
         return box;
       }
       var sel = el('select'); sel.setAttribute('aria-label', 'Whisper to ' + short);
-      [['', 'whisper...'], ['hold', 'hold this hour'], ['sell_all', 'sell everything']].concat(GOODS.map(function (g) { return ['buy:' + g, 'buy ' + g]; }))
+      [['', 'whisper... (' + (s.whispers_left != null ? s.whispers_left : 3) + ' left)'], ['hold', 'hold this hour'], ['sell_all', 'sell everything']].concat(GOODS.map(function (g) { return ['buy:' + g, 'buy ' + g]; }))
         .forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
       sel.addEventListener('change', function () {
         if (!sel.value) return;
@@ -392,7 +405,10 @@
         sel.disabled = true;
         post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
           cry('You whispered to ' + short + ': ' + sel.options[sel.selectedIndex].text + '. It obeys in the next hour.', 'order-row');
-          box.textContent = ''; box.appendChild(el('div', 'whisper-note', 'whisper sent: ' + sel.options[sel.selectedIndex].text));
+          var left = (s.whispers_left != null ? s.whispers_left : 3) - 1; s.whispers_left = left;
+          var said = sel.options[sel.selectedIndex].text;
+          var fresh = actsFor(c); box.replaceWith(fresh);
+          fresh.insertBefore(el('div', 'whisper-note', 'sent: ' + said), fresh.firstChild);
         }).catch(function (err) { sel.disabled = false; cry(short + ': ' + err.message, 'warn'); });
       });
       box.appendChild(sel);
@@ -442,6 +458,7 @@
     u.bub.classList.toggle('alarm', !!alarm);
     u.bub.classList.toggle('whispered', !!whispered);
   }
+  function sayAi(short, on) { var u = units[short]; if (u) u.bub.classList.toggle('ai', !!on); }
   function centerIn(rect, sr) { return { x: rect.left + rect.width / 2 - sr.left, y: rect.top + rect.height / 2 - sr.top }; }
   function drawLeashes() {
     var svg = $('leashes'); svg.textContent = '';
@@ -522,13 +539,14 @@
     });
     out.events.forEach(function (e) {
       if (e.kind === 'rival') cry(cap(e.title) + ' sends clones into town.', 'muted');
+      if (e.kind === 'deed') cry('Dawn: the merchant\'s deed pays ' + (e.player === guest ? 'you' : nameOf(e.player)) + ' a quarter of the night\'s fees: ' + near(e.share) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
         cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       }
     });
     mine.forEach(function (e) {
-      if (e.kind === 'bubble' && units[e.clone]) say(e.clone, e.say, /broke/.test(e.say), e.whispered);
+      if (e.kind === 'bubble' && units[e.clone]) { say(e.clone, e.say, /broke/.test(e.say), e.whispered); sayAi(e.clone, e.ai); }
       var line = describe(e);
       if (line) cry(line, e.kind === 'withdraw_refused' ? 'refused-row' : e.kind === 'order' ? 'order-row' : '');
       if (e.kind === 'withdraw_refused') showRefusal(e.clone, e.error);
@@ -668,6 +686,7 @@
         li.appendChild(el('span', 'b-det', near(r.stake) + ' → ' + near(r.paid_out) + ', ' + r.nights_played + 'n' + (r.broke ? ', broke' : '')));
         ol.appendChild(li);
       });
+      if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn).';
       if (town && town.crowned) {
         $('crownNote').textContent = 'Last crown: ' + String(town.crowned[0]).split('.')[0] + ' of ' + nameOf(String(town.crowned[0]).slice(String(town.crowned[0]).indexOf('.') + 1)) + ', night ' + town.crowned[2] + ', ' + near(town.crowned[1]) + ' NEAR of fees.';
       }
@@ -707,6 +726,32 @@
     for (var k = 0; k < bytes.length && bytes[k] === 0; k++) out += '1';
     for (var q = digits.length - 1; q >= 0; q--) out += B58[digits[q]];
     return out;
+  }
+  // An Ed25519 key made in this browser; only the public half leaves the page.
+  function makeKey() {
+    if (!(window.crypto && crypto.subtle)) return Promise.reject(new Error('no WebCrypto'));
+    return crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']).then(function (kp) {
+      return Promise.all([crypto.subtle.exportKey('raw', kp.publicKey), crypto.subtle.exportKey('pkcs8', kp.privateKey)]);
+    }).then(function (ex) {
+      var pub = new Uint8Array(ex[0]), seed = new Uint8Array(ex[1]).slice(-32);
+      var both = new Uint8Array(64); both.set(seed); both.set(pub, 32);
+      return { publicKey: 'ed25519:' + base58(pub), secret: 'ed25519:' + base58(both) };
+    });
+  }
+  function showMyKey() {
+    var raw = stored('clones.secret.' + guest);
+    if (!raw) return false;
+    var k; try { k = JSON.parse(raw); } catch (e) { return false; }
+    $('claimCard').hidden = false;
+    $('claimTitle').textContent = 'Your key to this account';
+    $('claimIntro').textContent = 'Your browser made this key when you sent your clones in, and it is the only full-access key on ' + guest + '. The house holds a key that can only whisper, retrain and settle at the market: it can run your clones but can never move your NEAR. Save the key file; it lives only in this browser.';
+    $('claimBtn').hidden = true;
+    $('claimed').hidden = false;
+    $('claimAcct').textContent = guest;
+    $('claimSecret').textContent = k.private_key;
+    $('claimDownload').href = URL.createObjectURL(new Blob([JSON.stringify(k, null, 2)], { type: 'application/json' }));
+    $('claimDownload').download = guest + '.json';
+    return true;
   }
   function claim() {
     var token = stored('clones.claim.' + guest);
@@ -763,7 +808,7 @@
       $('homeNote').textContent = inTown.length ? 'stake is out with the clones' : list.length ? 'paid home at dawn' : 'no clones yet';
       renderAccounts(list);
       $('bellRow').hidden = !inTown.length;
-      $('claimCard').hidden = !(stored('clones.claim.' + guest) && window.crypto && crypto.subtle);
+      if (!showMyKey()) $('claimCard').hidden = !(stored('clones.claim.' + guest) && window.crypto && crypto.subtle);
 
       if (inTown.length) {
         if (ringing) {

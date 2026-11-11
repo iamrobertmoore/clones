@@ -48,6 +48,9 @@ pub enum Temperament {
     Cautious,
     Greedy,
     Loyal,
+    /// Driven by an AI model following the player's instruction. Off chain the runner asks the
+    /// model; where no model answers (and in simulations) it trades as cautious.
+    Possessed,
 }
 
 pub fn good_index(name: &str) -> Option<usize> {
@@ -386,7 +389,7 @@ fn proceeds(i: &Intent) -> u64 {
 pub fn decide(t: Temperament, v: &View) -> Decision {
     let mut d = match t {
         Temperament::Greedy => greedy(v),
-        Temperament::Cautious => cautious(v),
+        Temperament::Cautious | Temperament::Possessed => cautious(v),
         Temperament::Loyal => loyal(v),
     };
     if let Some(first) = d.say.get_mut(..1) {

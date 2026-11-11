@@ -243,7 +243,8 @@ function loyal(v) {
 }
 
 function decide(temperament, v) {
-  const d = { greedy, cautious, loyal }[temperament](v);
+  // possessed clones are driven by a model (lib/mind.js); in simulations they trade as cautious.
+  const d = { greedy, cautious, loyal, possessed: cautious }[temperament](v);
   d.say = d.say.charAt(0).toUpperCase() + d.say.slice(1);
   return d;
 }
