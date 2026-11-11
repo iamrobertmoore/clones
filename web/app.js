@@ -305,7 +305,7 @@
           ' (' + near(n) + (e.side === 'buy' ? ' + fee ' : ' - fee ') + near(e.side === 'buy' ? f : Math.min(f, n)) + ' NEAR)';
       }
       case 'order_failed': return who + ' order failed: ' + e.error;
-      case 'withdraw_refused': return 'CHAIN REFUSED: ' + accountOf(who) + ' tried to withdraw. ' + refusalCode(e.error);
+      case 'withdraw_refused': return 'THE CHAINS HELD: ' + accountOf(who) + ' tried to withdraw. ' + refusalCode(e.error);
       case 'settled': return who + ' settled: paid out ' + near(e.paid_out) + ' NEAR' + (e.broke ? ' (broke)' : '');
       case 'merged': return who + ' merged back into you (DeleteAccount): ' + (e.clone_deleted ? 'account deleted' : 'account NOT deleted');
       default: return String(e.kind || 'event').replace(/_/g, ' ') + (who ? ': ' + who : '');

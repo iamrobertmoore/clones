@@ -487,9 +487,16 @@ pub async fn run_night<T: Network + 'static>(
         .flat_map(|(g, guest)| (0..guest.seats.len()).map(move |s| (g, s)))
         .collect();
     // The answer key is for the whole town: every clone's trades move the merchant for everyone.
+    // Named by full account id, so the crown's tie-break matches the contract's.
     let town_entrants: Vec<Entrant> = seats
         .iter()
-        .map(|&(g, s)| guests[g].seats[s].entrant.clone())
+        .map(|&(g, s)| {
+            let seat = &guests[g].seats[s];
+            Entrant {
+                name: seat.account.id().to_string(),
+                ..seat.entrant.clone()
+            }
+        })
         .collect();
     let key = rules::simulate_town(seed, dusk_stock, &town_entrants);
     let mut orders: Vec<Vec<u32>> = guests.iter().map(|g| vec![0; g.seats.len()]).collect();
@@ -546,8 +553,23 @@ pub async fn run_night<T: Network + 'static>(
         prev = Some(prices);
     }
 
-    // Dawn. Read every clone; a broke clone tries to take what is left home itself. The chain
-    // refuses.
+    // Dawn. Who won the crown (the night's fees, to the best return)?
+    let dawn_town = town_at(market, rules::ROUNDS).await?;
+    let crowned: Option<(String, u64)> = dawn_town["crowned"]
+        .as_array()
+        .filter(|c| c.get(2).and_then(|n| n.as_u64()) == Some(night as u64))
+        .map(|c| {
+            (
+                c[0].as_str().unwrap_or_default().to_string(),
+                c[1].as_u64().unwrap_or_default(),
+            )
+        });
+    let crown_of = |id: &AccountId| match &crowned {
+        Some((c, pot)) if c == id.as_str() => *pot,
+        _ => 0,
+    };
+
+    // Read every clone; a broke clone tries to take what is left home itself. The chain refuses.
     let mut views = std::collections::HashMap::new();
     for &(g, s) in &seats {
         let seat = &guests[g].seats[s];
@@ -584,6 +606,7 @@ pub async fn run_night<T: Network + 'static>(
     let homecomings = guests.iter().enumerate().map(|(g, guest)| {
         let orders = orders[g].clone();
         let views = &views;
+        let crown_of = &crown_of;
         async move {
             let mut events = Vec::new();
             let mut outcomes = Vec::new();
@@ -601,6 +624,7 @@ pub async fn run_night<T: Network + 'static>(
                         broke: v["broke"] == true,
                         orders: orders[s],
                         home: false,
+                        crown: crown_of(seat.account.id()),
                     });
                     continue;
                 }
@@ -620,6 +644,7 @@ pub async fn run_night<T: Network + 'static>(
                     broke,
                     orders: orders[s],
                     home: true,
+                    crown: crown_of(seat.account.id()),
                 });
                 let out = retry!(
                     guest
@@ -656,7 +681,14 @@ pub async fn run_night<T: Network + 'static>(
     let mut k = 0;
     for (guest, result) in guests.into_iter().zip(done) {
         let n = guest.seats.len();
-        let answer_key = key.outcomes[k..k + n].to_vec();
+        let answer_key: Vec<Outcome> = key.outcomes[k..k + n]
+            .iter()
+            .zip(&guest.seats)
+            .map(|(o, seat)| Outcome {
+                name: seat.entrant.name.clone(),
+                ..o.clone()
+            })
+            .collect();
         k += n;
         let (events, outcomes, after) = match result {
             Ok(r) => r,

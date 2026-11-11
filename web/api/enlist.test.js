@@ -108,3 +108,18 @@ test("a claim token is tied to one guest and the house key", () => {
   assert.notStrictEqual(a, claimToken("gb.house.testnet", env));
   assert.notStrictEqual(a, claimToken("ga.house.testnet", { HOUSE_KEY: "ed25519:other" }));
 });
+
+test("waits out the RPC's rate limit, which never lets a call through", async () => {
+  let calls = 0;
+  const out = await whenVisible(
+    async () => {
+      calls++;
+      if (calls < 3) throw Object.assign(new Error("Rate limits exceeded"), { name: "TooManyRequestsError" });
+      return "sent";
+    },
+    5,
+    1,
+  );
+  assert.strictEqual(out, "sent");
+  assert.strictEqual(calls, 3);
+});

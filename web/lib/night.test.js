@@ -32,6 +32,10 @@ function playNight(seed, whispers = []) {
     prev = board;
   }
   const dawn = new rules.Book(hours[rules.ROUNDS], stock);
+  const pot = orders.reduce((t, o) => t + o.fee, 0);
+  const win = rules.crownWinner(names.map((id, i) => ({ name: id, worth: rules.worth(ledgers[i], dawn), stake: 2000 })));
+  ledgers[win].cash += pot;
+  const crowned = [names[win], pot, 1];
   const clones = names.map((id, i) => {
     const worth = rules.worth(ledgers[i], dawn);
     const broke = rules.isBroke(worth, 2000);
@@ -54,7 +58,7 @@ function playNight(seed, whispers = []) {
       whisper: w ? [1, w.round, w.whisper] : null,
     };
   });
-  return { town: { night: 1, dusk_stock: rules.NORMAL_STOCK.slice(), hours }, clones, orders };
+  return { town: { night: 1, dusk_stock: rules.NORMAL_STOCK.slice(), hours, crowned }, clones, orders };
 }
 
 test("the audit passes a fair night and agrees with the off-chain simulation", () => {
@@ -62,12 +66,18 @@ test("the audit passes a fair night and agrees with the off-chain simulation", (
   const a = audit(town, clones, orders);
   assert.deepStrictEqual(a.problems, []);
   const sim = rules.simulateTown(606, rules.NORMAL_STOCK, [
-    { name: "a", temperament: "cautious", stake: 2000 },
-    { name: "b", temperament: "greedy", stake: 2000 },
-    { name: "c", temperament: "loyal", stake: 2000 },
+    { name: "clone-1.p.testnet", temperament: "cautious", stake: 2000 },
+    { name: "clone-2.p.testnet", temperament: "greedy", stake: 2000 },
+    { name: "clone-3.p.testnet", temperament: "loyal", stake: 2000 },
   ]);
   assert.deepStrictEqual(a.verdict.map((v) => v.expected.final_cash), sim.outcomes.map((o) => o.final_cash));
   assert.ok(a.verdict[1].expected.broke, "the demo night's greedy clone goes broke");
+});
+
+test("the audit checks the crown went to the best return", () => {
+  const { town, clones, orders } = playNight(606);
+  town.crowned = [clones[2].id, town.crowned[1], 1];
+  assert.ok(audit(town, clones, orders).problems.some((p) => p.startsWith("crown")));
 });
 
 test("the audit catches a fill at the wrong price", () => {

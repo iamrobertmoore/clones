@@ -16,7 +16,7 @@
 // `trade` only, every clone.
 
 const crypto = require("crypto");
-const { connect, keyStores, KeyPair, utils } = require("near-api-js");
+const { connect, keyStores, KeyPair, utils, transactions } = require("near-api-js");
 const rules = require("./rules.js");
 
 const TGAS = 1_000_000_000_000n;
@@ -25,16 +25,21 @@ const short = (id) => id.split(".")[0];
 async function openTown(env = process.env) {
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `ossuary.${house}`;
+  const market = env.MARKET_ACCOUNT || `charnel.${house}`;
   const keyStore = new keyStores.InMemoryKeyStore();
-  const near = await connect({
-    networkId: "testnet",
-    nodeUrl: env.NEAR_RPC || "https://test.rpc.fastnear.com",
-    keyStore,
-  });
+  // Accounts are spread across public RPC endpoints, so a busy town does not trip one node's
+  // rate limit. Views go to the first.
+  const urls = (env.NEAR_RPCS || env.NEAR_RPC || "https://test.rpc.fastnear.com,https://rpc.testnet.fastnear.com").split(",");
+  const nears = await Promise.all(urls.map((nodeUrl) => connect({ networkId: "testnet", nodeUrl, keyStore })));
+  const near = nears[0];
+  const accounts = new Map();
+  const spread = (id) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7) % nears.length;
   const as = async (id) => {
-    await keyStore.setKey("testnet", id, keyPair);
-    return near.account(id);
+    if (!accounts.has(id)) {
+      await keyStore.setKey("testnet", id, keyPair);
+      accounts.set(id, await nears[spread(id)].account(id));
+    }
+    return accounts.get(id);
   };
   const houseAccount = await as(house);
   const view = (methodName, args = {}) =>
@@ -45,17 +50,33 @@ async function openTown(env = process.env) {
 const message = (e) => String((e && (e.message || e.type)) || e);
 
 // Retry a call the RPC node turned away for load; such a call never reached the chain.
-async function patient(fn, tries = 6) {
+async function patient(fn, tries = 10) {
   for (let i = 1; ; i++) {
     try {
       return await fn();
     } catch (e) {
       const m = message(e).toLowerCase();
-      const busy = m.includes("429") || m.includes("rate") || m.includes("too many") || (e && e.type === "KeyNotFound");
+      const busy =
+        m.includes("429") || m.includes("rate") || m.includes("too many") || (e && (e.type === "KeyNotFound" || e.name === "TooManyRequestsError"));
       if (!busy || i >= tries) throw e;
-      await new Promise((r) => setTimeout(r, 400 * i));
+      await new Promise((r) => setTimeout(r, Math.min(4000, 300 * 2 ** Math.min(i, 4)) + Math.random() * 400));
     }
   }
+}
+
+// Run async jobs with at most `n` at a time, so a busy town does not trip the RPC's rate limit.
+async function pool(items, n, job) {
+  const out = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await job(items[i], i);
+      }
+    }),
+  );
+  return out;
 }
 
 async function readState(t) {
@@ -72,8 +93,8 @@ async function playHour(t, town, clones) {
   const book = new rules.Book(town.hours[round], town.hour_stock);
   const events = [{ kind: "hour", round, prices: town.prices, stock: town.hour_stock }];
   const playing = clones.filter((c) => c.from_night <= town.night);
-  await Promise.all(
-    playing.map(async (c) => {
+  const missed = [];
+  await pool(playing, 4, async (c) => {
       if (c.last_turn && c.last_turn[0] === town.night && c.last_turn[1] === round) return;
       const view = {
         round,
@@ -108,12 +129,25 @@ async function playHour(t, town, clones) {
         }
       } catch (e) {
         const m = message(e);
-        if (!m.includes("already traded this hour") && !m.includes("that hour is over")) {
-          events.push({ kind: "order_failed", round, ...who, error: m.slice(0, 300) });
-        }
+        if (!m.includes("already traded this hour") && !m.includes("that hour is over")) missed.push({ c, d, orders, who, m });
       }
-    }),
-  );
+  });
+  // A turn the RPC turned away is sent once more, alone, before the hour is rung.
+  for (const x of missed) {
+    try {
+      const account = await t.as(x.c.id);
+      const out = await patient(
+        () => account.functionCall({ contractId: t.market, methodName: "trade", args: { round, orders: x.orders }, gas: 50n * TGAS }),
+        14,
+      );
+      for (const i of x.d.intents) {
+        events.push({ kind: "order", round, ...x.who, good: rules.GOODS[i.good], side: i.side, qty: i.qty, price: book.quote(i.good, i.side, i.qty), tx: out.transaction.hash });
+      }
+    } catch (e) {
+      const m = message(e);
+      if (!m.includes("already traded this hour")) events.push({ kind: "order_failed", round, ...x.who, error: m.slice(0, 300) });
+    }
+  }
   const keeper = await t.as(t.market);
   try {
     await patient(() =>
@@ -164,6 +198,7 @@ function audit(town, clones, orders) {
   const counted = new Map(played.map((c) => [c.id, 0]));
   let stock = town.dusk_stock.slice();
   let prev = new rules.Book(town.hours[0], stock).board();
+  let pot = 0;
   for (let round = 0; round < rules.ROUNDS; round++) {
     const book = new rules.Book(town.hours[round], stock);
     const board = book.board();
@@ -184,6 +219,7 @@ function audit(town, clones, orders) {
         const fills = rules.applyTurn(l, moved, book, intents);
         fills.forEach((f, k) => {
           if (f.price !== got[k].price || f.fee !== got[k].fee) problems.push(`${short(c.id)} hour ${round}: price or fee differs`);
+          pot += f.fee;
         });
         counted.set(c.id, counted.get(c.id) + got.length);
       } catch (e) {
@@ -194,6 +230,12 @@ function audit(town, clones, orders) {
     prev = board;
   }
   const dawn = new rules.Book(town.hours[rules.ROUNDS], stock);
+  // The crown: tonight's fees to the best return on stake.
+  const w = pot > 0 ? rules.crownWinner(played.map((c) => ({ name: c.id, worth: rules.worth(ledgers.get(c.id), dawn), stake: c.stake }))) : -1;
+  const crown = w >= 0 ? { clone: played[w].id, pot } : null;
+  if (crown) ledgers.get(crown.clone).cash += pot;
+  const onChain = town.crowned && town.crowned[2] === town.night ? { clone: town.crowned[0], pot: town.crowned[1] } : null;
+  if (JSON.stringify(crown) !== JSON.stringify(onChain)) problems.push(`crown: expected ${JSON.stringify(crown)}, chain has ${JSON.stringify(onChain)}`);
   const verdict = played.map((c) => {
     const w = rules.worth(ledgers.get(c.id), dawn);
     const broke = rules.isBroke(w, c.stake);
@@ -208,7 +250,7 @@ function audit(town, clones, orders) {
     if (!matched) problems.push(`${short(c.id)} at dawn: expected ${JSON.stringify(expected)}, chain has ${JSON.stringify(chain)}`);
     return { clone: short(c.id), player: c.player, temperament: c.temperament, stake: c.stake, expected, chain, matched };
   });
-  return { verdict, problems, orders: orders.filter((o) => o.night === town.night).length };
+  return { verdict, problems, crown, orders: orders.filter((o) => o.night === town.night).length };
 }
 
 // After the last hour: check the night against the answer key, computed from chain state alone,
@@ -222,9 +264,13 @@ async function dawnVerdict(t) {
   }
   if (!town.asleep) throw new Error("the town never reached dawn");
   const played = clones.filter((c) => c.from_night <= town.night);
-  const { verdict, problems, orders } = audit(town, clones, await ordersTonight(t, town.dusk_order));
+  const { verdict, problems, orders, crown } = audit(town, clones, await ordersTonight(t, town.dusk_order));
   if (problems.length) console.error("audit:", problems.slice(0, 10));
   const events = [{ kind: "hour", round: rules.ROUNDS, prices: town.prices, stock: town.hour_stock }];
+  if (crown) {
+    const c = played.find((x) => x.id === crown.clone);
+    events.push({ kind: "crowned", clone: short(crown.clone), player: c ? c.player : null, pot: crown.pot });
+  }
   for (const c of played.filter((x) => x.broke)) {
     const who = { clone: short(c.id), player: c.player };
     events.push({ kind: "bubble", round: rules.ROUNDS, ...who, say: "I'm broke. I'll just take what's left on my account and run." });
@@ -286,8 +332,9 @@ async function bringHome(t, clones) {
           }
         }
         try {
-          const m = await patient(() =>
-            guest.functionCall({ contractId: c.id, methodName: "merge", args: {}, gas: 100n * TGAS }),
+          const m = await patient(
+            () => guest.functionCall({ contractId: c.id, methodName: "merge", args: {}, gas: 100n * TGAS }),
+            14,
           );
           events.push({ kind: "merged", ...who, tx: m.transaction.hash, clone_deleted: true });
         } catch (e) {
@@ -309,6 +356,81 @@ async function sweep(t, guest) {
   const state = await guest.state();
   const send = BigInt(state.amount) - BigInt(utils.format.parseNearAmount("0.05"));
   if (send > 0n) await patient(() => guest.sendMoney(t.house, send));
+}
+
+// The town's regulars: three house players who send clones in every night someone rings the
+// bell, so a guest is never alone at the merchant and the crown is always contested. Each has a
+// style; the Widow reads the omen (and, given a NEAR AI key, asks a model what to send).
+const RIVALS = [
+  { name: "widow", title: "the Widow", plan: (omen) => widowPlan(omen) },
+  { name: "abbot", title: "the Abbot", plan: () => [{ temperament: "cautious", stake: 500, nights: 1 }] },
+  { name: "hound", title: "the Hound", plan: () => [{ temperament: "greedy", stake: 1000, nights: 1 }] },
+];
+const FAVOURS = { boom: "greedy", slump: "cautious", blight: "loyal", wild: "cautious" };
+function widowPlan(omen) {
+  const t = FAVOURS[omen] || "cautious";
+  return [
+    { temperament: t, stake: 1000, nights: 1 },
+    { temperament: t === "loyal" ? "cautious" : "loyal", stake: 250, nights: 1 },
+  ];
+}
+const rivalId = (t, r) => `${r.name}.${t.house}`;
+const isRival = (t, player) => RIVALS.some((r) => rivalId(t, r) === player);
+
+// Send in every regular who has no clones in town. Runs before a night opens.
+async function ensureRivals(t, town, clones, env = process.env) {
+  const { enlist } = require("../api/enlist.js");
+  const here = new Set(clones.map((c) => c.player));
+  const missing = RIVALS.filter((r) => !here.has(rivalId(t, r)));
+  const results = await Promise.all(
+    missing.map(async (r) => {
+      try {
+        await tidyRival(t, rivalId(t, r));
+        const out = await enlist(r.plan(town.omen), env, { guest: rivalId(t, r) });
+        return out.status === 200 ? r.title : null;
+      } catch (e) {
+        console.error(`rival ${r.name}:`, message(e));
+        return null;
+      }
+    }),
+  );
+  return results.filter(Boolean);
+}
+
+const exists = async (t, id) => {
+  try {
+    await (await t.as(id)).state();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Before a regular comes back: make sure its account exists, and merge any clone of its that a
+// busy RPC left behind (settled, but not yet merged home).
+async function tidyRival(t, id) {
+  if (!(await exists(t, id))) {
+    const house = await t.as(t.house);
+    await patient(() =>
+      house.signAndSendTransaction({
+        receiverId: id,
+        actions: [
+          transactions.createAccount(),
+          transactions.transfer(BigInt(utils.format.parseNearAmount("0.2"))),
+          transactions.addKey(t.keyPair.getPublicKey(), transactions.fullAccessKey()),
+        ],
+      }),
+    );
+  }
+  const rival = await t.as(id);
+  for (const n of [1, 2, 3]) {
+    const clone = `clone-${n}.${id}`;
+    if (await exists(t, clone)) {
+      await patient(() => rival.functionCall({ contractId: clone, methodName: "merge", args: {}, gas: 100n * TGAS })).catch((e) =>
+        console.error(`tidy ${clone}:`, message(e)),
+      );
+    }
+  }
 }
 
 function newSeed() {
@@ -359,7 +481,8 @@ async function ring(t, { start = false } = {}) {
   if (clones.some((c) => c.due_home)) {
     return { phase: "home", night: town.night, round: town.round, events: await bringHome(t, clones) };
   }
-  if (start && clones.length) {
+  if (start && clones.some((c) => !isRival(t, c.player))) {
+    const arrived = await ensureRivals(t, town, clones);
     await openNight(t, town);
     const after = await readState(t);
     return {
@@ -369,6 +492,7 @@ async function ring(t, { start = false } = {}) {
       mood: after.town.mood,
       omen: after.town.omen,
       events: [
+        ...arrived.map((title) => ({ kind: "rival", title })),
         {
           kind: "dusk",
           night: after.town.night,
@@ -380,7 +504,12 @@ async function ring(t, { start = false } = {}) {
       ],
     };
   }
-  return { phase: clones.length ? "waiting" : "empty", night: town.night, round: town.round, events: [] };
+  return {
+    phase: clones.some((c) => !isRival(t, c.player)) ? "waiting" : "empty",
+    night: town.night,
+    round: town.round,
+    events: [],
+  };
 }
 
-module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit };
+module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit, RIVALS, isRival };

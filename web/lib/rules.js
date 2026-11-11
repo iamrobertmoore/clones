@@ -264,6 +264,20 @@ function applyTurn(ledger, stock, book, intents) {
   return fills;
 }
 
+// The crown: the night's fees go to the clone with the best return on its stake; ties to the
+// lower account id. entries: [{name, worth, stake}]. Returns the winner's index or -1.
+function crownWinner(entries) {
+  let best = -1;
+  entries.forEach((e, i) => {
+    if (best < 0) return void (best = i);
+    const r = (BigInt(e.worth) * 1000000n) / BigInt(Math.max(e.stake, 1));
+    const b = entries[best];
+    const br = (BigInt(b.worth) * 1000000n) / BigInt(Math.max(b.stake, 1));
+    if (r > br || (r === br && e.name < b.name)) best = i;
+  });
+  return best;
+}
+
 const startOf = (e) => (e.carried ? copyLedger(e.carried) : { cash: e.stake, stock: [0, 0, 0, 0, 0] });
 const comesHome = (e, broke) => broke || (e.played || 0) + 1 >= (e.nights || 1);
 
@@ -274,6 +288,7 @@ function simulateTown(seed, dusk, entrants) {
   const prices = [];
   const stocks = [];
   let prev = Book.at(seed, 0, stock).board();
+  let pot = 0;
   for (let round = 0; round < ROUNDS; round++) {
     const book = Book.at(seed, round, stock);
     const board = book.board();
@@ -284,8 +299,9 @@ function simulateTown(seed, dusk, entrants) {
       const d = decide(e.temperament, { round, book, prices: board, prev, ledger: ledgers[i], stake: e.stake });
       if (!d.intents.length) return;
       try {
-        applyTurn(ledgers[i], moved, book, d.intents);
+        const fills = applyTurn(ledgers[i], moved, book, d.intents);
         orders[i] += d.intents.length;
+        pot += fills.reduce((t, f) => t + f.fee, 0);
       } catch (_) {
         // a refused turn changes nothing, as on chain
       }
@@ -296,13 +312,15 @@ function simulateTown(seed, dusk, entrants) {
   const dawn = Book.at(seed, ROUNDS, stock);
   prices.push(dawn.board());
   stocks.push(stock.slice());
+  const crowned = pot > 0 ? crownWinner(entrants.map((e, i) => ({ name: e.name, worth: worth(ledgers[i], dawn), stake: e.stake }))) : -1;
+  if (crowned >= 0) ledgers[crowned].cash += pot;
   const held = ledgers.map(copyLedger);
   const outcomes = entrants.map((e, i) => {
     const w = worth(ledgers[i], dawn);
     const broke = isBroke(w, e.stake);
     const home = comesHome(e, broke);
     if (home) ledgers[i].stock.forEach((q, g) => moveStock(stock, g, "sell", q));
-    return { name: e.name, temperament: e.temperament, stake: e.stake, final_cash: w, broke, orders: orders[i], home };
+    return { name: e.name, temperament: e.temperament, stake: e.stake, final_cash: w, broke, orders: orders[i], home, crown: i === crowned ? pot : 0 };
   });
   return { outcomes, prices, stock: stocks, stock_end: stock, held };
 }
@@ -349,6 +367,7 @@ module.exports = {
   decide,
   obey,
   applyTurn,
+  crownWinner,
   simulateTown,
   comesHome,
 };

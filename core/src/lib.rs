@@ -79,6 +79,9 @@ pub enum Regime {
     Wild,
 }
 
+/// Omens in the hosted town come true this many nights in ten.
+pub const OMEN_TRUE_IN_TEN: u64 = 7;
+
 pub const REGIMES: [Regime; 4] = [Regime::Blight, Regime::Boom, Regime::Slump, Regime::Wild];
 
 /// The mood a number draws: in seeded play, from the seed; in the hosted town, from the chain's
@@ -569,6 +572,32 @@ pub struct Outcome {
     /// its goods and plays the next night.
     #[serde(default = "yes")]
     pub home: bool,
+    /// The night's pot of fees, if this clone won the crown (included in `final_cash`).
+    #[serde(default)]
+    pub crown: u64,
+}
+
+/// The crown: at dawn, every fee the town took during the night goes to the clone with the best
+/// return on its stake (ties to the lower account id). Clones compete for it, so other players'
+/// clones are rivals, not just weather. Returns the winner's index.
+pub fn crown_winner(entries: &[(&str, u64, u64)]) -> Option<usize> {
+    let mut best: Option<usize> = None;
+    for (i, (name, worth, stake)) in entries.iter().enumerate() {
+        let ratio = *worth as u128 * 1_000_000 / (*stake).max(1) as u128;
+        best = match best {
+            None => Some(i),
+            Some(b) => {
+                let (bn, bw, bs) = entries[b];
+                let br = bw as u128 * 1_000_000 / bs.max(1) as u128;
+                if ratio > br || (ratio == br && *name < bn) {
+                    Some(i)
+                } else {
+                    Some(b)
+                }
+            }
+        };
+    }
+    best
 }
 
 /// Whether a clone comes home at this dawn.
@@ -599,6 +628,7 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
     let mut boards = Vec::new();
     let mut stocks = Vec::new();
     let mut prev = Book::at(seed, 0, stock).board();
+    let mut pot = 0u64;
     for round in 0..ROUNDS {
         // The book is fixed when the hour begins; trades during it move the stock, which shows in
         // the next hour's prices.
@@ -622,8 +652,9 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
             if d.intents.is_empty() {
                 continue;
             }
-            if apply_turn(&mut ledgers[i], &mut moved, &book, &d.intents).is_ok() {
+            if let Ok(fills) = apply_turn(&mut ledgers[i], &mut moved, &book, &d.intents) {
                 orders[i] += d.intents.len() as u32;
+                pot += fills.iter().map(|f| f.fee).sum::<u64>();
             }
         }
         stock = moved;
@@ -632,6 +663,15 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
     let dawn = Book::at(seed, ROUNDS, stock);
     boards.push(dawn.board());
     stocks.push(stock);
+    let worths: Vec<(&str, u64, u64)> = entrants
+        .iter()
+        .enumerate()
+        .map(|(i, e)| (e.name.as_str(), ledgers[i].worth(&dawn), e.stake))
+        .collect();
+    let crowned = if pot > 0 { crown_winner(&worths) } else { None };
+    if let Some(w) = crowned {
+        ledgers[w].cash += pot;
+    }
     let held = ledgers.clone();
     let mut outcomes = Vec::new();
     for (i, e) in entrants.iter().enumerate() {
@@ -651,6 +691,7 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
             broke,
             orders: orders[i],
             home,
+            crown: if crowned == Some(i) { pot } else { 0 },
         });
     }
     Night {

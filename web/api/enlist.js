@@ -48,8 +48,10 @@ async function whenVisible(fn, tries = 10, waitMs = 1000) {
     try {
       return await fn();
     } catch (e) {
-      if (e && e.type === "KeyNotFound" && attempt < tries) {
-        await sleep(waitMs);
+      const m = String((e && e.message) || "").toLowerCase();
+      const rateLimited = (e && e.name === "TooManyRequestsError") || m.includes("rate limits exceeded") || m.includes("429");
+      if (e && (e.type === "KeyNotFound" || rateLimited) && attempt < tries) {
+        await sleep(rateLimited ? waitMs * attempt : waitMs);
         continue;
       }
       throw e;
@@ -68,12 +70,14 @@ function claimToken(guest, env = process.env) {
   return crypto.createHmac("sha256", env.HOUSE_KEY.trim()).update(`claim:${guest}`).digest("hex").slice(0, 32);
 }
 
-async function enlist(plan, env = process.env) {
+// `opts.guest`: send the clones in under this existing (or new) guest account instead of a fresh
+// random one; the town's rival regulars use it.
+async function enlist(plan, env = process.env, opts = {}) {
   const temperaments = plan.map((c) => c.temperament);
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `ossuary.${house}`;
-  const guest = `${guestName()}.${house}`;
+  const market = env.MARKET_ACCOUNT || `charnel.${house}`;
+  const guest = opts.guest || `${guestName()}.${house}`;
   const clones = temperaments.map((_, i) => `clone-${i + 1}.${guest}`);
 
   const keyStore = new keyStores.InMemoryKeyStore();
@@ -111,15 +115,26 @@ async function enlist(plan, env = process.env) {
 
   const txs = [];
   const pk = keyPair.getPublicKey();
-  let out = await houseAccount.signAndSendTransaction({
-    receiverId: guest,
-    actions: [
-      transactions.createAccount(),
-      transactions.transfer(guestFund),
-      transactions.addKey(pk, transactions.fullAccessKey()),
-    ],
-  });
-  txs.push({ step: "guest created", tx: out.transaction.hash });
+  let exists = false;
+  if (opts.guest) {
+    try {
+      await (await near.account(guest)).state();
+      exists = true;
+    } catch {
+      exists = false;
+    }
+  }
+  let out = exists
+    ? await whenVisible(() => houseAccount.sendMoney(guest, guestFund))
+    : await whenVisible(() => houseAccount.signAndSendTransaction({
+        receiverId: guest,
+        actions: [
+          transactions.createAccount(),
+          transactions.transfer(guestFund),
+          transactions.addKey(pk, transactions.fullAccessKey()),
+        ],
+      }));
+  txs.push({ step: exists ? "guest funded" : "guest created", tx: out.transaction.hash });
 
   const guestAccount = await near.account(guest);
   const made = [];
@@ -165,7 +180,8 @@ async function enlist(plan, env = process.env) {
       });
     }
   } catch (e) {
-    await rollBack(guestAccount, market, house, made, sentIn);
+    // Only an account this sign-up created is deleted; a regular's account stays.
+    await rollBack(guestAccount, market, house, made, sentIn, !exists);
     throw e;
   }
   return {
@@ -175,7 +191,7 @@ async function enlist(plan, env = process.env) {
 }
 
 // Something failed half way: bring every NEAR back to the house so nothing is stranded.
-async function rollBack(guestAccount, market, house, made, sentIn) {
+async function rollBack(guestAccount, market, house, made, sentIn, deleteGuest = true) {
   const attempt = async (what, fn) => {
     try {
       await whenVisible(fn);
@@ -203,7 +219,7 @@ async function rollBack(guestAccount, market, house, made, sentIn) {
       }),
     );
   }
-  await attempt("delete guest", () => guestAccount.deleteAccount(house));
+  if (deleteGuest) await attempt("delete guest", () => guestAccount.deleteAccount(house));
 }
 
 function parseTemperaments(body) {

@@ -10,7 +10,7 @@
 
   var RPC = 'https://test.rpc.fastnear.com';
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'ossuary.' + HOUSE;
+  var MARKET = 'charnel.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';
@@ -24,10 +24,10 @@
   var GOODS = ['grain', 'salt', 'wool', 'iron', 'amber'];
   var STAKES = [[250, '0.25'], [500, '0.5'], [1000, '1']];
   var MOODS = {
-    blight: { name: 'Blight', why: 'The luxuries rot all night; staples hold. Favours loyal.' },
-    boom: { name: 'Boom', why: 'Prices climb all night. Favours greedy.' },
-    slump: { name: 'Slump', why: 'Prices sink, then rebound before dawn. Favours cautious.' },
-    wild: { name: 'Wild', why: 'Big swings both ways. Greedy clones go broke; favours cautious.' }
+    blight: { name: 'Blight', why: 'The luxuries rot all night; the staples hold.' },
+    boom: { name: 'Boom', why: 'Prices climb all night.' },
+    slump: { name: 'Slump', why: 'Prices sink, then rebound before dawn.' },
+    wild: { name: 'Wild', why: 'Big swings both ways.' }
   };
   var NIGHTS = [1, 2, 3];
 
@@ -173,7 +173,7 @@
     var on = !town.asleep;
     var m = MOODS[on ? town.mood : town.omen];
     $('omen').hidden = false;
-    $('omenWhen').textContent = on ? 'tonight\'s mood (tomorrow: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the next night\'s omen';
+    $('omenWhen').textContent = on ? 'tonight\'s mood (the omen for tomorrow: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for the next night (omens lie three nights in ten)';
     $('omenMood').textContent = m.name;
     $('omenWhy').textContent = m.why;
   }
@@ -460,8 +460,8 @@
   /* ---------- the refusal ---------- */
   function showRefusal(short, error) {
     var e = String(error || '');
-    $('refusalErr').textContent = /RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError: RequiresFullAccess' : e.split(':')[0];
-    $('refusalWhy').textContent = short + ' tried to send NEAR from its own account. Its only key can call trade on the market, and moving NEAR needs a full-access key, so the chain refused the transaction. Nothing left the clone.';
+    $('refusalErr').textContent = 'the chain refused: ' + (/RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError(RequiresFullAccess)' : e.split(':')[0]);
+    $('refusalWhy').textContent = short + ' tried to run off with the NEAR on its own account. Its only key can trade at the market and nothing else, so the transfer never happened. Nothing left the clone.';
     $('refusalRaw').textContent = 'A function-call key can only sign a call to the one contract and method it names. A transfer is a different action, so the chain rejects it before it reaches a block (nearcore reports this as RequiresFullAccess).';
     $('refusal').hidden = false;
     var seal = document.querySelector('#refusal .seal');
@@ -520,6 +520,13 @@
         if (e.kind === 'dusk' && MOODS[e.mood]) cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why);
       }
     });
+    out.events.forEach(function (e) {
+      if (e.kind === 'rival') cry(cap(e.title) + ' sends clones into town.', 'muted');
+      if (e.kind === 'crowned') {
+        var whose = e.player === guest ? 'yours' : nameOf(e.player);
+        cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
+      }
+    });
     mine.forEach(function (e) {
       if (e.kind === 'bubble' && units[e.clone]) say(e.clone, e.say, /broke/.test(e.say), e.whispered);
       var line = describe(e);
@@ -574,6 +581,13 @@
     });
   }
 
+  var RIVAL_TITLES = { widow: 'the Widow', abbot: 'the Abbot', hound: 'the Hound' };
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  function nameOf(player) {
+    var short = String(player).split('.')[0];
+    return player === guest ? 'you' : RIVAL_TITLES[short] || short;
+  }
+
   /* ---------- after dawn ---------- */
   function renderMorning(rows) {
     var latest = rows.reduce(function (m, r) { return Math.max(m, Number(r.night) || 0); }, 0);
@@ -625,19 +639,36 @@
       rows = rows || [];
       if (!rows.length) return;
       $('townBoard').hidden = false;
+      // Standings: each player's net over the town's recent settlements.
+      var by = {};
+      rows.forEach(function (r) {
+        var p = by[r.player] || (by[r.player] = { player: r.player, net: 0, stake: 0, clones: 0 });
+        p.net += r.paid_out - r.stake; p.stake += r.stake; p.clones += 1;
+      });
+      var st = $('standRows'); st.textContent = '';
+      Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.net - a.net; }).slice(0, 8).forEach(function (p) {
+        var li = el('li', p.player === guest ? 'mine' : '');
+        li.appendChild(el('span', 'b-who', cap(nameOf(p.player)) + ' (' + p.clones + (p.clones === 1 ? ' clone)' : ' clones)')));
+        li.appendChild(el('span', 'b-num ' + (p.net >= 0 ? 'gain' : 'loss'), signed(p.net)));
+        li.appendChild(el('span', 'b-det', near(p.stake) + ' staked'));
+        st.appendChild(li);
+      });
       var ol = $('boardRows'); ol.textContent = '';
       rows.slice().sort(function (a, b) { return (b.paid_out / b.stake) - (a.paid_out / a.stake); }).slice(0, 10).forEach(function (r) {
         var li = el('li', r.player === guest ? 'mine' : '');
         li.style.setProperty('--tint', (TEMPS[r.temperament] || {}).tint || '#888');
         var who = el('span', 'b-who');
         who.appendChild(el('b', 't-chip', r.temperament));
-        who.appendChild(document.createTextNode(String(r.clone).split('.')[0] + ' of ' + String(r.player).split('.')[0] + (r.player === guest ? ' (you)' : '')));
+        who.appendChild(document.createTextNode(String(r.clone).split('.')[0] + ' of ' + nameOf(r.player)));
         li.appendChild(who);
         var pct = Math.round((r.paid_out - r.stake) * 100 / r.stake);
         li.appendChild(el('span', 'b-num ' + (pct >= 0 ? 'gain' : 'loss'), (pct >= 0 ? '+' : '') + pct + '%'));
         li.appendChild(el('span', 'b-det', near(r.stake) + ' → ' + near(r.paid_out) + ', ' + r.nights_played + 'n' + (r.broke ? ', broke' : '')));
         ol.appendChild(li);
       });
+      if (town && town.crowned) {
+        $('crownNote').textContent = 'Last crown: ' + String(town.crowned[0]).split('.')[0] + ' of ' + nameOf(String(town.crowned[0]).slice(String(town.crowned[0]).indexOf('.') + 1)) + ', night ' + town.crowned[2] + ', ' + near(town.crowned[1]) + ' NEAR of fees.';
+      }
     }).catch(function () { /* the board is optional */ });
   }
   function renderAccounts(list) {

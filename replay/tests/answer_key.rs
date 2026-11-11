@@ -14,7 +14,7 @@ fn the_demo_night_answer_key() {
     let loyal = by(Temperament::Loyal);
 
     // Every clone goes in with 2 NEAR (2000 mNEAR).
-    assert_eq!((cautious.final_cash, cautious.broke), (2613, false));
+    assert_eq!((cautious.final_cash, cautious.broke), (3112, false));
     assert_eq!((greedy.final_cash, greedy.broke), (484, true));
     assert_eq!((loyal.final_cash, loyal.broke), (2053, false));
 }
@@ -60,9 +60,9 @@ async fn the_chain_plays_the_demo_night_exactly_as_the_answer_key_says() -> anyh
     assert_eq!(merged, 3, "all three clones merge home");
 
     // The player sent 3 x (1 NEAR account + 2 NEAR stake) and got back the accounts plus
-    // 2613 + 484 + 2053 mNEAR, less gas and storage. Net: down about 0.85 NEAR on this night.
+    // 3112 (with the crown) + 484 + 2053 mNEAR, less gas and storage. Net: down about 0.35 NEAR on this night.
     let net = log.player_balance_after as i64 - log.player_balance_before as i64;
-    let expected = (2613 + 484 + 2053) - 6000;
+    let expected = (3112 + 484 + 2053) - 6000;
     assert!(
         (net - expected).abs() < 150,
         "player net {net} mNEAR, expected about {expected}"

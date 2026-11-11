@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Review round 3 fixes. The crown: each night's fees go at dawn to the clone with the best return, picked by the contract and checked by the audit. Omens come true seven nights in ten. Three regulars (the Widow, the Abbot, the Hound) play every night. Standings by player. The refusal is told in the story: "the chains held". New market `charnel.clonestown.testnet`.
+- The night runner throttles its turns, retries rate-limited calls longer, resends missed turns before ringing the hour, and spreads accounts over two RPC hostnames.
 - Review round 2 fixes. Moods: each night is a boom, slump, blight or wild, each favouring a different temperament, with tomorrow's posted as an omen. Whispers: one on-chain order per clone per night, obeyed for one hour. Between nights: retrain or bring home early. Greedy no longer churns every hour.
 - The hosted market (`ossuary.clonestown.testnet`) draws each hour's prices and tomorrow's mood from block randomness, so nobody can see the next hour. Each night ends with an audit that replays every order on chain from the dusk state.
 - Demo night moved to seed 606 (a wild night) and re-recorded on testnet.

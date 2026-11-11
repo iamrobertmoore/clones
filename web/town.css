@@ -129,6 +129,8 @@
 .board-rows .b-num.loss { color: var(--loss); }
 .board-rows .b-det { font-family: var(--mono); font-size: 13px; color: var(--ash); }
 
+.board-sub { font-family: var(--goth); font-size: 19px; font-weight: 700; margin: 14px 0 0; color: var(--bone); }
+
 /* Keys and claiming */
 .acct-list .keys { font-family: var(--mono); font-size: 12.5px; color: var(--ash); margin-top: 2px; }
 .claimed { margin-top: 10px; }

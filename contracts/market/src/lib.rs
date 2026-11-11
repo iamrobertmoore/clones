@@ -258,6 +258,10 @@ pub struct TownView {
     pub hours: Vec<[u64; 5]>,
     /// The index of tonight's first order in `get_orders`.
     pub dusk_order: u32,
+    /// Fees taken tonight so far: the crown's pot.
+    pub night_fees: u64,
+    /// The last crown: (clone, pot in milliNEAR, night).
+    pub crowned: Option<(AccountId, u64, u32)>,
     pub fees_collected: u64,
     pub clones_in_town: u32,
 }
@@ -281,6 +285,8 @@ pub struct Market {
     omen: Mood,
     chain_dice: bool,
     dusk_order: u32,
+    night_fees: u64,
+    crowned: Option<(AccountId, u64, u32)>,
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
@@ -340,6 +346,8 @@ impl Market {
             omen: omen.into(),
             chain_dice,
             dusk_order: 0,
+            night_fees: 0,
+            crowned: None,
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
@@ -378,8 +386,17 @@ impl Market {
         self.seed = seed.0;
         self.round = 0;
         if self.chain_dice {
-            // Tonight's mood is the omen posted last night; the chain draws tomorrow's.
-            self.mood = self.omen;
+            // Tonight's mood is usually the omen posted last night; omens lie three nights in ten.
+            // The chain draws whether it lies, and tomorrow's omen.
+            let roll = random_u64(night as u64 ^ 0x6C6965);
+            self.mood = if roll % 10 < rules::OMEN_TRUE_IN_TEN {
+                self.omen
+            } else {
+                let o: rules::Regime = self.omen.into();
+                let others: Vec<rules::Regime> =
+                    rules::REGIMES.iter().copied().filter(|r| *r != o).collect();
+                others[((roll / 10) % 3) as usize].into()
+            };
             self.omen = rules::regime_of(random_u64(night as u64)).into();
         } else {
             self.mood = rules::regime_of(seed.0).into();
@@ -388,6 +405,7 @@ impl Market {
         self.usual = rules::BASE_PRICE;
         self.hours = vec![self.usual];
         self.dusk_order = self.orders.len();
+        self.night_fees = 0;
         self.stock = rules::restock(&self.stock);
         self.hour_stock = self.stock;
         self.dusk_stock = self.stock;
@@ -425,8 +443,38 @@ impl Market {
                     rec.nights_played += 1;
                 }
             }
+            self.crown();
         }
         self.round
+    }
+
+    /// At dawn the night's fees go to the clone with the best return on its stake.
+    fn crown(&mut self) {
+        if self.night_fees == 0 {
+            return;
+        }
+        let book = self.book();
+        let night = self.night;
+        let entries: Vec<(String, u64, u64)> = self
+            .clones
+            .iter()
+            .filter(|(_, r)| r.from_night <= night)
+            .map(|(id, r)| (id.to_string(), r.ledger().worth(&book), r.stake))
+            .collect();
+        let refs: Vec<(&str, u64, u64)> = entries
+            .iter()
+            .map(|(n, w, s)| (n.as_str(), *w, *s))
+            .collect();
+        if let Some(w) = rules::crown_winner(&refs) {
+            let id: AccountId = entries[w].0.parse().unwrap();
+            let pot = self.night_fees;
+            if let Some(rec) = self.clones.get_mut(&id) {
+                rec.cash += pot;
+            }
+            env::log_str(&format!("crowned {id}: {pot} mNEAR"));
+            self.crowned = Some((id, pot, night));
+            self.night_fees = 0;
+        }
     }
 
     /// Called by the player with the clone's stake attached. The clone account must be a direct
@@ -538,6 +586,7 @@ impl Market {
         let mut ids = Vec::new();
         for (o, f) in orders.into_iter().zip(fills) {
             self.fees += f.fee;
+            self.night_fees += f.fee;
             let id = self.orders.len();
             self.orders.push(Order {
                 id,
@@ -760,6 +809,8 @@ impl Market {
             chain_dice: self.chain_dice,
             hours: self.hours.clone(),
             dusk_order: self.dusk_order,
+            night_fees: self.night_fees,
+            crowned: self.crowned.clone(),
             fees_collected: self.fees,
             clones_in_town: self.clones.len(),
         }
@@ -945,7 +996,8 @@ mod tests {
         let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
         assert_eq!(
             (c.dusk_cash, c.dusk_stock, c.dusk_orders),
-            (2000 - 92, [0, 3, 0, 0, 0], 1)
+            (2000 - 92 + 2, [0, 3, 0, 0, 0], 1),
+            "cash includes last night's crown"
         );
     }
 
@@ -1040,6 +1092,26 @@ mod tests {
         let mut m = town_with_clone();
         as_caller("alice.testnet", zero());
         m.retrain(acc("clone-1.alice.testnet"), Temperament::Loyal);
+    }
+
+    #[test]
+    fn the_nights_fees_crown_the_best_return() {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(1));
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None);
+        // Bob's clone joins next night; tonight only alice trades and pays fees.
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        let fees = m.get_town().night_fees;
+        assert_eq!(fees, 2);
+        ring_to_dawn(&mut m);
+        let t = m.get_town();
+        assert_eq!(t.crowned, Some((acc("clone-1.alice.testnet"), 2, 1)));
+        assert_eq!(t.night_fees, 0);
+        assert_eq!(
+            m.get_clone(acc("clone-1.alice.testnet")).unwrap().cash,
+            2000 - 92 + 2
+        );
     }
 
     #[test]
