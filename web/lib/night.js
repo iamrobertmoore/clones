@@ -307,8 +307,24 @@ async function tryToRun(t, cloneId, player) {
 // Bring home every clone that is due: settle (the market sells up and pays the clone account),
 // then merge (the leash deletes the clone; the chain sends its balance to the guest). Guests in
 // parallel, each guest's clones in turn. Then sweep finished guests back to the house.
+const NEAR = 10n ** 24n;
+const MILLI = 10n ** 21n;
+
+// The house keeps an account able to act: if what it can spend is below `min`, send it up to `to`.
+async function topUp(t, id, min, to) {
+  const acc = await t.as(id);
+  const { available } = await patient(() => acc.getAccountBalance());
+  if (BigInt(available) >= min) return;
+  const house = await t.as(t.house);
+  await patient(() => house.sendMoney(id, to - BigInt(available)));
+}
+
 async function bringHome(t, clones) {
   const due = clones.filter((c) => c.due_home);
+  // The merchant is the house: on a good night the clones take out more than they put in, so
+  // the market is topped up to cover every payout before anyone settles.
+  const owed = due.reduce((sum, c) => sum + BigInt(c.worth) * MILLI, 0n);
+  await topUp(t, t.market, owed + 2n * NEAR, owed + 4n * NEAR).catch((e) => console.error("top up market:", message(e)));
   const byPlayer = new Map();
   for (const c of due) byPlayer.set(c.player, [...(byPlayer.get(c.player) || []), c]);
   const stillOut = new Set(clones.filter((c) => !c.due_home).map((c) => c.player));
@@ -318,6 +334,8 @@ async function bringHome(t, clones) {
       // A house guest whose account went missing (a failed sign-up rolled it back) is made again,
       // so its clones can still settle and merge home.
       if (player.endsWith(`.${t.house}`) && !(await exists(t, player))) await recreate(t, player).catch((e) => console.error(`recreate ${player}:`, message(e)));
+      // Settling and merging cost the guest gas; a swept guest gets enough back to pay it.
+      await topUp(t, player, (3n * NEAR) / 10n, (5n * NEAR) / 10n).catch((e) => console.error(`top up ${player}:`, message(e)));
       const guest = await t.as(player);
       for (const c of list) {
         const who = { clone: short(c.id), player };
@@ -357,7 +375,8 @@ async function sweep(t, guest) {
   const full = keys.filter((k) => k.access_key.permission === "FullAccess");
   if (full.length > 1) return;
   const state = await guest.state();
-  const send = BigInt(state.amount) - BigInt(utils.format.parseNearAmount("0.05"));
+  // Keep enough for the gas of whispers and homecomings next time.
+  const send = BigInt(state.amount) - BigInt(utils.format.parseNearAmount("0.3"));
   if (send > 0n) await patient(() => guest.sendMoney(t.house, send));
 }
 
