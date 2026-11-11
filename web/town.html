@@ -135,8 +135,10 @@
     <ol class="board-rows" id="boardRows"></ol>
   </section>
 
-  <section class="paper claim" id="claimCard" hidden aria-labelledby="claimTitle">
-    <h2 id="claimTitle">Make this account yours</h2>
+  <section class="proof" id="proof" aria-labelledby="proofTitle">
+    <h2 class="proof-title" id="proofTitle">Proof <small>open any drawer; everything here is read from the chain</small></h2>
+    <details class="paper drawer claim" id="claimCard" hidden>
+    <summary><h2 id="claimTitle">Make this account yours</h2><span class="drawer-hint">your account, your key</span></summary>
     <p id="claimIntro">Right now the house holds the only key to your guest account. Add a key that only you hold: your browser makes it, and the private key never leaves this page. After that, what your clones bring home stays with you instead of going back to the house, and you can remove the house key whenever you like.</p>
     <div class="result-actions"><button class="btn" id="claimBtn" type="button">Add my own key</button><span class="watch-note" id="claimNote"></span></div>
     <div class="claimed" id="claimed" hidden>
@@ -144,16 +146,26 @@
       <p class="guest-url" id="claimSecret"></p>
       <div class="result-actions"><a class="btn small" id="claimDownload" download>Download key file</a></div>
     </div>
-  </section>
-
-  <section class="paper accounts-card" id="accountsCard" hidden aria-labelledby="accTitle">
-    <h2 id="accTitle">On the explorer, with their keys</h2>
+  </details>
+    <details class="paper drawer accounts-card" id="accountsCard" hidden>
+    <summary><h2 id="accTitle">On the explorer, with their keys</h2><span class="drawer-hint">every account and key, read live</span></summary>
     <p class="sub">Each clone's keys, read live from the chain. One key each, and it can only call <code>trade</code> on the market.</p>
     <ul class="acct-list" id="acctList"></ul>
-  </section>
-
-  <section class="paper temperaments" id="temperaments" aria-labelledby="tempTitle">
-    <h2 id="tempTitle">The four temperaments</h2>
+  </details>
+    <details class="paper drawer audit-card" id="auditCard">
+    <summary><h2 id="auditTitle">The dawn audit</h2><span class="drawer-hint" id="auditHint">replays every order from chain state</span></summary>
+    <p class="sub">At dawn the bell reads the whole night back from the market contract (<code>get_orders</code>, <code>get_state</code>) and replays it with the same rules the contract runs (<code>web/lib/rules.js</code>, kept identical to the Rust core by a golden test in CI). It checks, order by order:</p>
+    <ul>
+      <li>each clone did what its temperament says, or what you whispered for that hour (a possessed clone's moves come from its model, so for those only the prices are checked; the contract also refuses any turn that breaks its temperament);</li>
+      <li>every price, fee and slippage is what the merchant's stock gives;</li>
+      <li>the crown went to the biggest profit, and the deed holder was paid a quarter of the fees;</li>
+      <li>every clone's worth at dawn is its cash plus its goods at the closing price, and the right clones were sent home.</li>
+    </ul>
+    <p class="sub" id="auditLast">Ring the bell to see the audit for tonight.</p>
+    <p class="sub">The same check runs every six hours in public CI against the live market, next to a check that the code deployed on chain is the code in this repository.</p>
+  </details>
+    <details class="paper drawer temperaments" id="temperaments">
+    <summary><h2 id="tempTitle">The four temperaments</h2><span class="drawer-hint">who does well in which mood</span></summary>
     <ul class="temp-list">
       <li><b class="t-chip" style="--tint:#7aa2c8">cautious</b> buys what is cheap and takes profit at +10%. Best in a <b>slump</b> (about +10% a night) and steady in a <b>wild</b> night; loses badly in a <b>blight</b>, buying luxuries all the way down.</li>
       <li><b class="t-chip" style="--tint:#d9a53a">greedy</b> chases whatever is rising fastest, all in. Best by far in a <b>boom</b> (about +19% a night); goes broke one <b>wild</b> night in four.</li>
@@ -162,10 +174,9 @@
     </ul>
     <p class="sub">Each night has a mood, and the next night's is posted in advance as the omen (top right of the town), drawn by the market contract from the chain's own randomness. Omens come true seven nights in ten. In the hosted town every hour's prices are drawn the same way as the hour is rung, so nobody, the house included, knows them in advance. Figures: 20,000 simulated nights, <code>cargo run -p clones-core --example balance</code>.</p>
     <p class="sub">The merchant's stock is real and shared: when clones buy a good it runs short and the price rises for everyone, so other players' clones move your prices and yours move theirs.</p>
-  </section>
-
-  <section class="paper how" aria-labelledby="howTitle">
-    <h2 id="howTitle">How the hosted town works</h2>
+  </details>
+    <details class="paper drawer how" id="howCard">
+    <summary><h2 id="howTitle">How the hosted town works</h2><span class="drawer-hint">the rules, in ten lines</span></summary>
     <ul>
       <li><b>Testnet only.</b> No real money. The house pays each clone's stake with testnet NEAR.</li>
       <li><b>No login, and the account is yours.</b> You get a guest account (<code>g&hellip;.clonestown.testnet</code>). Your browser makes its only full-access key; the house's key on it can only whisper, retrain and settle at the market, so it can run your clones but never move your NEAR.</li>
@@ -178,8 +189,9 @@
       <li><b>Between nights.</b> Retrain a clone that is staying out, or bring it home early.</li>
       <li><b>Dawn.</b> A clone comes home after the nights you chose, or as soon as it goes broke: it settles, then merges back into your guest account (a real DeleteAccount). A clone with nights left keeps its goods and plays the next night.</li>
     </ul>
-    <p class="again"><a id="enlistAgain" href="town.html?new=1">Send in a new set of clones</a></p>
+  </details>
   </section>
+  <p class="again"><a id="enlistAgain" href="town.html?new=1">Send in a new set of clones</a></p>
 </main>
 
 <footer class="foot">

@@ -173,3 +173,22 @@
 @media (prefers-reduced-motion: reduce) {
   .bar span { transition: none; }
 }
+
+/* The proof drawer: play first, evidence one click away. */
+.proof { margin: 26px 0 0; }
+.proof-title { font-family: var(--frak); font-weight: 400; font-size: 30px; margin: 0 0 4px; color: var(--bone); }
+.proof-title small { display: block; font-family: var(--serif, inherit); font-size: 14px; color: var(--ash); letter-spacing: 0; }
+.drawer { padding: 4px 18px; }
+.drawer[open] { padding-bottom: 16px; }
+.drawer > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.drawer > summary::-webkit-details-marker { display: none; }
+.drawer > summary h2 { margin: 6px 0; font-size: 26px; }
+.drawer > summary h2::before { content: "+ "; color: var(--ash); font-family: var(--mono, monospace); font-size: 18px; }
+.drawer[open] > summary h2::before { content: "- "; }
+.drawer-hint { color: var(--ash); font-size: 14px; }
+.drawer ul { padding-left: 20px; }
+.again { margin: 18px 0 0; }
+@media (max-width: 520px) {
+  .drawer > summary h2 { font-size: 22px; }
+  .drawer { padding: 4px 12px; }
+}

@@ -560,6 +560,12 @@
         ? 'Audit passed: ' + (out.audited || 0) + ' orders replayed from chain state. Every clone did what its temperament or your whisper said, and every price, fee and payout is what the rules say.'
         : 'Audit failed: the chain and the rules disagree. Details in the console.';
       if (!out.matched) console.warn('audit', out.problems, out.verdict);
+      var more = el('a', null, ' What it checked');
+      more.href = '#proof'; $('verdict').appendChild(more);
+      $('auditHint').textContent = out.matched ? 'tonight: passed, ' + (out.audited || 0) + ' orders' : 'tonight: FAILED';
+      $('auditLast').textContent = out.matched
+        ? 'Tonight (night ' + (town ? town.night : '?') + '): passed. ' + (out.audited || 0) + ' orders replayed, no differences.'
+        : 'Tonight: failed. ' + (out.problems || []).slice(0, 5).join('; ');
     }
     tickClock();
   }
@@ -885,6 +891,13 @@
   }
 
   /* ---------- start ---------- */
+  // The proof drawers stay shut unless someone asks for them with #proof.
+  function openProof() {
+    if (location.hash !== '#proof') return;
+    Array.prototype.forEach.call(document.querySelectorAll('#proof details'), function (d) { d.open = true; });
+  }
+  window.addEventListener('hashchange', openProof);
+  openProof();
   window.addEventListener('resize', drawLeashes);
   setInterval(tickClock, 1000);
   $('marketLink').href = EXPLORER + '/address/' + MARKET;
@@ -918,6 +931,7 @@
     $('guestClones').hidden = false;
     $('enlistAgain').hidden = false;
     loadGuest();
+    if (params.has('fresh')) $('claimCard').open = true;
     if (params.has('fresh')) history.replaceState(null, '', 'town.html?g=' + encodeURIComponent(g));
   } else {
     loadTown().catch(function () { $('boardNote').textContent = 'could not reach the testnet RPC'; });
