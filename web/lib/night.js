@@ -315,6 +315,9 @@ async function bringHome(t, clones) {
   const events = [];
   await Promise.all(
     [...byPlayer].map(async ([player, list]) => {
+      // A house guest whose account went missing (a failed sign-up rolled it back) is made again,
+      // so its clones can still settle and merge home.
+      if (player.endsWith(`.${t.house}`) && !(await exists(t, player))) await recreate(t, player).catch((e) => console.error(`recreate ${player}:`, message(e)));
       const guest = await t.as(player);
       for (const c of list) {
         const who = { clone: short(c.id), player };
@@ -406,22 +409,24 @@ const exists = async (t, id) => {
   }
 };
 
+async function recreate(t, id) {
+  const house = await t.as(t.house);
+  await patient(() =>
+    house.signAndSendTransaction({
+      receiverId: id,
+      actions: [
+        transactions.createAccount(),
+        transactions.transfer(BigInt(utils.format.parseNearAmount("0.2"))),
+        transactions.addKey(t.keyPair.getPublicKey(), transactions.fullAccessKey()),
+      ],
+    }),
+  );
+}
+
 // Before a regular comes back: make sure its account exists, and merge any clone of its that a
 // busy RPC left behind (settled, but not yet merged home).
 async function tidyRival(t, id) {
-  if (!(await exists(t, id))) {
-    const house = await t.as(t.house);
-    await patient(() =>
-      house.signAndSendTransaction({
-        receiverId: id,
-        actions: [
-          transactions.createAccount(),
-          transactions.transfer(BigInt(utils.format.parseNearAmount("0.2"))),
-          transactions.addKey(t.keyPair.getPublicKey(), transactions.fullAccessKey()),
-        ],
-      }),
-    );
-  }
+  if (!(await exists(t, id))) await recreate(t, id);
   const rival = await t.as(id);
   for (const n of [1, 2, 3]) {
     const clone = `clone-${n}.${id}`;
@@ -478,32 +483,35 @@ async function ring(t, { start = false } = {}) {
     }
     return { phase: "hour", night: town.night, seed: town.seed, round: town.round + 1, events };
   }
-  if (clones.some((c) => c.due_home)) {
-    return { phase: "home", night: town.night, round: town.round, events: await bringHome(t, clones) };
-  }
-  if (start && clones.some((c) => !isRival(t, c.player))) {
-    const arrived = await ensureRivals(t, town, clones);
-    await openNight(t, town);
-    const after = await readState(t);
+  // Dawn chores first: bring home every clone that is due. A clone that cannot come home now
+  // (a busy RPC) never blocks the next night; it is tried again at the next ring.
+  const home = clones.some((c) => c.due_home) ? await bringHome(t, clones) : [];
+  const after = home.length ? await readState(t) : { town, clones };
+  if (start && after.clones.some((c) => !isRival(t, c.player) && !c.due_home)) {
+    const arrived = await ensureRivals(t, after.town, after.clones);
+    await openNight(t, after.town);
+    const dusk = await readState(t);
     return {
       phase: "dusk",
-      night: after.town.night,
-      round: after.town.round,
-      mood: after.town.mood,
-      omen: after.town.omen,
+      night: dusk.town.night,
+      round: dusk.town.round,
+      mood: dusk.town.mood,
+      omen: dusk.town.omen,
       events: [
+        ...home,
         ...arrived.map((title) => ({ kind: "rival", title })),
         {
           kind: "dusk",
-          night: after.town.night,
-          mood: after.town.mood,
-          omen: after.town.omen,
-          prices: after.town.prices,
-          stock: after.town.hour_stock,
+          night: dusk.town.night,
+          mood: dusk.town.mood,
+          omen: dusk.town.omen,
+          prices: dusk.town.prices,
+          stock: dusk.town.hour_stock,
         },
       ],
     };
   }
+  if (home.length) return { phase: "home", night: town.night, round: town.round, events: home };
   return {
     phase: clones.some((c) => !isRival(t, c.player)) ? "waiting" : "empty",
     night: town.night,

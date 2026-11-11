@@ -563,7 +563,7 @@
         btn.textContent = out.phase === 'dawn' ? 'Dawn: bringing them home' : out.phase === 'home' ? 'Home' : 'Night ' + out.night + ', hour ' + Math.min(out.round + 1, 12) + ' of 12';
         return refreshMine().then(function () {
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
-          if (opened && (out.phase === 'home' || out.phase === 'waiting')) return 'stop';
+          if (out.phase === 'home' || out.phase === 'waiting') return 'stop';
           return sleep(reduceMotion ? 200 : 900).then(step);
         });
       }).catch(function (err) {
