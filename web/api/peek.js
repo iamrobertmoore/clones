@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
       res.status(200).json({ round: town.round, plans: [] });
       return;
     }
-    const book = new rules.Book(town.hours[town.round], town.hour_stock);
+    const book = new rules.Book(town.hours[town.round], town.hour_stock, town.fee_bps || rules.FEE_BPS);
     const plans = clones
       .filter((c) => c.player === guest && c.from_night <= town.night)
       .map((c) => {

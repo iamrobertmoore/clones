@@ -6,9 +6,14 @@ const golden = require("./golden.json");
 test("the JavaScript rules play every golden night exactly as the Rust rules did", () => {
   assert.ok(golden.cases.length >= 20);
   for (const c of golden.cases) {
-    const night = rules.simulateTown(c.seed, c.stock, c.entrants);
+    const night = rules.simulateTown(c.seed, c.stock, c.entrants, c.fee_bps);
     assert.deepStrictEqual(night, c.night, `seed ${c.seed}`);
   }
+});
+
+test("the golden nights include every fee the deed holder can set", () => {
+  const fees = new Set(golden.cases.map((c) => c.fee_bps));
+  for (const f of [rules.FEE_BPS, rules.MIN_FEE_BPS, rules.MAX_FEE_BPS]) assert.ok(fees.has(f), `fee ${f}`);
 });
 
 test("splitmix64 matches the published reference value", () => {

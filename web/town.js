@@ -167,8 +167,9 @@
       ul.appendChild(li);
     });
     if (prices) lastPrices = prices.slice();
-    if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'live from the market contract, milliNEAR / unit; bars: the merchant\'s stock';
+    if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'live from the market contract, milliNEAR / unit, fee ' + pctOf(town.fee_bps) + '; bars: the merchant\'s stock';
   }
+  function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
   function showOmen() {
     if (!town || !MOODS[town.omen]) return;
     var on = !town.asleep;
@@ -535,10 +536,12 @@
         }
         buildBoard(e.prices, e.stock);
         if (e.kind === 'dusk' && MOODS[e.mood]) cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why);
+        if (e.kind === 'dusk' && e.fee_bps) { if (town) town.fee_bps = e.fee_bps; cry('The merchant takes ' + pctOf(e.fee_bps) + ' of every trade tonight' + (e.fee_bps === 200 ? '.' : ', as the deed holder set it.'), 'muted'); }
       }
     });
     out.events.forEach(function (e) {
       if (e.kind === 'rival') cry(cap(e.title) + ' sends clones into town.', 'muted');
+      if (e.kind === 'fee') cry(cap(e.title) + ' holds the merchant\'s deed and sets tonight\'s fee at ' + pctOf(e.bps) + '.', 'muted');
       if (e.kind === 'deed') cry('Dawn: the merchant\'s deed pays ' + (e.player === guest ? 'you' : nameOf(e.player)) + ' a quarter of the night\'s fees: ' + near(e.share) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
@@ -691,25 +694,37 @@
       btn.hidden = true;
     });
   }
+  // The season: every player's net over the clones they settled this season, and past champions.
+  function loadSeason() {
+    return view('get_season', { from: 0, limit: 200 }).then(function (sz) {
+      if (!sz) return;
+      $('townBoard').hidden = false;
+      var left = Math.max(0, sz.ends_night - (town ? town.night : 0));
+      $('seasonTitle').textContent = 'Season ' + sz.season + ' standings';
+      $('seasonNote').textContent = 'Nights ' + sz.started_night + ' to ' + sz.ends_night + (left ? ', ' + left + (left === 1 ? ' night' : ' nights') + ' left' : ', the last night') + '. Net is what came home less what was staked, over every clone settled this season. At the first dusk after the last night, the best net takes the season crown.';
+      var st = $('standRows'); st.textContent = '';
+      sz.rows.map(function (r) { return { player: r[0], row: r[1] }; })
+        .sort(function (a, b) { return b.row.net - a.row.net || b.row.crowns - a.row.crowns; })
+        .slice(0, 10).forEach(function (p, i) {
+          var li = el('li', p.player === guest ? 'mine' : '');
+          li.appendChild(el('span', 'b-who', (i === 0 ? '\u265B ' : '') + cap(nameOf(p.player)) + ' (' + p.row.clones + (p.row.clones === 1 ? ' clone' : ' clones') + (p.row.crowns ? ', ' + p.row.crowns + (p.row.crowns === 1 ? ' crown' : ' crowns') : '') + ')'));
+          li.appendChild(el('span', 'b-num ' + (p.row.net >= 0 ? 'gain' : 'loss'), signed(p.row.net)));
+          li.appendChild(el('span', 'b-det', near(p.row.staked) + ' staked'));
+          st.appendChild(li);
+        });
+      if (!sz.rows.length) st.appendChild(el('li', 'muted', 'Nobody has come home yet this season.'));
+      var ch = sz.champions || [];
+      $('champNote').textContent = ch.length
+        ? 'Season crowns: ' + ch.slice(-5).reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; }).join('; ') + '.'
+        : '';
+    }).catch(function () { /* older markets have no season */ });
+  }
   function loadBoard() {
+    loadSeason();
     return view('get_recent', {}).then(function (rows) {
       rows = rows || [];
       if (!rows.length) return;
       $('townBoard').hidden = false;
-      // Standings: each player's net over the town's recent settlements.
-      var by = {};
-      rows.forEach(function (r) {
-        var p = by[r.player] || (by[r.player] = { player: r.player, net: 0, stake: 0, clones: 0 });
-        p.net += r.paid_out - r.stake; p.stake += r.stake; p.clones += 1;
-      });
-      var st = $('standRows'); st.textContent = '';
-      Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.net - a.net; }).slice(0, 8).forEach(function (p) {
-        var li = el('li', p.player === guest ? 'mine' : '');
-        li.appendChild(el('span', 'b-who', cap(nameOf(p.player)) + ' (' + p.clones + (p.clones === 1 ? ' clone)' : ' clones)')));
-        li.appendChild(el('span', 'b-num ' + (p.net >= 0 ? 'gain' : 'loss'), signed(p.net)));
-        li.appendChild(el('span', 'b-det', near(p.stake) + ' staked'));
-        st.appendChild(li);
-      });
       var ol = $('boardRows'); ol.textContent = '';
       rows.slice().sort(function (a, b) { return (b.paid_out / b.stake) - (a.paid_out / a.stake); }).slice(0, 10).forEach(function (r) {
         var li = el('li', r.player === guest ? 'mine' : '');
@@ -723,8 +738,11 @@
         li.appendChild(el('span', 'b-det', near(r.stake) + ' → ' + near(r.paid_out) + ', ' + r.nights_played + 'n' + (r.broke ? ', broke' : '')));
         ol.appendChild(li);
       });
-      if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn' + (town.restock_order ? '; ordered a full restock of ' + town.restock_order : '') + ').';
-      $('restockRow').hidden = !(town && town.deed === guest && town.asleep && token());
+      if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn' + (town.restock_order ? '; ordered a full restock of ' + town.restock_order : '') + (town.next_fee_bps ? '; set the next night\'s fee at ' + pctOf(town.next_fee_bps) : '') + ').';
+      var holder = !!(town && town.deed === guest && town.asleep && token());
+      $('restockRow').hidden = !holder;
+      $('feeRow').hidden = !holder;
+      if (holder && town.next_fee_bps) $('feeSel').value = String(town.next_fee_bps);
       if (town && town.crowned) {
         $('crownNote').textContent = 'Last crown: ' + String(town.crowned[0]).split('.')[0] + ' of ' + nameOf(String(town.crowned[0]).slice(String(town.crowned[0]).indexOf('.') + 1)) + ', night ' + town.crowned[2] + ', ' + near(town.crowned[1]) + ' NEAR of fees.';
       }
@@ -796,7 +814,7 @@
     var k; try { k = JSON.parse(raw); } catch (e) { return false; }
     $('claimCard').hidden = false;
     $('claimTitle').textContent = 'Your key to this account';
-    $('claimIntro').textContent = 'Your browser made this key when you sent your clones in, and it is the only full-access key on ' + guest + '. The house holds a key that can only whisper, retrain and settle at the market: it can run your clones but can never move your NEAR. Save the key file; it lives only in this browser.';
+    $('claimIntro').textContent = 'Your browser made this key when you sent your clones in, and it is the only full-access key on ' + guest + '. The house holds a key that can only whisper, retrain, settle and use the deed at the market: it can run your clones but can never move your NEAR. Save the key file; it lives only in this browser.';
     $('claimBtn').hidden = true;
     $('claimed').hidden = false;
     $('claimed').firstElementChild.textContent = 'Your full-access key for ' + guest + '. It is kept in this browser only; download the key file to keep it safe.';
@@ -904,6 +922,14 @@
   $('bellBtn').addEventListener('click', ringBell);
   $('refusalClose').addEventListener('click', function () { $('refusal').hidden = true; });
   $('claimBtn').addEventListener('click', claim);
+  $('feeSel').addEventListener('change', function () {
+    var bps = Number($('feeSel').value); if (!bps) return;
+    $('feeSel').disabled = true;
+    post('/api/setfee', { guest: guest, token: token(), bps: bps }).then(function () {
+      $('feeSel').disabled = false;
+      $('deedNote').textContent = 'You set the next night\'s fee at ' + pctOf(bps) + '. A quarter of the fees is yours at dawn; your own clones pay it too.';
+    }).catch(function (err) { $('feeSel').disabled = false; cry(err.message, 'warn'); });
+  });
   $('restockSel').addEventListener('change', function () {
     var g = $('restockSel').value; if (!g) return;
     $('restockSel').disabled = true;

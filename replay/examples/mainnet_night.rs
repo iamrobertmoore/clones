@@ -1,7 +1,7 @@
 //! One real night on NEAR mainnet, in a market nobody can change.
 //!
 //!     CLONES_KEYS_DIR=/private/keys cargo run --release -p clones-replay --example mainnet_night -- \
-//!         <funder: an account whose key is in CLONES_KEYS_DIR> <house name, e.g. clones-town.near> \
+//!         <funder: an account whose key is in CLONES_KEYS_DIR, or "-" if the house exists> <house name, e.g. clones-town.near> \
 //!         [return-to: your own account, for what is left at the end] [seed]
 //!
 //! It creates the house (`<house>` through the `near` account registrar), then:
@@ -63,30 +63,42 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     };
 
-    let funder = load(&args[0])?;
     let house_id: AccountId = args[1].parse()?;
-    let have = worker.view_account(funder.id()).await?.balance;
-    anyhow::ensure!(
-        have >= NearToken::from_millinear(4850),
-        "the funder holds {have}; send it 4.9 NEAR first"
-    );
-
-    // 1. The house, through the `near` registrar.
-    let house_key = SecretKey::from_random(KeyType::ED25519);
-    save(&house_id, &house_key)?;
-    let out = funder
-        .call(&"near".parse()?, "create_account")
-        .args_json(json!({ "new_account_id": house_id, "new_public_key": house_key.public_key() }))
-        .deposit(have.saturating_sub(NearToken::from_millinear(50)))
-        .gas(near_workspaces::types::Gas::from_tgas(100))
-        .transact()
-        .await?;
-    anyhow::ensure!(
-        out.is_success(),
-        "could not create {house_id}: {:?}",
-        out.into_result().err()
-    );
-    let house = Account::from_secret_key(house_id.clone(), house_key, &worker);
+    // 1. The house. Either it already exists (created from a wallet with the key in
+    // CLONES_KEYS_DIR, funder "-"), or the funder creates it through the `near` registrar.
+    let house = if args[0] == "-" {
+        let house = load(house_id.as_str())?;
+        let have = worker.view_account(&house_id).await?.balance;
+        anyhow::ensure!(
+            have >= NearToken::from_millinear(4800),
+            "the house holds {have}; it needs 4.8 NEAR"
+        );
+        house
+    } else {
+        let funder = load(&args[0])?;
+        let have = worker.view_account(funder.id()).await?.balance;
+        anyhow::ensure!(
+            have >= NearToken::from_millinear(4850),
+            "the funder holds {have}; send it 4.9 NEAR first"
+        );
+        let house_key = SecretKey::from_random(KeyType::ED25519);
+        save(&house_id, &house_key)?;
+        let out = funder
+            .call(&"near".parse()?, "create_account")
+            .args_json(
+                json!({ "new_account_id": house_id, "new_public_key": house_key.public_key() }),
+            )
+            .deposit(have.saturating_sub(NearToken::from_millinear(50)))
+            .gas(near_workspaces::types::Gas::from_tgas(100))
+            .transact()
+            .await?;
+        anyhow::ensure!(
+            out.is_success(),
+            "could not create {house_id}: {:?}",
+            out.into_result().err()
+        );
+        Account::from_secret_key(house_id.clone(), house_key, &worker)
+    };
     println!("house   {EXPLORER}/address/{house_id}");
 
     // 2. The market: created, funded, deployed and initialised in one transaction, with no key.

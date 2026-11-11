@@ -32,10 +32,10 @@ pub fn golden() -> String {
         let stocks = [NORMAL_STOCK, [700, 1500, 590, 101, 400]];
         for (i, entrants) in sets.into_iter().enumerate() {
             let stock = stocks[i];
-            let night = simulate_town(seed, stock, &entrants);
-            cases.push(
-                json!({ "seed": seed, "stock": stock, "entrants": entrants, "night": night }),
-            );
+            // Every third case at a fee the deed holder might set.
+            let fee_bps = [FEE_BPS, MIN_FEE_BPS, MAX_FEE_BPS][(cases.len()) % 3];
+            let night = simulate_town_at(seed, stock, &entrants, fee_bps);
+            cases.push(json!({ "seed": seed, "stock": stock, "entrants": entrants, "fee_bps": fee_bps, "night": night }));
         }
     }
     serde_json::to_string(&json!({ "cases": cases })).unwrap()

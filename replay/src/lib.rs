@@ -272,7 +272,13 @@ async fn take_turn(
 }
 
 /// Compile both contracts with cargo-near.
+///
+/// With `MARKET_WASM` and `LEASH_WASM` set, those files are used instead: the wasm from
+/// `cargo near build reproducible-wasm`, which anyone can rebuild and compare with the chain.
 pub async fn contracts() -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+    if let (Ok(m), Ok(l)) = (std::env::var("MARKET_WASM"), std::env::var("LEASH_WASM")) {
+        return Ok((std::fs::read(m)?, std::fs::read(l)?));
+    }
     let market = near_workspaces::compile_project(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../contracts/market"

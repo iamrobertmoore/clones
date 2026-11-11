@@ -46,6 +46,17 @@ pub const WHISPERS_A_NIGHT: u32 = 3;
 /// Most orders in one clone's turn.
 pub const MAX_ORDERS_PER_TURN: usize = 6;
 
+/// Nights in a season. At the first dusk after one, the player with the best season takes the
+/// season crown and the standings start again.
+pub const SEASON_NIGHTS: u32 = 7;
+
+/// Players remembered in a season's standings (a bound on storage). Later newcomers still play;
+/// they are not ranked until the next season.
+pub const SEASON_PLAYERS: u32 = 200;
+
+/// Season champions remembered.
+pub const CHAMPIONS_KEPT: u32 = 20;
+
 const YOCTO_PER_MILLI: u128 = 1_000_000_000_000_000_000_000;
 
 #[near(serializers = [borsh, json])]
@@ -165,6 +176,9 @@ pub struct CloneRecord {
     pub whisper: Option<(u32, u32, Whisper)>,
     /// (night, whispers used that night).
     pub whispers: (u32, u32),
+    /// Every whisper of the current night as (night, hour, order), so the night can be replayed
+    /// from chain state after it is over.
+    pub whisper_log: Vec<(u32, u32, Whisper)>,
     /// A possessed clone's instruction from its player, public on chain.
     pub instruction: Option<String>,
 }
@@ -206,6 +220,8 @@ pub struct CloneView {
     /// player has left for it tonight.
     pub whisper: Option<(u32, u32, Whisper)>,
     pub whispers_left: u32,
+    /// Every whisper of the current night, as (night, hour, order).
+    pub whispers_tonight: Vec<(u32, u32, Whisper)>,
     /// A possessed clone's instruction from its player.
     pub instruction: Option<String>,
 }
@@ -238,6 +254,52 @@ pub struct Settlement {
     pub broke: bool,
     pub orders_placed: u32,
     pub nights_played: u32,
+    /// What it held at the last dusk, the first night it played, the nights it was sent for, and
+    /// its whispers that night: with the orders, enough to replay its last night after it is gone.
+    pub from_night: u32,
+    pub nights: u32,
+    pub dusk_cash: u64,
+    pub dusk_stock: [u32; 5],
+    pub dusk_orders: u32,
+    pub whispers: Vec<(u32, u32, Whisper)>,
+}
+
+/// One player's season so far. Amounts in milliNEAR.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SeasonRow {
+    /// Paid out less staked, summed over every clone settled this season (crowns included).
+    pub net: i64,
+    pub staked: u64,
+    pub clones: u32,
+    /// Night crowns its clones took this season.
+    pub crowns: u32,
+}
+
+/// A season's winner: the player with the best net when the season closed.
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Champion {
+    pub season: u32,
+    pub player: AccountId,
+    pub net: i64,
+    pub crowns: u32,
+    /// The last night of that season.
+    pub night: u32,
+}
+
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SeasonView {
+    pub season: u32,
+    /// The first night of this season, and the last.
+    pub started_night: u32,
+    pub ends_night: u32,
+    pub players: u32,
+    /// A page of this season's standings, in the order players joined it.
+    pub rows: Vec<(AccountId, SeasonRow)>,
+    /// Past seasons' champions, oldest first.
+    pub champions: Vec<Champion>,
 }
 
 #[near(serializers = [json])]
@@ -282,6 +344,13 @@ pub struct TownView {
     pub deed_paid: Option<(AccountId, u64, u32)>,
     /// The good the deed holder has ordered fully restocked at the next dusk, if any.
     pub restock_order: Option<String>,
+    /// Tonight's fee on every trade, in basis points, and the fee the deed holder has set for the
+    /// next night (the standard 200 if none).
+    pub fee_bps: u64,
+    pub next_fee_bps: Option<u64>,
+    /// The current season and the night it started.
+    pub season: u32,
+    pub season_started_night: u32,
     pub fees_collected: u64,
     pub clones_in_town: u32,
 }
@@ -310,6 +379,12 @@ pub struct Market {
     deed: Option<AccountId>,
     deed_paid: Option<(AccountId, u64, u32)>,
     restock_order: Option<u8>,
+    fee_bps: u64,
+    next_fee_bps: Option<u64>,
+    season: u32,
+    season_started_night: u32,
+    season_rows: IterableMap<AccountId, SeasonRow>,
+    champions: Vector<Champion>,
     clones: IterableMap<AccountId, CloneRecord>,
     orders: Vector<Order>,
     results: LookupMap<AccountId, Vec<Settlement>>,
@@ -374,6 +449,12 @@ impl Market {
             deed: None,
             deed_paid: None,
             restock_order: None,
+            fee_bps: rules::FEE_BPS,
+            next_fee_bps: None,
+            season: 1,
+            season_started_night: 1,
+            season_rows: IterableMap::new(b"s"),
+            champions: Vector::new(b"h"),
             clones: IterableMap::new(b"c"),
             orders: Vector::new(b"o"),
             results: LookupMap::new(b"r"),
@@ -394,6 +475,7 @@ impl Market {
         rules::Book {
             usual: self.usual,
             stock: self.hour_stock,
+            fee_bps: self.fee_bps,
         }
     }
 
@@ -411,6 +493,11 @@ impl Market {
         self.night = night;
         self.seed = seed.0;
         self.round = 0;
+        // Tonight's fee: what the deed holder set, or the standard one.
+        self.fee_bps = self.next_fee_bps.take().unwrap_or(rules::FEE_BPS);
+        if night >= self.season_started_night + SEASON_NIGHTS {
+            self.close_season(night - 1);
+        }
         if self.chain_dice {
             // Tonight's mood is usually the omen posted last night; omens lie three nights in ten.
             // The chain draws whether it lies, and tomorrow's omen.
@@ -511,6 +598,11 @@ impl Market {
             }
             let pot = self.night_fees - share;
             let winner_player = self.clones.get(&id).map(|r| r.player.clone());
+            if let Some(p) = &winner_player {
+                if let Some(row) = self.season_row(p) {
+                    row.crowns += 1;
+                }
+            }
             if let Some(rec) = self.clones.get_mut(&id) {
                 rec.cash += pot;
             }
@@ -594,6 +686,7 @@ impl Market {
                 dusk_orders: 0,
                 whisper: None,
                 whispers: (0, 0),
+                whisper_log: Vec::new(),
                 instruction,
             },
         );
@@ -754,6 +847,8 @@ impl Market {
             used < WHISPERS_A_NIGHT,
             "you have used this clone's three whispers tonight"
         );
+        rec.whisper_log.retain(|(n, _, _)| *n == night);
+        rec.whisper_log.push((night, next, whisper.clone()));
         rec.whisper = Some((night, next, whisper));
         rec.whispers = (night, used + 1);
     }
@@ -768,6 +863,71 @@ impl Market {
         );
         let g = rules::good_index(&good).unwrap_or_else(|| env::panic_str("unknown good"));
         self.restock_order = Some(g as u8);
+    }
+
+    /// Called by the holder of the merchant's deed between nights: the fee on every trade next
+    /// night, 50 to 300 basis points (0.5% to 3%). The deed holder is paid a quarter of the fees,
+    /// but a dear market trades less and costs their own clones too.
+    pub fn set_fee(&mut self, bps: u64) {
+        require!(self.asleep(), "set the fee between nights");
+        require!(
+            self.deed.as_ref() == Some(&env::predecessor_account_id()),
+            "only the holder of the merchant's deed can set the fee"
+        );
+        require!(
+            (rules::MIN_FEE_BPS..=rules::MAX_FEE_BPS).contains(&bps),
+            "the fee is 50 to 300 basis points"
+        );
+        self.next_fee_bps = Some(bps);
+    }
+
+    /// This season's row for a player, made if there is room.
+    fn season_row(&mut self, player: &AccountId) -> Option<&mut SeasonRow> {
+        if !self.season_rows.contains_key(player) {
+            if self.season_rows.len() >= SEASON_PLAYERS {
+                return None;
+            }
+            self.season_rows
+                .insert(player.clone(), SeasonRow::default());
+        }
+        self.season_rows.get_mut(player)
+    }
+
+    /// The season is over: the best net takes the season crown (ties go to more night crowns,
+    /// then to whoever joined the season first), and the standings start again.
+    fn close_season(&mut self, last_night: u32) {
+        let mut best: Option<(AccountId, SeasonRow)> = None;
+        for (p, r) in self.season_rows.iter() {
+            let better = match &best {
+                None => true,
+                Some((_, b)) => (r.net, r.crowns) > (b.net, b.crowns),
+            };
+            if better {
+                best = Some((p.clone(), r.clone()));
+            }
+        }
+        if let Some((player, row)) = best {
+            env::log_str(&format!(
+                "season {} crown: {player}, {} mNEAR",
+                self.season, row.net
+            ));
+            let champ = Champion {
+                season: self.season,
+                player,
+                net: row.net,
+                crowns: row.crowns,
+                night: last_night,
+            };
+            if self.champions.len() < CHAMPIONS_KEPT {
+                self.champions.push(champ);
+            } else {
+                self.champions
+                    .replace((self.season - 1) % CHAMPIONS_KEPT, champ);
+            }
+        }
+        self.season_rows.clear();
+        self.season += 1;
+        self.season_started_night = last_night + 1;
     }
 
     /// Called by the player between nights: change a clone's temperament for the nights it has
@@ -827,7 +987,23 @@ impl Market {
             broke,
             orders_placed: rec.orders_placed,
             nights_played: rec.nights_played,
+            from_night: rec.from_night,
+            nights: rec.nights,
+            dusk_cash: rec.dusk_cash,
+            dusk_stock: rec.dusk_stock,
+            dusk_orders: rec.dusk_orders,
+            whispers: rec
+                .whisper_log
+                .iter()
+                .filter(|(n, _, _)| *n == self.night)
+                .cloned()
+                .collect(),
         };
+        if let Some(row) = self.season_row(&rec.player) {
+            row.net += ledger.cash as i64 - rec.stake as i64;
+            row.staked += rec.stake;
+            row.clones += 1;
+        }
         let mut kept = self.results.get(&rec.player).cloned().unwrap_or_default();
         kept.push(settlement.clone());
         if kept.len() > RESULTS_KEPT {
@@ -912,6 +1088,32 @@ impl Market {
             .collect()
     }
 
+    /// This season's standings, a page at a time, with past champions.
+    pub fn get_season(&self, from: u32, limit: u32) -> SeasonView {
+        let n = self.champions.len();
+        let start = if n > 0 && self.season - 1 > n {
+            (self.season - 1) % n
+        } else {
+            0
+        };
+        SeasonView {
+            season: self.season,
+            started_night: self.season_started_night,
+            ends_night: self.season_started_night + SEASON_NIGHTS - 1,
+            players: self.season_rows.len(),
+            rows: self
+                .season_rows
+                .iter()
+                .skip(from as usize)
+                .take(limit.min(SEASON_PLAYERS) as usize)
+                .map(|(p, r)| (p.clone(), r.clone()))
+                .collect(),
+            champions: (0..n)
+                .map(|i| self.champions[(start + i) % n].clone())
+                .collect(),
+        }
+    }
+
     fn view_of(&self, r: &CloneRecord) -> CloneView {
         let worth = r.ledger().worth(&self.book());
         let broke = rules::is_broke(worth, r.stake);
@@ -935,6 +1137,12 @@ impl Market {
             dusk_stock: r.dusk_stock,
             dusk_orders: r.dusk_orders,
             whisper: r.whisper.clone(),
+            whispers_tonight: r
+                .whisper_log
+                .iter()
+                .filter(|(n, _, _)| *n == self.night)
+                .cloned()
+                .collect(),
             instruction: r.instruction.clone(),
             whispers_left: WHISPERS_A_NIGHT
                 - if r.whispers.0 == self.night {
@@ -972,6 +1180,10 @@ impl Market {
             restock_order: self
                 .restock_order
                 .map(|g| rules::GOODS[g as usize].to_string()),
+            fee_bps: self.fee_bps,
+            next_fee_bps: self.next_fee_bps,
+            season: self.season,
+            season_started_night: self.season_started_night,
             fees_collected: self.fees,
             clones_in_town: self.clones.len(),
         }
@@ -1434,6 +1646,128 @@ mod tests {
     }
 
     #[test]
+    fn every_whisper_of_the_night_is_kept_for_the_audit() {
+        let mut m = town_with_clone();
+        as_caller("alice.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::Hold);
+        as_caller("keeper.testnet", zero());
+        m.advance_round(0);
+        as_caller("alice.testnet", zero());
+        m.whisper(acc("clone-1.alice.testnet"), Whisper::SellAll);
+        let c = m.get_clone(acc("clone-1.alice.testnet")).unwrap();
+        assert_eq!(
+            c.whispers_tonight,
+            vec![(1, 0, Whisper::Hold), (1, 1, Whisper::SellAll)]
+        );
+        ring_to_dawn(&mut m);
+        as_caller("alice.testnet", zero());
+        let _ = m.settle(acc("clone-1.alice.testnet"));
+        let s = &m.get_results(acc("alice.testnet"))[0];
+        assert_eq!(s.whispers.len(), 2);
+        assert_eq!((s.from_night, s.nights, s.dusk_cash), (1, 1, 2000));
+    }
+
+    #[test]
+    fn the_deed_holder_sets_the_next_nights_fee() {
+        let mut m = town_with_clone();
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        assert_eq!(m.get_town().fee_bps, rules::FEE_BPS);
+        as_caller("alice.testnet", zero());
+        m.set_fee(300);
+        assert_eq!(m.get_town().next_fee_bps, Some(300));
+        open(&mut m);
+        let t = m.get_town();
+        assert_eq!((t.fee_bps, t.next_fee_bps), (300, None));
+        // 3% of a 600 mNEAR buy is 18, where the standard fee would be 12.
+        let book = rules::Book::at(SEED, 0, t.hour_stock).with_fee(300);
+        let price = book.quote(0, rules::Side::Buy, 30);
+        as_clone();
+        m.trade(0, vec![order("grain", Side::Buy, 30, price)]);
+        let orders = m.get_orders(0, 10);
+        let last = orders.last().unwrap();
+        assert_eq!(last.fee, rules::fee_at(price * 30, 300));
+        assert!(last.fee > rules::fee(price * 30));
+        // Nobody set a fee for the night after: back to the standard one.
+        ring_to_dawn(&mut m);
+        open(&mut m);
+        assert_eq!(m.get_town().fee_bps, rules::FEE_BPS);
+    }
+
+    #[test]
+    #[should_panic(expected = "50 to 300 basis points")]
+    fn the_fee_is_bounded() {
+        let mut m = town_with_clone();
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        as_caller("alice.testnet", zero());
+        m.set_fee(301);
+    }
+
+    #[test]
+    #[should_panic(expected = "only the holder of the merchant's deed can set the fee")]
+    fn only_the_deed_holder_sets_the_fee() {
+        let mut m = town_with_clone();
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        as_caller("bob.testnet", zero());
+        m.set_fee(100);
+    }
+
+    #[test]
+    fn a_season_ranks_players_and_crowns_the_best() {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(1));
+        m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None, None);
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        // Alice's clone took the night's crown and comes home after one night.
+        let s = m.get_season(0, 10);
+        assert_eq!(
+            (s.season, s.started_night, s.ends_night),
+            (1, 1, SEASON_NIGHTS)
+        );
+        assert_eq!(s.rows.len(), 1);
+        assert_eq!(s.rows[0].1.crowns, 1);
+        as_caller("alice.testnet", zero());
+        let _ = m.settle(acc("clone-1.alice.testnet"));
+        let alice = m.get_season(0, 10).rows[0].1.clone();
+        assert_eq!(alice.clones, 1);
+        assert_eq!(alice.staked, 2000);
+        let paid = m.get_results(acc("alice.testnet"))[0].paid_out as i64;
+        assert_eq!(alice.net, paid - 2000);
+        // Play out the season; bob's loyal clone settles on night 2.
+        open(&mut m);
+        ring_to_dawn(&mut m);
+        as_caller("bob.testnet", zero());
+        let _ = m.settle(acc("clone-1.bob.testnet"));
+        let bob_net = m.get_results(acc("bob.testnet"))[0].paid_out as i64 - 1000;
+        assert_eq!(m.get_season(0, 10).players, 2);
+        while m.get_town().night < SEASON_NIGHTS {
+            open(&mut m);
+            ring_to_dawn(&mut m);
+        }
+        assert!(m.get_season(0, 10).champions.is_empty());
+        open(&mut m);
+        let s = m.get_season(0, 10);
+        assert_eq!((s.season, s.started_night), (2, SEASON_NIGHTS + 1));
+        assert_eq!(s.players, 0, "a new season starts empty");
+        let best = if alice.net >= bob_net {
+            "alice.testnet"
+        } else {
+            "bob.testnet"
+        };
+        assert_eq!(s.champions.len(), 1);
+        assert_eq!(s.champions[0].player, acc(best));
+        assert_eq!(s.champions[0].night, SEASON_NIGHTS);
+        assert_eq!(m.get_town().season, 2);
+    }
+
+    #[test]
     fn player_of_accepts_only_the_three_clone_names() {
         assert_eq!(player_of("clone-1.alice.testnet"), Some("alice.testnet"));
         assert_eq!(player_of("clone-3.bob.near"), Some("bob.near"));
@@ -1586,6 +1920,7 @@ mod tests {
         let book = rules::Book {
             usual: t.hours[0],
             stock: t.hour_stock,
+            fee_bps: t.fee_bps,
         };
         let d = rules::decide(
             rules::Temperament::Greedy,

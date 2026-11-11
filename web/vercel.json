@@ -27,6 +27,9 @@
     },
     "api/restock.js": {
       "maxDuration": 30
+    },
+    "api/setfee.js": {
+      "maxDuration": 30
     }
   }
 }

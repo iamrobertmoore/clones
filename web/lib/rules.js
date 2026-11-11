@@ -12,6 +12,9 @@ const GOODS = ["grain", "salt", "wool", "iron", "amber"];
 const BASE_PRICE = [20, 30, 50, 80, 120];
 const NORMAL_STOCK = [1200, 900, 600, 360, 240];
 const FEE_BPS = 200;
+// The range the deed holder may set the next night's fee in.
+const MIN_FEE_BPS = 50;
+const MAX_FEE_BPS = 300;
 const ROUNDS = 12;
 const BROKE_DIVISOR = 4;
 const MAX_NIGHTS = 3;
@@ -90,12 +93,16 @@ function moveStock(stock, good, side, qty) {
 }
 
 class Book {
-  constructor(usual, stock) {
+  constructor(usual, stock, feeBps = FEE_BPS) {
     this.usual = usual;
     this.stock = stock.slice();
+    this.feeBps = feeBps;
   }
-  static at(seed, round, stock) {
-    return new Book(pricesAt(seed, round), stock);
+  static at(seed, round, stock, feeBps = FEE_BPS) {
+    return new Book(pricesAt(seed, round), stock, feeBps);
+  }
+  fee(notional) {
+    return fee(notional, this.feeBps);
   }
   board() {
     return this.usual.map((u, g) => stockedPrice(u, NORMAL_STOCK[g], this.stock[g]));
@@ -106,17 +113,17 @@ class Book {
   }
 }
 
-function fee(notional) {
-  return Math.max(Math.floor((notional * FEE_BPS + 9999) / 10000), 1);
+function fee(notional, feeBps = FEE_BPS) {
+  return Math.max(Math.floor((notional * feeBps + 9999) / 10000), 1);
 }
 
-function fill(l, good, side, qty, limit, price) {
+function fill(l, good, side, qty, limit, price, feeBps = FEE_BPS) {
   if (good < 0 || good >= GOODS.length) throw new Error("unknown good");
   if (qty === 0) throw new Error("quantity must be positive");
   const notional = price * qty;
   if (side === "buy") {
     if (limit < price) throw new Error("limit is below the merchant's price");
-    const f = fee(notional);
+    const f = fee(notional, feeBps);
     if (notional + f > l.cash) throw new Error("not enough cash for that order");
     l.cash -= notional + f;
     l.stock[good] += qty;
@@ -124,7 +131,7 @@ function fill(l, good, side, qty, limit, price) {
   }
   if (limit > price) throw new Error("limit is above the merchant's price");
   if (l.stock[good] < qty) throw new Error("not enough stock to sell");
-  const f = Math.min(fee(notional), notional);
+  const f = Math.min(fee(notional, feeBps), notional);
   l.stock[good] -= qty;
   l.cash += notional - f;
   return { price, fee: f };
@@ -138,7 +145,7 @@ function liquidate(l, book) {
     const q = l.stock[g];
     if (q > 0) {
       const price = book.quote(g, "sell", q);
-      fees += fill(l, g, "sell", q, price, price).fee;
+      fees += fill(l, g, "sell", q, price, price, book.feeBps).fee;
     }
   }
   return fees;
@@ -155,7 +162,7 @@ const isBroke = (w, stake) => w < Math.floor(stake / BROKE_DIVISOR);
 function affordable(budget, book, good) {
   const cost = (q) => {
     const n = book.quote(good, "buy", q) * q;
-    return n + fee(n);
+    return n + book.fee(n);
   };
   let q = Math.floor(budget / book.quote(good, "buy", 1));
   while (q > 0 && cost(q) > budget) q -= 1;
@@ -169,9 +176,9 @@ const sellAll = (v, g) => {
   return { good: g, side: "sell", qty, limit: v.book.quote(g, "sell", qty) };
 };
 const buy = (v, g, qty) => ({ good: g, side: "buy", qty, limit: v.book.quote(g, "buy", qty) });
-const proceeds = (i) => {
+const proceeds = (i, book) => {
   const n = i.limit * i.qty;
-  return n - Math.min(fee(n), n);
+  return n - Math.min(book.fee(n), n);
 };
 
 function greedy(v) {
@@ -187,7 +194,7 @@ function greedy(v) {
   }
   const intents = [];
   for (let g = 0; g < 5; g++) if (g !== best && v.ledger.stock[g] > 0) intents.push(sellAll(v, g));
-  const cash = v.ledger.cash + intents.reduce((s, i) => s + proceeds(i), 0);
+  const cash = v.ledger.cash + intents.reduce((s, i) => s + proceeds(i, v.book), 0);
   const qty = affordable(cash, v.book, best);
   const up = changePct(v, best);
   let say;
@@ -256,7 +263,7 @@ function applyTurn(ledger, stock, book, intents) {
   const fills = [];
   for (const i of intents) {
     const price = book.quote(i.good, i.side, i.qty);
-    fills.push(fill(l, i.good, i.side, i.qty, i.limit, price));
+    fills.push(fill(l, i.good, i.side, i.qty, i.limit, price, book.feeBps));
     moveStock(s, i.good, i.side, i.qty);
   }
   ledger.cash = l.cash;
@@ -282,7 +289,7 @@ function crownWinner(entries) {
 const startOf = (e) => (e.carried ? copyLedger(e.carried) : { cash: e.stake, stock: [0, 0, 0, 0, 0] });
 const comesHome = (e, broke) => broke || (e.played || 0) + 1 >= (e.nights || 1);
 
-function simulateTown(seed, dusk, entrants) {
+function simulateTown(seed, dusk, entrants, feeBps = FEE_BPS) {
   let stock = dusk.slice();
   const ledgers = entrants.map(startOf);
   const orders = entrants.map(() => 0);
@@ -291,7 +298,7 @@ function simulateTown(seed, dusk, entrants) {
   let prev = Book.at(seed, 0, stock).board();
   let pot = 0;
   for (let round = 0; round < ROUNDS; round++) {
-    const book = Book.at(seed, round, stock);
+    const book = Book.at(seed, round, stock, feeBps);
     const board = book.board();
     prices.push(board);
     stocks.push(stock.slice());
@@ -310,7 +317,7 @@ function simulateTown(seed, dusk, entrants) {
     stock = moved;
     prev = board;
   }
-  const dawn = Book.at(seed, ROUNDS, stock);
+  const dawn = Book.at(seed, ROUNDS, stock, feeBps);
   prices.push(dawn.board());
   stocks.push(stock.slice());
   const crowned = pot > 0 ? crownWinner(entrants.map((e, i) => ({ name: e.name, worth: worth(ledgers[i], dawn), stake: e.stake }))) : -1;
@@ -358,6 +365,9 @@ module.exports = {
   pricesAt,
   stockedPrice,
   restock,
+  FEE_BPS,
+  MIN_FEE_BPS,
+  MAX_FEE_BPS,
   Book,
   fee,
   fill,

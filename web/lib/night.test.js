@@ -1,11 +1,11 @@
 const test = require("node:test");
 const assert = require("node:assert");
 const rules = require("./rules.js");
-const { audit } = require("./night.js");
+const { audit, playedFrom } = require("./night.js");
 
 // Play a seeded night the way the runner does, recording orders as the chain would, with an
 // optional whisper {clone, round, whisper}. Returns what the audit reads from chain state.
-function playNight(seed, whispers = []) {
+function playNight(seed, whispers = [], feeBps = rules.FEE_BPS) {
   const names = ["clone-1.p.testnet", "clone-2.p.testnet", "clone-3.p.testnet"];
   const temps = ["cautious", "greedy", "loyal"];
   const hours = [];
@@ -13,9 +13,9 @@ function playNight(seed, whispers = []) {
   let stock = rules.NORMAL_STOCK.slice();
   const ledgers = names.map(() => ({ cash: 2000, stock: [0, 0, 0, 0, 0] }));
   const orders = [];
-  let prev = new rules.Book(hours[0], stock).board();
+  let prev = new rules.Book(hours[0], stock, feeBps).board();
   for (let round = 0; round < rules.ROUNDS; round++) {
-    const book = new rules.Book(hours[round], stock);
+    const book = new rules.Book(hours[round], stock, feeBps);
     const board = book.board();
     const moved = stock.slice();
     names.forEach((id, i) => {
@@ -31,7 +31,7 @@ function playNight(seed, whispers = []) {
     stock = moved;
     prev = board;
   }
-  const dawn = new rules.Book(hours[rules.ROUNDS], stock);
+  const dawn = new rules.Book(hours[rules.ROUNDS], stock, feeBps);
   const pot = orders.reduce((t, o) => t + o.fee, 0);
   const win = rules.crownWinner(names.map((id, i) => ({ name: id, worth: rules.worth(ledgers[i], dawn), stake: 2000 })));
   ledgers[win].cash += pot;
@@ -56,9 +56,10 @@ function playNight(seed, whispers = []) {
       broke,
       due_home: true,
       whisper: w ? [1, w.round, w.whisper] : null,
+      whispers_tonight: whispers.filter((x) => x.clone === id).map((x) => [1, x.round, x.whisper]),
     };
   });
-  return { town: { night: 1, dusk_stock: rules.NORMAL_STOCK.slice(), hours, crowned }, clones, orders };
+  return { town: { night: 1, dusk_stock: rules.NORMAL_STOCK.slice(), hours, crowned, fee_bps: feeBps }, clones, orders };
 }
 
 test("the audit passes a fair night and agrees with the off-chain simulation", () => {
@@ -92,5 +93,38 @@ test("a whispered hour is checked against the whisper, not the temperament", () 
   assert.deepStrictEqual(audit(town, clones, orders).problems, []);
   // The same orders without the whisper on record look like a clone ignoring its temperament.
   clones[1].whisper = null;
+  clones[1].whispers_tonight = [];
   assert.ok(audit(town, clones, orders).problems.some((p) => p.includes("hour 5")));
+});
+
+test("the audit replays a night at the fee the deed holder set", () => {
+  const { town, clones, orders } = playNight(606, [], rules.MAX_FEE_BPS);
+  assert.deepStrictEqual(audit(town, clones, orders).problems, []);
+  // The same night read as if the standard fee applied: every fee looks wrong.
+  town.fee_bps = rules.FEE_BPS;
+  assert.ok(audit(town, clones, orders).problems.some((p) => p.includes("price or fee")));
+});
+
+test("two whispers in a night are both checked, from the whisper log", () => {
+  const whispers = [
+    { clone: "clone-2.p.testnet", round: 3, whisper: { do: "hold" } },
+    { clone: "clone-2.p.testnet", round: 7, whisper: { do: "sell_all" } },
+  ];
+  const { town, clones, orders } = playNight(606, whispers);
+  assert.deepStrictEqual(audit(town, clones, orders).problems, []);
+});
+
+test("a finished night is audited after its clones came home, from their settlements", () => {
+  const { town, clones, orders } = playNight(606);
+  // Two clones settled and left town; their settlements keep their dusk ledger.
+  const settlements = clones.slice(0, 2).map((c) => ({
+    player: c.player, clone: c.id, temperament: c.temperament, night: 1, stake: c.stake, paid_out: c.worth, broke: c.broke,
+    orders_placed: c.orders_placed, nights_played: 1, from_night: 1, nights: 1, dusk_cash: c.dusk_cash, dusk_stock: c.dusk_stock,
+    dusk_orders: 0, whispers: [],
+  }));
+  const played = playedFrom(clones.slice(2), settlements, 1);
+  assert.strictEqual(played.length, 3);
+  assert.deepStrictEqual(audit(town, played, orders).problems, []);
+  // Without the settled clones the crown looks wrong: they matter.
+  assert.ok(audit(town, clones.slice(2), orders).problems.length > 0);
 });

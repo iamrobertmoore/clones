@@ -23,8 +23,16 @@ pub const BASE_PRICE: [u64; 5] = [20, 30, 50, 80, 120];
 /// How much of each good the merchant keeps when nothing has disturbed the market.
 pub const NORMAL_STOCK: [i64; 5] = [1200, 900, 600, 360, 240];
 
-/// The town takes 2% of every trade, at least 1 milliNEAR.
+/// The town takes 2% of every trade, at least 1 milliNEAR, unless the deed holder sets another fee.
 pub const FEE_BPS: u64 = 200;
+
+/// The range the holder of the merchant's deed may set the next night's fee in (0.5% to 3%).
+pub const MIN_FEE_BPS: u64 = 50;
+pub const MAX_FEE_BPS: u64 = 300;
+
+fn default_fee() -> u64 {
+    FEE_BPS
+}
 
 /// Hours in a night. Clones act once per hour; prices move between hours.
 pub const ROUNDS: u32 = 12;
@@ -196,6 +204,9 @@ pub fn move_stock(stock: &mut Stock, good: usize, side: Side, qty: u32) {
 pub struct Book {
     pub usual: [u64; 5],
     pub stock: Stock,
+    /// The fee on every trade tonight, in basis points.
+    #[serde(default = "default_fee")]
+    pub fee_bps: u64,
 }
 
 impl Book {
@@ -203,7 +214,19 @@ impl Book {
         Book {
             usual: prices_at(seed, round),
             stock,
+            fee_bps: FEE_BPS,
         }
+    }
+
+    /// The same book with another fee.
+    pub fn with_fee(mut self, fee_bps: u64) -> Self {
+        self.fee_bps = fee_bps;
+        self
+    }
+
+    /// The fee on a trade of this notional at tonight's rate.
+    pub fn fee(&self, notional: u64) -> u64 {
+        fee_at(notional, self.fee_bps)
     }
 
     /// The price on the board: what one unit costs right now.
@@ -225,8 +248,14 @@ impl Book {
     }
 }
 
+/// The fee on a trade at the standard rate.
 pub fn fee(notional: u64) -> u64 {
-    (notional * FEE_BPS).div_ceil(10_000).max(1)
+    fee_at(notional, FEE_BPS)
+}
+
+/// The fee on a trade at `fee_bps` basis points, at least 1 milliNEAR.
+pub fn fee_at(notional: u64, fee_bps: u64) -> u64 {
+    (notional * fee_bps).div_ceil(10_000).max(1)
 }
 
 /// What a clone holds in town.
@@ -252,7 +281,7 @@ pub struct Fill {
     pub fee: u64,
 }
 
-/// Clear one order against the merchant at the given unit price. Fill or kill.
+/// Clear one order against the merchant at the given unit price and the standard fee.
 pub fn fill(
     l: &mut Ledger,
     good: usize,
@@ -260,6 +289,19 @@ pub fn fill(
     qty: u32,
     limit: u64,
     price: u64,
+) -> Result<Fill, &'static str> {
+    fill_at(l, good, side, qty, limit, price, FEE_BPS)
+}
+
+/// Clear one order against the merchant at the given unit price and fee. Fill or kill.
+pub fn fill_at(
+    l: &mut Ledger,
+    good: usize,
+    side: Side,
+    qty: u32,
+    limit: u64,
+    price: u64,
+    fee_bps: u64,
 ) -> Result<Fill, &'static str> {
     if good >= GOODS.len() {
         return Err("unknown good");
@@ -273,7 +315,7 @@ pub fn fill(
             if limit < price {
                 return Err("limit is below the merchant's price");
             }
-            let f = fee(notional);
+            let f = fee_at(notional, fee_bps);
             if notional + f > l.cash {
                 return Err("not enough cash for that order");
             }
@@ -288,7 +330,7 @@ pub fn fill(
             if l.stock[good] < qty {
                 return Err("not enough stock to sell");
             }
-            let f = fee(notional).min(notional);
+            let f = fee_at(notional, fee_bps).min(notional);
             l.stock[good] -= qty;
             l.cash += notional - f;
             Ok(Fill { price, fee: f })
@@ -304,7 +346,7 @@ pub fn liquidate(l: &mut Ledger, book: &Book) -> u64 {
         let q = l.stock[g];
         if q > 0 {
             let price = book.quote(g, Side::Sell, q);
-            fees += fill(l, g, Side::Sell, q, price, price)
+            fees += fill_at(l, g, Side::Sell, q, price, price, book.fee_bps)
                 .expect("selling held stock at the merchant's quote always fills")
                 .fee;
         }
@@ -347,7 +389,7 @@ pub struct Decision {
 pub fn affordable(budget: u64, book: &Book, good: usize) -> u32 {
     let cost = |q: u32| {
         let n = book.quote(good, Side::Buy, q) * q as u64;
-        n + fee(n)
+        n + book.fee(n)
     };
     let mut q = (budget / book.quote(good, Side::Buy, 1)) as u32;
     while q > 0 && cost(q) > budget {
@@ -380,9 +422,9 @@ fn buy(v: &View, g: usize, qty: u32) -> Intent {
 }
 
 /// What selling an intent pays, after the fee.
-fn proceeds(i: &Intent) -> u64 {
+fn proceeds(i: &Intent, book: &Book) -> u64 {
     let n = i.limit * i.qty as u64;
-    n - fee(n).min(n)
+    n - book.fee(n).min(n)
 }
 
 /// Each temperament is a fixed policy, so a seeded night always plays out the same way.
@@ -416,7 +458,7 @@ fn greedy(v: &View) -> Decision {
         .filter(|g| *g != target && v.ledger.stock[*g] > 0)
         .map(|g| sell_all(v, g))
         .collect();
-    let cash = v.ledger.cash + intents.iter().map(proceeds).sum::<u64>();
+    let cash = v.ledger.cash + intents.iter().map(|i| proceeds(i, &v.book)).sum::<u64>();
     let qty = affordable(cash, &v.book, target);
     let up = change_pct(v, target);
     let say = if qty > 0 {
@@ -507,7 +549,15 @@ pub fn apply_turn(
             return Err("unknown good");
         }
         let price = book.quote(i.good, i.side, i.qty);
-        fills.push(fill(&mut nl, i.good, i.side, i.qty, i.limit, price)?);
+        fills.push(fill_at(
+            &mut nl,
+            i.good,
+            i.side,
+            i.qty,
+            i.limit,
+            price,
+            book.fee_bps,
+        )?);
         move_stock(&mut ns, i.good, i.side, i.qty);
     }
     *l = nl;
@@ -630,6 +680,11 @@ pub struct Night {
 /// Play a whole night off chain with the same rules the contract uses. `stock` is the merchant's
 /// stock at dusk (after the overnight restock).
 pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
+    simulate_town_at(seed, stock, entrants, FEE_BPS)
+}
+
+/// A night at a fee the deed holder set (basis points).
+pub fn simulate_town_at(seed: u64, stock: Stock, entrants: &[Entrant], fee_bps: u64) -> Night {
     let mut stock = stock;
     let mut ledgers: Vec<Ledger> = entrants.iter().map(Entrant::start).collect();
     let mut orders = vec![0u32; entrants.len()];
@@ -640,7 +695,7 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
     for round in 0..ROUNDS {
         // The book is fixed when the hour begins; trades during it move the stock, which shows in
         // the next hour's prices.
-        let book = Book::at(seed, round, stock);
+        let book = Book::at(seed, round, stock).with_fee(fee_bps);
         let prices = book.board();
         boards.push(prices);
         stocks.push(stock);
@@ -668,7 +723,7 @@ pub fn simulate_town(seed: u64, stock: Stock, entrants: &[Entrant]) -> Night {
         stock = moved;
         prev = prices;
     }
-    let dawn = Book::at(seed, ROUNDS, stock);
+    let dawn = Book::at(seed, ROUNDS, stock).with_fee(fee_bps);
     boards.push(dawn.board());
     stocks.push(stock);
     let worths: Vec<(&str, u64, u64)> = entrants
@@ -775,6 +830,30 @@ mod tests {
     }
 
     #[test]
+    fn the_fee_follows_the_book() {
+        let mut l = Ledger {
+            cash: 1_000,
+            stock: [0; 5],
+        };
+        let f = fill_at(&mut l, 0, Side::Buy, 10, 20, 20, MAX_FEE_BPS).unwrap();
+        assert_eq!(f.fee, 6, "3% of 200");
+        assert_eq!(fee_at(200, MIN_FEE_BPS), 1, "0.5% of 200");
+        let cheap = Book::at(7, 0, NORMAL_STOCK).with_fee(MIN_FEE_BPS);
+        let dear = Book::at(7, 0, NORMAL_STOCK).with_fee(MAX_FEE_BPS);
+        assert!(affordable(10_000, &cheap, 0) > affordable(10_000, &dear, 0));
+        let held = Ledger {
+            cash: 0,
+            stock: [100, 0, 0, 0, 0],
+        };
+        assert!(held.worth(&cheap) > held.worth(&dear));
+        let e = standard_entrants();
+        assert_eq!(
+            simulate_town(7, NORMAL_STOCK, &e),
+            simulate_town_at(7, NORMAL_STOCK, &e, FEE_BPS)
+        );
+    }
+
+    #[test]
     fn buying_and_selling_back_never_pays() {
         // Buy at dusk, let the price rise from your own buying, sell back next hour: a loss.
         for q in [1u32, 5, 20, 60] {
@@ -782,6 +861,7 @@ mod tests {
             let b0 = Book {
                 usual: BASE_PRICE,
                 stock,
+                fee_bps: FEE_BPS,
             };
             let mut l = Ledger {
                 cash: 100_000,
@@ -791,6 +871,7 @@ mod tests {
             let b1 = Book {
                 usual: BASE_PRICE,
                 stock,
+                fee_bps: FEE_BPS,
             };
             assert!(
                 l.worth(&b1) < 100_000,

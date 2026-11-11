@@ -1,0 +1,84 @@
+name: verify the live town
+
+# Every six hours, against the hosted market on testnet, read-only (public RPC, no secrets):
+#  1. the code deployed on chain is this repository's code: rebuild the market contract in the
+#     pinned image at the commit the contract names in its own NEP-330 metadata, and compare the
+#     sha256 with the code hash the chain reports. The leash every new clone gets
+#     (web/api/leash.wasm on main) is built from the same commit, so it is rebuilt and compared
+#     too, and so is the code on any clone in town right now;
+#  2. the last finished night replays from chain state alone with the dawn audit.
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+env:
+  MARKET: shroud.clonestown.testnet
+  RPC: https://rpc.testnet.fastnear.com
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the deployed code hash and the commit it was built from
+        id: chain
+        run: |
+          set -euo pipefail
+          q() { curl -sf "$RPC" -H 'content-type: application/json' -d "$1"; }
+          hash=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_account","finality":"final","account_id":"'"$MARKET"'"}}' | jq -r .result.code_hash)
+          meta=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"'"$MARKET"'","method_name":"contract_source_metadata","args_base64":"e30="}}' \
+            | jq -r '.result.result | implode')
+          echo "$meta" | jq .
+          snapshot=$(echo "$meta" | jq -r .build_info.source_code_snapshot)
+          rev=${snapshot##*rev=}
+          keys=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_access_key_list","finality":"final","account_id":"'"$MARKET"'"}}' | jq '.result.keys | length')
+          echo "code hash on chain: $hash; built from $rev; access keys on the market: $keys"
+          test "$keys" = 0
+          clone=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"'"$MARKET"'","method_name":"list_clones","args_base64":"'"$(printf '{"from":0,"limit":1}' | base64)"'"}}' \
+            | jq -r '.result.result | implode | fromjson | .[0][0] // empty')
+          clonehash=""
+          if [ -n "$clone" ]; then
+            clonehash=$(q '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_account","finality":"final","account_id":"'"$clone"'"}}' | jq -r '.result.code_hash // empty')
+            echo "a clone in town: $clone, code hash $clonehash"
+          fi
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+          echo "clonehash=$clonehash" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ steps.chain.outputs.rev }}
+          fetch-depth: 0
+      - name: Install cargo-near
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.23.0/cargo-near-installer.sh | sh
+          cargo near --version
+      - name: Rebuild in the pinned image and compare
+        run: |
+          set -euo pipefail
+          b58() { node web/scripts/codehash.js "$1"; }
+          cargo near build reproducible-wasm --manifest-path contracts/market/Cargo.toml --out-dir out/market
+          cargo near build reproducible-wasm --manifest-path contracts/leash/Cargo.toml --out-dir out/leash
+          market=$(b58 out/market/clones_market.wasm)
+          leash=$(b58 out/leash/clones_leash.wasm)
+          git show origin/main:web/api/leash.wasm > shipped-leash.wasm
+          shipped=$(b58 shipped-leash.wasm)
+          echo "market: chain ${{ steps.chain.outputs.hash }}, rebuilt $market"
+          echo "leash:  shipped to every new clone $shipped, rebuilt $leash"
+          test "$market" = "${{ steps.chain.outputs.hash }}"
+          test "$leash" = "$shipped"
+          clonehash="${{ steps.chain.outputs.clonehash }}"
+          if [ -n "$clonehash" ]; then echo "clone in town: $clonehash"; test "$clonehash" = "$shipped"; fi
+
+  night:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Replay the last finished night from chain state with the dawn audit
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          MARKET_ACCOUNT=$MARKET node scripts/verify-night.js

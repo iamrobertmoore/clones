@@ -93,7 +93,7 @@ async function playHour(t, town, clones) {
   const round = town.round;
   // The usual prices come from the chain (in the hosted town, drawn from block randomness as the
   // hour was rung), never from the seed.
-  const book = new rules.Book(town.hours[round], town.hour_stock);
+  const book = new rules.Book(town.hours[round], town.hour_stock, town.fee_bps || rules.FEE_BPS);
   const events = [{ kind: "hour", round, prices: town.prices, stock: town.hour_stock }];
   const playing = clones.filter((c) => c.from_night <= town.night);
   const missed = [];
@@ -174,8 +174,40 @@ async function playHour(t, town, clones) {
 }
 
 // The whisper a clone obeys in this hour, if its player sent one for it.
+// The whisper a clone obeyed in an hour: from the night's whisper log (every whisper, kept on
+// chain), or on an older market only the last one.
 function whisperFor(c, night, round) {
-  return c.whisper && c.whisper[0] === night && c.whisper[1] === round ? c.whisper[2] : null;
+  const log = c.whispers_tonight || c.whispers || (c.whisper ? [c.whisper] : []);
+  let w = null;
+  for (const [n, h, order] of log) if (n === night && h === round) w = order;
+  return w;
+}
+
+// The clones that played night `night`, read from chain state after it: those still in town,
+// and those that came home (their settlements keep what they held at dusk and their whispers).
+function playedFrom(clones, settlements, night) {
+  const inTown = clones.filter((c) => c.from_night <= night);
+  const ids = new Set(inTown.map((c) => c.id));
+  const home = settlements
+    .filter((s) => s.night === night && s.dusk_stock && !ids.has(s.clone))
+    .map((s) => ({
+      id: s.clone,
+      player: s.player,
+      temperament: s.temperament,
+      stake: s.stake,
+      from_night: s.from_night,
+      nights: s.nights,
+      nights_played: s.nights_played,
+      dusk_cash: s.dusk_cash,
+      dusk_stock: s.dusk_stock,
+      dusk_orders: s.dusk_orders,
+      orders_placed: s.orders_placed,
+      worth: s.paid_out,
+      broke: s.broke,
+      due_home: true,
+      whispers: s.whispers,
+    }));
+  return inTown.concat(home);
 }
 
 // All of tonight's orders, from the market's order book.
@@ -205,10 +237,11 @@ function audit(town, clones, orders) {
   const problems = [];
   const counted = new Map(played.map((c) => [c.id, 0]));
   let stock = town.dusk_stock.slice();
-  let prev = new rules.Book(town.hours[0], stock).board();
+  const feeBps = town.fee_bps || rules.FEE_BPS;
+  let prev = new rules.Book(town.hours[0], stock, feeBps).board();
   let pot = 0;
   for (let round = 0; round < rules.ROUNDS; round++) {
-    const book = new rules.Book(town.hours[round], stock);
+    const book = new rules.Book(town.hours[round], stock, feeBps);
     const board = book.board();
     const moved = stock.slice();
     for (const c of played) {
@@ -239,7 +272,7 @@ function audit(town, clones, orders) {
     stock = moved;
     prev = board;
   }
-  const dawn = new rules.Book(town.hours[rules.ROUNDS], stock);
+  const dawn = new rules.Book(town.hours[rules.ROUNDS], stock, feeBps);
   // The crown: tonight's fees to the best return on stake.
   const w = pot > 0 ? rules.crownWinner(played.map((c) => ({ name: c.id, worth: rules.worth(ledgers.get(c.id), dawn), stake: c.stake }))) : -1;
   // A quarter goes to the deed holder (last crown's player), if there was one at dusk.
@@ -420,6 +453,9 @@ const RIVALS = [
   { name: "abbot", title: "the Abbot", plan: () => [{ temperament: "cautious", stake: 500, nights: 1 }] },
   { name: "hound", title: "the Hound", plan: () => [{ temperament: "greedy", stake: 1000, nights: 1 }] },
 ];
+// The fee each regular sets when it holds the merchant's deed: the Abbot keeps the market cheap,
+// the Hound squeezes it.
+const RIVAL_FEES = { widow: 250, abbot: 100, hound: 300 };
 const FAVOURS = { boom: "greedy", slump: "cautious", blight: "loyal", wild: "cautious" };
 function widowPlan(omen) {
   const t = FAVOURS[omen] || "cautious";
@@ -493,6 +529,21 @@ function newSeed() {
   return crypto.randomInt(1, 1_000_000);
 }
 
+// A regular holding the merchant's deed sets the next night's fee, as a guest would.
+async function rivalSetsFee(t, town) {
+  const r = RIVALS.find((x) => rivalId(t, x) === town.deed);
+  if (!r || town.next_fee_bps != null) return null;
+  const bps = RIVAL_FEES[r.name];
+  try {
+    const rival = await t.as(town.deed);
+    await patient(() => rival.functionCall({ contractId: t.market, methodName: "set_fee", args: { bps }, gas: 30n * TGAS }));
+    return { kind: "fee", player: town.deed, title: r.title, bps };
+  } catch (e) {
+    console.error(`fee ${r.name}:`, message(e));
+    return null;
+  }
+}
+
 async function openNight(t, town) {
   // The house is the market's keeper: the market itself has no key.
   const keeper = await t.as(t.house);
@@ -548,6 +599,7 @@ async function ring(t, { start = false } = {}) {
   const home = [];
   if (start && after.clones.some((c) => !isRival(t, c.player) && !c.due_home)) {
     const arrived = await ensureRivals(t, after.town, after.clones);
+    const fee = await rivalSetsFee(t, after.town);
     await openNight(t, after.town);
     const dusk = await readState(t);
     return {
@@ -559,8 +611,10 @@ async function ring(t, { start = false } = {}) {
       events: [
         ...home,
         ...arrived.map((title) => ({ kind: "rival", title })),
+        ...(fee ? [fee] : []),
         {
           kind: "dusk",
+          fee_bps: dusk.town.fee_bps,
           night: dusk.town.night,
           mood: dusk.town.mood,
           omen: dusk.town.omen,
@@ -578,4 +632,4 @@ async function ring(t, { start = false } = {}) {
   };
 }
 
-module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit, RIVALS, isRival };
+module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit, playedFrom, ordersTonight, RIVALS, isRival };

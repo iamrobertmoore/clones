@@ -207,7 +207,7 @@ async function enlist(plan, env = process.env, opts = {}) {
           transactions.deleteKey(pk),
           transactions.addKey(
             pk,
-            transactions.functionCallAccessKey(market, ["whisper", "retrain", "settle", "order_restock"], BigInt(ALLOWANCE)),
+            transactions.functionCallAccessKey(market, ["whisper", "retrain", "settle", "order_restock", "set_fee"], BigInt(ALLOWANCE)),
           ),
         ],
       }),
