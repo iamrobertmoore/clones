@@ -27,7 +27,7 @@ const short = (id) => id.split(".")[0];
 async function openTown(env = process.env) {
   const house = env.HOUSE_ACCOUNT;
   const keyPair = KeyPair.fromString(env.HOUSE_KEY.trim());
-  const market = env.MARKET_ACCOUNT || `grave.${house}`;
+  const market = env.MARKET_ACCOUNT || `shroud.${house}`;
   const keyStore = new keyStores.InMemoryKeyStore();
   // Accounts are spread across public RPC endpoints, so a busy town does not trip one node's
   // rate limit. Views go to the first.

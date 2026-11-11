@@ -10,7 +10,7 @@
 
   var RPC = 'https://test.rpc.fastnear.com';
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'grave.' + HOUSE;
+  var MARKET = 'shroud.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';

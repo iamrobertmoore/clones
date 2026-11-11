@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- The town page leads with play; the keys, the explorer panel, the audit and the rules sit in a Proof drawer (`town.html#proof` opens it).
+- The deed holder sets the next night's fee, 0.5% to 3% (`set_fee`); the fee is part of the rules' `Book`, in Rust and JavaScript, and the golden nights cover every fee. The Hound sets 3% when it holds the deed, the Abbot 1%, the Widow 2.5%.
+- Seasons of seven nights: the contract keeps each player's net and night crowns (`get_season`), and the best net takes the season crown at the next dusk. The town page shows the season standings.
+- Every whisper of the night is kept on chain, and each settlement keeps the clone's dusk holdings and whispers, so any finished night replays from chain state after its clones have gone home (`web/scripts/verify-night.js`).
+- Reproducible builds: both contracts build in a pinned `cargo near` image and carry NEP-330 source metadata. The verify workflow checks every six hours that the deployed market and the shipped leash match this repository, and replays the last finished night.
+- The leash has its own README as a reusable crate.
+- New keyless market `shroud.clonestown.testnet`, built reproducibly.
 - The hosted market is keyless (`grave.clonestown.testnet`), with the house as keeper only. The contract enforces each temperament's turn (and a possessed clone's one move an hour). Each clone has its own derived key. Possessed clones run on Gemini 2.5 Flash-Lite through NEAR AI Cloud.
 - Review round 5. Possessed clones: a NEAR AI model trades on the player's one-sentence instruction, stored on chain; the Widow is possessed. Custody by default: the browser's key is the guest's only full-access key and the house key is cut to market calls. The market merges a clone home after paying it (the leash trusts the market it is bound to, and always pays the player). Three whispers a night, enforced by the contract. The deed: a quarter of the next night's fees and a full restock of one good. The bell pauses twice a night to show each clone's plan. The crown goes to the biggest profit. New market `cairn.clonestown.testnet`. Mainnet night script (`replay/examples/mainnet_night.rs`).
 - Review round 3 fixes. The crown: each night's fees go at dawn to the clone with the best return, picked by the contract and checked by the audit. Omens come true seven nights in ten. Three regulars (the Widow, the Abbot, the Hound) play every night. Standings by player. The refusal is told in the story: "the chains held". New market `charnel.clonestown.testnet`.
