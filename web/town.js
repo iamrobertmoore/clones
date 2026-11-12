@@ -19,7 +19,7 @@
     cautious: { tint: '#7aa2c8', why: 'Buys what is cheap, takes profit at +10%.' },
     greedy: { tint: '#d9a53a', why: 'Chases whatever rose most. All in.' },
     loyal: { tint: '#79a86a', why: 'Only grain and salt. Keeps your money safe.' },
-    possessed: { tint: '#b48ad8', why: 'A NEAR AI model trades on your instruction, on the same leash.' }
+    possessed: { tint: '#b48ad8', why: 'An AI trades on your instruction (edit it below). It still can\'t run off with your money.' }
   };
   var ORDER = ['cautious', 'greedy', 'loyal'];
   var GOODS = ['grain', 'salt', 'wool', 'iron', 'amber'];
@@ -176,7 +176,7 @@
       ul.appendChild(li);
     });
     if (prices) lastPrices = prices.slice();
-    if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'live from the market contract, milliNEAR / unit, fee ' + pctOf(town.fee_bps) + '; bars: the merchant\'s stock';
+    if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), fee ' + pctOf(town.fee_bps) + '; bars: the merchant\'s stock';
   }
   function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
 
@@ -193,7 +193,8 @@
   }
   function omenAdvice() {
     if (!town || !MOODS[town.omen]) return 'Each night has a mood, posted in advance as the omen.';
-    return 'The omen for the next night: ' + MOODS[town.omen].name + '. ' + MOODS[town.omen].why + ' ' + FAVOURS[town.omen] + ' Omens lie three nights in ten.';
+    var when = nightOn() ? 'A night is under way, so clones you send now play the one after. Its omen: ' : 'The omen for the coming night (the one the bell plays next): ';
+    return when + MOODS[town.omen].name + '. ' + MOODS[town.omen].why + ' ' + FAVOURS[town.omen] + ' Omens lie three nights in ten.';
   }
 
   /* ---------- the race for the crown: every clone in play, by profit so far ---------- */
@@ -233,7 +234,7 @@
     var on = !town.asleep;
     var m = MOODS[on ? town.mood : town.omen];
     $('omen').hidden = false;
-    $('omenWhen').textContent = on ? 'tonight\'s mood (the omen for tomorrow: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for the next night (omens lie three nights in ten)';
+    $('omenWhen').textContent = on ? 'tonight\'s mood (the omen for the night after: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for the coming night, the one the bell plays next (omens lie three nights in ten)';
     $('omenMood').textContent = m.name;
     $('omenWhy').textContent = m.why;
   }
@@ -272,7 +273,7 @@
       opts.forEach(function (t) {
         var lab = el('label');
         var inp = el('input'); inp.type = 'radio'; inp.name = 'slot' + i; inp.value = t;
-        if (t === ORDER[i]) inp.checked = true;
+        if (t === (i === 2 ? 'possessed' : ORDER[i])) inp.checked = true;
         var dot = el('span', 'dot'); if (TEMPS[t]) dot.style.setProperty('--tint', TEMPS[t].tint);
         lab.appendChild(inp); lab.appendChild(dot); lab.appendChild(document.createTextNode(t === 'none' ? 'stay home' : t));
         pick.appendChild(lab);
@@ -283,6 +284,7 @@
       knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), i === 0 ? 2 : 1, 'nights'));
       var ins = el('input', 'instr'); ins.type = 'text'; ins.name = 'instr' + i; ins.maxLength = 160;
       ins.placeholder = 'Your instruction, e.g. buy amber when it falls, never all in';
+      ins.value = 'Trade carefully and never risk more than half.';
       ins.setAttribute('aria-label', 'Instruction for clone-' + (i + 1));
       knobs.appendChild(ins);
       pick.appendChild(knobs);
@@ -606,8 +608,8 @@
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
         guide(4, e.player === guest
-          ? 'Dawn, and the crown is yours: ' + e.clone + ' made the biggest profit and takes the night\'s fees. You hold the merchant\'s deed for the next night.'
-          : 'Dawn. The crown went to ' + e.clone + ' of ' + nameOf(e.player) + '. Ring again for the next night, or retrain your clones first.', e.player === guest ? 'deedCard' : 'morning');
+          ? 'Dawn, and the crown is yours: ' + e.clone + ' made the biggest profit in NEAR of any clone in town and takes the night\'s fees. You hold the merchant\'s deed: set the next night\'s fee and name a good to restock.'
+          : 'Dawn. The crown (the night\'s fees, to the one clone with the biggest profit in NEAR) went to ' + e.clone + ' of ' + nameOf(e.player) + ', who now holds the merchant\'s deed: the next night\'s fee and a restock. Ring again for the next night.', e.player === guest ? 'deedCard' : 'morning');
         store(GUIDE_KEY, '1');
         cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       }
@@ -646,7 +648,7 @@
     var opened = false, tries = 0, paused = {};
     btn.textContent = 'Ringing...';
     setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds.');
-    guide(2, 'The night is on. Watch the race for the crown: twice tonight the bell holds for your call.', 'raceBox');
+    guide(2, 'The night is on. Watch the race for the crown: the bell holds twice for your call, and you can whisper under a clone at any hour (three whispers per clone a night).', 'raceBox');
     function step() {
       return post('/api/bell', { start: !opened }).then(function (out) {
         tries = 0;
@@ -802,21 +804,24 @@
   }
   // The season: every player's net over the clones they settled this season, and past champions.
   function loadSeason() {
-    return Promise.all([view('get_season', { from: 0, limit: 200 }), town ? Promise.resolve(town) : loadTown()]).then(function (both) {
-      var sz = both[0];
+    return Promise.all([view('get_season', { from: 0, limit: 200 }), town ? Promise.resolve(town) : loadTown(), view('get_state', {}).catch(function () { return null; })]).then(function (both) {
+      var sz = both[0], open = {};
+      if (both[2]) both[2][1].forEach(function (c) { var pl = c[1].player || playerOfClone(c[0]); open[pl] = (open[pl] || 0) + (c[1].worth - c[1].stake); });
       if (!sz) return;
       $('townBoard').hidden = false;
       var left = Math.max(0, sz.ends_night - (town ? town.night : 0));
       $('seasonTitle').textContent = 'Season ' + sz.season + ' standings';
-      $('seasonNote').textContent = 'Nights ' + sz.started_night + ' to ' + sz.ends_night + (left ? ', ' + left + (left === 1 ? ' night' : ' nights') + ' left' : ', the last night') + '. Net is what came home less what was staked, over every clone settled this season. At the first dusk after the last night, the best net takes the season crown.';
+      $('seasonNote').textContent = 'Nights ' + sz.started_night + ' to ' + sz.ends_night + (left ? ', ' + left + (left === 1 ? ' night' : ' nights') + ' left' : ', the last night') + '. Net is what came home less what was staked, over every clone that has come home this season; "out now" is how the clones still in town stand. At the first dusk after the last night, the best net takes the season crown.';
       var st = $('standRows'); st.textContent = '';
+      var listed = {}; sz.rows.forEach(function (r) { listed[r[0]] = true; });
+      Object.keys(open).forEach(function (pl) { if (!listed[pl]) sz.rows.push([pl, { net: 0, staked: 0, clones: 0, crowns: 0, fresh: true }]); });
       sz.rows.map(function (r) { return { player: r[0], row: r[1] }; })
         .sort(function (a, b) { return b.row.net - a.row.net || b.row.crowns - a.row.crowns; })
-        .slice(0, 10).forEach(function (p, i) {
+        .slice(0, 15).forEach(function (p, i) {
           var li = el('li', p.player === guest ? 'mine' : '');
-          li.appendChild(el('span', 'b-who', (i === 0 ? '\u265B ' : '') + cap(nameOf(p.player)) + ' (' + p.row.clones + (p.row.clones === 1 ? ' clone' : ' clones') + (p.row.crowns ? ', ' + p.row.crowns + (p.row.crowns === 1 ? ' crown' : ' crowns') : '') + ')'));
+          li.appendChild(el('span', 'b-who', (i === 0 && !p.row.fresh ? '\u265B ' : '') + cap(nameOf(p.player)) + (p.row.fresh || !p.row.clones ? ' (' + (p.row.crowns ? p.row.crowns + (p.row.crowns === 1 ? ' crown, ' : ' crowns, ') : '') + 'clones still in town)' : ' (' + p.row.clones + (p.row.clones === 1 ? ' clone' : ' clones') + ' home' + (p.row.crowns ? ', ' + p.row.crowns + (p.row.crowns === 1 ? ' crown' : ' crowns') : '') + ')')));
           li.appendChild(el('span', 'b-num ' + (p.row.net >= 0 ? 'gain' : 'loss'), signed(p.row.net)));
-          li.appendChild(el('span', 'b-det', near(p.row.staked) + ' staked'));
+          li.appendChild(el('span', 'b-det', (p.row.staked ? near(p.row.staked) + ' staked' : '') + (open[p.player] != null ? (p.row.staked ? ', ' : '') + 'out now ' + signed(open[p.player]) : '')));
           st.appendChild(li);
         });
       if (!sz.rows.length) st.appendChild(el('li', 'muted', 'Nobody has come home yet this season.'));
@@ -1015,7 +1020,7 @@
           setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Ring the bell to carry it on and watch, or it finishes on its own.');
         } else if (!afterBell) {
           setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). And press "Try to run" on any clone, to see whether it can.');
-          guide(2, 'Your clones are in town. Ring the bell to play the night: they trade twelve hours against everyone else\'s, and twice the bell holds for your call.', 'bellBtn');
+          guide(2, 'Your clones are in town. Ring the bell to play the night: they trade twelve hours against everyone else\'s. The bell is shared, so if someone else rings first your clones still play, and you see how they did here.', 'bellBtn');
         } else {
           setStatus('Dawn', inTown.length + (inTown.length === 1 ? ' clone stays' : ' clones stay') + ' in town for the nights you chose, holding their goods. Ring again to play the next night.');
         }
@@ -1061,6 +1066,12 @@
     }).catch(function (err) { $('restockSel').disabled = false; cry(err.message, 'warn'); });
   });
 
+  // A slow testnet RPC: say so, and offer the recorded night meanwhile.
+  setTimeout(function () {
+    if ($('statusTitle').textContent !== 'Loading') return;
+    setStatus('The town is slow to answer', 'The test network is busy. Give it a few seconds, or watch a recorded night meanwhile.');
+    var a = el('a', null, ' Watch a recorded night'); a.href = 'index.html'; $('statusText').appendChild(a);
+  }, 9000);
   var params = new URLSearchParams(location.search);
   var g = params.get('g');
   if (g && !validGuest(g)) {
