@@ -21,7 +21,7 @@
 }
 .picker label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: var(--goth); font-weight: 500; font-size: 17px; color: var(--ash); padding: 3px 8px; border: 1px solid transparent; min-height: 34px; transition: color .15s, background .15s, border-color .15s; }
 .picker label:hover { color: var(--bone); }
-.picker input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.picker input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 .picker label .dot { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid #000; background: var(--tint, #4d4a52); flex: none; box-shadow: 0 0 0 1px #5a5462; }
 .picker label:has(input:checked) { color: var(--bone); background: rgba(255,255,255,.05); border-color: #6a6472; }
 .picker label:has(input:checked) .dot { box-shadow: 0 0 0 1px var(--bone), 0 0 10px var(--tint, transparent); }
@@ -73,7 +73,7 @@
 .seg label { flex: 1 1 0; text-align: center; cursor: pointer; padding: 0; min-height: 0; border: 0; }
 .seg label span { display: block; font-family: var(--mono); font-size: 13px; color: var(--ash); border: 1px solid #45404c; padding: 3px 0; background: #0d0c10; transition: color .15s, border-color .15s, background .15s; }
 .seg label:hover span { color: var(--bone); }
-.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 .seg input:checked + span { color: #050407; background: var(--bone); border-color: var(--bone); }
 .seg input:focus-visible + span { outline: 2px solid var(--frost); outline-offset: 1px; }
 

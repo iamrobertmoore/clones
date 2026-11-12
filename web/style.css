@@ -478,3 +478,6 @@ a.btn { display: inline-block; text-decoration: none; }
   .bubble { transition: none; }
   .log li.new { animation: none; }
 }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: none; }
+.sound-toggle { font-size: 15px; padding: 5px 12px; }
+.sound-toggle[aria-pressed="true"] { border-color: var(--frost); color: var(--bone); box-shadow: 0 0 12px rgba(159, 182, 207, .3); }

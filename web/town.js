@@ -8,7 +8,8 @@
 (function () {
   'use strict';
 
-  var RPC = 'https://test.rpc.fastnear.com';
+  var RPCS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.fastnear.com'];
+  var rpcAt = 0; // the host that answered last
   var HOUSE = 'clonestown.testnet';
   var MARKET = 'shroud.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
@@ -89,8 +90,16 @@
 
   /* ---------- chain reads ---------- */
   function b64(str) { return btoa(unescape(encodeURIComponent(str))); }
-  function rpc(params) {
-    return fetch(RPC, {
+  function rpc(params, tried) {
+    var host = RPCS[rpcAt % RPCS.length];
+    return rpcOnce(host, params).catch(function (err) {
+      if ((tried || 0) + 1 >= RPCS.length || /UNKNOWN|does not exist|MethodNotFound/i.test(String(err.message))) throw err;
+      rpcAt += 1;
+      return rpc(params, (tried || 0) + 1);
+    });
+  }
+  function rpcOnce(host, params) {
+    return fetch(host, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'query', params: params })
@@ -368,6 +377,7 @@
       $('progress').hidden = true;
       if (!validGuest(res.guest)) throw new Error('The town answered with an unexpected guest id.');
       store(STORE_KEY, res.guest);
+      if (window.ClonesSound) ClonesSound.play('bell', { f: 196, vol: 0.2 });
       if (res.claim) { store('clones.claim.' + res.guest, res.claim); store('clones.token.' + res.guest, res.claim); }
       store('clones.txs.' + res.guest, JSON.stringify(res.txs || []));
       location.href = 'town.html?g=' + encodeURIComponent(res.guest) + '&fresh=1';
@@ -472,6 +482,7 @@
         sel.disabled = true;
         post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
           cry('You whispered to ' + short + ': ' + sel.options[sel.selectedIndex].text + '. It obeys in the coming hour.', 'order-row');
+          if (window.ClonesSound) ClonesSound.play('whisper');
           var left = (s.whispers_left != null ? s.whispers_left : 3) - 1; s.whispers_left = left;
           var said = sel.options[sel.selectedIndex].text;
           var fresh = actsFor(c); box.replaceWith(fresh);
@@ -544,6 +555,7 @@
   /* ---------- the refusal ---------- */
   function showRefusal(short, error) {
     var e = String(error || '');
+    if (window.ClonesSound) ClonesSound.play('chains');
     $('refusalErr').textContent = 'the leash held';
     $('refusalWhy').textContent = short + ' tried to run off with its purse. It can trade at the market and do nothing else, so it went nowhere. Not a coin left it.';
     $('refusalRaw').textContent = 'Not our code: NEAR itself refused. The clone\'s only key can call "trade" at the market, so the chain rejects any transfer before it reaches a block (' + (/RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError: RequiresFullAccess' : e.split(':')[0]) + ').';
@@ -621,6 +633,10 @@
         if (e.kind === 'dusk' && e.fee_bps) { if (town) town.fee_bps = e.fee_bps; cry('The merchant takes ' + pctOf(e.fee_bps) + ' of every trade tonight' + (e.fee_bps === 200 ? '.' : ', as the deed holder set it.'), 'muted'); }
       }
     });
+    if (window.ClonesSound) out.events.forEach(function (e) {
+      if (e.kind === 'crowned') ClonesSound.event('crowned', { mine: e.player === guest });
+      else if (e.kind !== 'withdraw_refused') ClonesSound.event(e.kind, e);
+    });
     out.events.forEach(function (e) {
       if (e.kind === 'rival') cry(cap(e.title) + ' sends clones into town.', 'muted');
       if (e.kind === 'fee') cry(cap(e.title) + ' holds the merchant\'s deed and sets tonight\'s fee at ' + pctOf(e.bps) + '.', 'muted');
@@ -689,7 +705,8 @@
         return refreshMine().then(function () {
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
           if (out.phase === 'waiting' || (out.phase === 'home' && !out.next)) return 'stop';
-          if (out.phase === 'hour' && (out.round === 4 || out.round === 8) && !paused[out.round]) {
+          var playing = clonesNow.some(function (c) { return c.state && c.state.from_night <= (town ? town.night : 0); });
+          if (out.phase === 'hour' && (out.round === 4 || out.round === 8) && !paused[out.round] && playing && token()) {
             paused[out.round] = true;
             return waitForPlayer(out.round).then(step);
           }
@@ -735,6 +752,7 @@
       var wl = li.querySelector('.whisper-left');
       if (wl && c.state) wl.textContent = c.state.whispers_left + (c.state.whispers_left === 1 ? ' whisper' : ' whispers') + ' left tonight';
       li.classList.add('decided');
+      if (window.ClonesSound) ClonesSound.play('whisper');
       note.textContent = 'You told ' + cloneShort + ': ' + label + '. It obeys this hour; after that it goes back to its own way.';
       var u = units[cloneShort], old = u && u.root.querySelector('.acts');
       if (old) old.replaceWith(actsFor(c));
@@ -751,6 +769,7 @@
     list.textContent = '';
     list.appendChild(el('li', null, 'Reading the board...'));
     $('pauseTitle').textContent = 'Your call: hour ' + (round + 1) + ' of 12';
+    if (window.ClonesSound) ClonesSound.play('bell', { f: 147, vol: 0.2 });
     card.hidden = false;
     guide(3, 'The bell holds for your call. Check the race; whisper to a clone to change its next move, or let it be.', 'pauseCard');
     if (!reduceMotion) card.scrollIntoView({ block: 'center' });
@@ -933,6 +952,7 @@
         post('/api/setfee', { guest: guest, token: token(), bps: f[0] }).then(function () {
           town.next_fee_bps = f[0];
           cry('You set the next night\'s fee at ' + f[1] + '.', 'order-row');
+          if (window.ClonesSound) ClonesSound.play('coin', { n: 4 });
           showDeed();
         }).catch(function (err) { box.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); $('deedDone').textContent = err.message; });
       });
@@ -1063,6 +1083,12 @@
       view('get_results', { player: guest }).catch(function () { return []; }),
       view('get_state', {}).catch(function () { return null; })
     ]).then(function (all) {
+      if (!all[0]) {
+        setStatus('Can\'t reach the chain', 'The test network is not answering right now. Your clones are safe in town and nothing is lost; this page tries again every few seconds.');
+        $('boardNote').textContent = 'waiting for the test network...';
+        schedulePoll(10000);
+        return;
+      }
       var states = all[1], results = all[2] || [];
       othersInTown = !!(all[3] && all[3][1].some(function (c) { var pl = c[1].player || playerOfClone(c[0]); return pl !== guest && !RIVAL_TITLES[String(pl).split('.')[0]] && !c[1].due_home; }));
       var list = [];
@@ -1086,14 +1112,16 @@
         if (ringing) {
           setStatus('The bell is ringing', 'Every clone in town is trading. Whisper to a clone with the box under its purse: it obeys in the next hour.');
         } else if (nightOn()) {
-          setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Ring the bell to carry it on and watch, or it finishes on its own.');
+          setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Someone else is ringing it: whisper under a clone\'s purse to steer it, or ring on to carry the night yourself and get the bell\'s calls.');
+          $('bellBtn').textContent = 'Ring on from hour ' + (town.round + 1);
         } else if (!afterBell) {
+          $('bellBtn').textContent = 'Ring the bell: play the night now';
           setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). And press "Try to run" on any clone, to see whether it can.');
           guide(2, 'Your clones are in town. Ring the bell to play the night: they trade twelve hours against everyone else\'s. The bell is shared, so if someone else rings first your clones still play, and you see how they did here.', 'bellBtn');
         } else {
           setStatus('Dawn', inTown.length + (inTown.length === 1 ? ' clone stays' : ' clones stay') + ' in town for the nights you chose, holding their goods. Ring again to play the next night.');
         }
-        if (!ringing) schedulePoll(nightOn() ? 8000 : 60000);
+        if (!ringing) schedulePoll(nightOn() ? 8000 : 20000);
       } else if (results.length) {
         setStatus('Morning', 'Your clones came home and handed over what they made. Look in the Proof drawers for how each step happened on chain, or ');
         var again = el('a', null, 'send in a new set'); again.href = 'town.html?new=1'; $('statusText').appendChild(again); $('statusText').appendChild(document.createTextNode('.'));
@@ -1109,6 +1137,7 @@
   }
   function schedulePoll(ms) {
     clearTimeout(pollTimer);
+    if (document.hidden) ms *= 4;
     pollTimer = setTimeout(function () { if (!ringing) loadGuest(); }, ms);
   }
 
@@ -1121,6 +1150,8 @@
   window.addEventListener('hashchange', openProof);
   openProof();
   window.addEventListener('resize', drawLeashes);
+  if (window.ClonesSound) ClonesSound.mine(function (e) { return !e.player || e.player === guest; });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && guest && !ringing) loadGuest(true); });
   setInterval(tickClock, 1000);
   $('marketLink').href = EXPLORER + '/address/' + MARKET;
   $('bellBtn').addEventListener('click', ringBell);

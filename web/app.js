@@ -470,6 +470,11 @@
 
     renderFlies(t, sr, rm);
 
+    // sound: each event as the playhead crosses it
+    if (playing && window.ClonesSound && ClonesSound.on() && t > prevT && t - prevT < 1) {
+      TL.forEach(function (it) { if (it.t > prevT && it.t <= t) ClonesSound.event(it.e.kind, it.e); });
+    }
+
     // refusal moment
     var ref = $('refusal');
     if (inRefusal) {
