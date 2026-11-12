@@ -1,5 +1,3 @@
-<!-- GIF goes here once the video is cut -->
-
 # Clones
 
 **A trading game on NEAR where copies of you trade while you sleep. They can trade, but they can never withdraw.**
@@ -36,17 +34,24 @@ promise in someone's code; in December 2022 leaked trading-bot API keys cost 44 
 $14.8 million between them ([Unchained](https://unchainedcrypto.com/3commas-users-plan-class-action-lawsuit-after-losing-14m/)).
 Here the promise is an access key, and the chain checks it on every transaction.
 
+That is the difference from giving an agent a wallet with limits: nothing in my code stops a clone
+from running. NEAR itself refuses. What Clones adds is the whole life of an agent on accounts: it is
+spawned as its own account, leashed by one key it cannot exceed, merged home by `DeleteAccount`, and
+it trades at a market that has no key at all, on testnet and on [mainnet](#mainnet).
+
 ## Try this, watch what happens
 
 | Try this | Watch what happens |
 |---|---|
 | [Open the town](https://clones-tau-nine.vercel.app/town.html) and press **Send them in** | No login, no wallet. About 20 seconds later you have a guest account on testnet with up to three clones in town, each holding the stake you chose. |
 | Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key. The chain refuses it with `InvalidAccessKeyError: RequiresFullAccess`, and the page shows the chain's words. |
+| Follow the guide on your first night | Five steps: read the omen (it tells you which temperament the mood favours), pick your clones, ring the bell, make your calls, see who takes the crown. |
+| At each of the bell's two pauses, make your call | The bell holds for 20 seconds and shows the race for the crown and what each of your clones means to do next. Let it, or tell it to hold, sell everything or buy a good. |
 | Read the omen (top right), then press **Ring the bell** | The whole town trades a night, hour by hour, in about a minute: speech bubbles, orders, prices moving with the merchant's stock. At dawn the page audits the night from chain state alone, then the clones that are due merge home. |
 | Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour. The instruction is stored on chain with the clone, and its key is the same trade-only leash. If the model doesn't answer, the clone trades as cautious and its bubble says "the voice is silent". |
 | Open **Proof**, then **On the explorer, with their keys** | Your guest account has one full-access key (yours) and one function-call key for the house that can only call `whisper`, `retrain`, `settle`, `order_restock` and `set_fee`. |
 | Watch dawn | The contract hands the crown (every fee the merchant took that night) to the clone with the best return, yours or a rival's. The season standings rank every player, kept by the contract. |
-| Take the crown, then set the fee | You hold the merchant's deed: pick the next night's fee, 0.5% to 3%. A quarter of the fees is yours at dawn, but your own clones pay it too. The Hound squeezes at 3%; the Abbot keeps it at 1%. |
+| Take the crown, then set the fee | A card asks you, as the deed holder, to pick the next night's fee, 0.5% to 3%. A quarter of the fees is yours at dawn, but your own clones pay it too. The Hound squeezes at 3%; the Abbot keeps it at 1%. |
 | During the night, pick **whisper...** under a clone | Your order is stored on chain (one per clone per night). The clone obeys it for the next hour, and the dawn audit checks it did. |
 | Between nights, **retrain** or **Bring home now** | Change a clone's temperament for the nights it has left, or settle and merge it early. |
 | [Watch a recorded night](https://clones-tau-nine.vercel.app) | The demo night on testnet in 60 seconds, every order linked to its transaction. The greedy clone goes broke and tries to run; the chain refuses. |

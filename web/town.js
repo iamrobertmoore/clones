@@ -31,6 +31,15 @@
     wild: { name: 'Wild', why: 'Big swings both ways.' }
   };
   var NIGHTS = [1, 2, 3];
+  // Which temperament each mood favours (20,000 simulated nights; see the temperaments drawer).
+  var FAVOURS = {
+    boom: 'A boom favours greedy: it chases whatever rises.',
+    slump: 'A slump favours cautious: it buys cheap and sells on the rebound.',
+    blight: 'A blight favours loyal: only the staples hold.',
+    wild: 'A wild night favours cautious; greedy goes broke one wild night in four.'
+  };
+  var GUIDE_KEY = 'clones.guide.done';
+  var GUIDE = ['Read the omen', 'Pick your clones', 'Ring the bell', 'Make your calls', 'Dawn: the crown'];
 
   var $ = function (id) { return document.getElementById(id); };
   var NS = 'http://www.w3.org/2000/svg';
@@ -170,6 +179,55 @@
     if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'live from the market contract, milliNEAR / unit, fee ' + pctOf(town.fee_bps) + '; bars: the merchant\'s stock';
   }
   function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
+
+  /* ---------- the guide: five steps through a first night ---------- */
+  function guide(step, text, target) {
+    var box = $('coach');
+    if (stored(GUIDE_KEY) && step < 4) { box.hidden = true; return; }
+    box.hidden = false;
+    var ol = $('coachSteps'); ol.textContent = '';
+    GUIDE.forEach(function (g, i) { ol.appendChild(el('li', i < step ? 'done' : i === step ? 'now' : '', (i + 1) + '. ' + g)); });
+    $('coachText').textContent = text;
+    document.querySelectorAll('.lit').forEach(function (n) { n.classList.remove('lit'); });
+    if (target && $(target)) $(target).classList.add('lit');
+  }
+  function omenAdvice() {
+    if (!town || !MOODS[town.omen]) return 'Each night has a mood, posted in advance as the omen.';
+    return 'The omen for the next night: ' + MOODS[town.omen].name + '. ' + MOODS[town.omen].why + ' ' + FAVOURS[town.omen] + ' Omens lie three nights in ten.';
+  }
+
+  /* ---------- the race for the crown: every clone in play, by profit so far ---------- */
+  function playerOfClone(id) { var s = String(id); return s.slice(s.indexOf('.') + 1); }
+  function loadRace() {
+    return view('get_state', {}).then(function (st) {
+      var t = st[0], night = t.night;
+      return st[1].filter(function (c) { return c[1].from_night <= night; }).map(function (c) {
+        return { id: c[0], player: c[1].player || playerOfClone(c[0]), profit: c[1].worth - c[1].stake, broke: c[1].broke };
+      }).sort(function (a, b) { return b.profit - a.profit || (a.id < b.id ? -1 : 1); });
+    });
+  }
+  function paintRace(ol, rows) {
+    ol.textContent = '';
+    if (!rows.length) { ol.appendChild(el('li', 'muted', 'Nobody is trading yet.')); return; }
+    var mineAt = -1; rows.forEach(function (r, i) { if (mineAt < 0 && r.player === guest) mineAt = i; });
+    rows.forEach(function (r, i) {
+      if (i > 2 && i !== mineAt) return;
+      var li = el('li', r.player === guest ? 'mine' : '');
+      li.appendChild(el('span', 'r-rank', (i === 0 ? '\u265B ' : '') + (i + 1) + '.'));
+      li.appendChild(el('span', 'b-who', r.id.split('.')[0] + ' of ' + nameOf(r.player) + (r.broke ? ' (broke)' : '')));
+      li.appendChild(el('span', 'b-num ' + (r.profit >= 0 ? 'gain' : 'loss'), signed(r.profit)));
+      ol.appendChild(li);
+    });
+    if (mineAt > 0) ol.appendChild(el('li', 'muted', mineAt === 0 ? '' : 'Yours is ' + ordinal(mineAt + 1) + ' of ' + rows.length + '.'));
+    else if (mineAt === 0) ol.appendChild(el('li', 'muted', 'You are leading for the crown.'));
+  }
+  function ordinal(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+  var raceAt = 0;
+  function refreshRace(force) {
+    if (!force && Date.now() - raceAt < 2500) return;
+    raceAt = Date.now();
+    loadRace().then(function (rows) { $('raceBox').hidden = false; paintRace($('raceRows'), rows); }).catch(function () { /* the race is optional */ });
+  }
   function showOmen() {
     if (!town || !MOODS[town.omen]) return;
     var on = !town.asleep;
@@ -319,6 +377,8 @@
     buildSlots();
     $('enlistForm').addEventListener('submit', enlist);
     setStatus('Send your clones in', 'Pick a temperament, a stake and how many nights for each clone. Then ring the bell and watch them trade, or leave them to the nightly bell.');
+    (town ? Promise.resolve(town) : loadTown()).then(function () { guide(0, omenAdvice(), 'omen'); }).catch(function () { /* no omen yet */ });
+    $('slots').addEventListener('change', function () { guide(1, 'Each clone gets a temperament, a stake and a number of nights. When you are happy, send them in.', 'sendBtn'); });
     var g = stored(STORE_KEY);
     if (g && validGuest(g)) {
       var p = $('statusText');
@@ -374,7 +434,7 @@
       if (s) {
         var run = el('button', 'btn small run', 'Try to run');
         run.type = 'button';
-        run.title = 'This clone tries to send 0.01 NEAR from its own account. Watch the chain refuse.';
+        run.title = 'This clone tries to run off with the NEAR on its own account.';
         run.addEventListener('click', function () { tryToRun(c.id, run); });
         purse.appendChild(run);
       }
@@ -478,9 +538,9 @@
   /* ---------- the refusal ---------- */
   function showRefusal(short, error) {
     var e = String(error || '');
-    $('refusalErr').textContent = 'the chain refused: ' + (/RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError(RequiresFullAccess)' : e.split(':')[0]);
-    $('refusalWhy').textContent = short + ' tried to run off with the NEAR on its own account. Its only key can trade at the market and nothing else, so the transfer never happened. Nothing left the clone.';
-    $('refusalRaw').textContent = 'A function-call key can only sign a call to the one contract and method it names. A transfer is a different action, so the chain rejects it before it reaches a block (nearcore reports this as RequiresFullAccess).';
+    $('refusalErr').textContent = 'the leash held';
+    $('refusalWhy').textContent = short + ' tried to run off with its purse. It can trade at the market and do nothing else, so it went nowhere. Not a coin left it.';
+    $('refusalRaw').textContent = 'Not our code: NEAR itself refused. The clone\'s only key can call "trade" at the market, so the chain rejects any transfer before it reaches a block (' + (/RequiresFullAccess/.test(e) ? 'InvalidAccessKeyError: RequiresFullAccess' : e.split(':')[0]) + ').';
     $('refusal').hidden = false;
     var seal = document.querySelector('#refusal .seal');
     var scene = $('scene');
@@ -497,7 +557,7 @@
     say(short, "I'll just take what's on my account and go.", true);
     post('/api/escape', { clone: id }).then(function (res) {
       showRefusal(short, res.refusal);
-      cry(short + ' tried to withdraw. Refused by the chain: ' + String(res.refusal).split(':')[0], 'refused-row');
+      cry(short + ' tried to run with its purse. The leash held.', 'refused-row');
     }).catch(function (err) {
       cry('Could not reach the chain for ' + short + ': ' + err.message, 'warn');
     }).then(function () { btn.disabled = false; btn.textContent = 'Try to run'; });
@@ -511,9 +571,9 @@
     switch (e.kind) {
       case 'order': return e.clone + ' ' + (e.side === 'buy' ? 'bought ' : 'sold ') + e.qty + ' ' + e.good + ' at ' + e.price;
       case 'order_failed': return e.clone + ': a turn did not clear';
-      case 'withdraw_refused': return e.clone + ' tried to withdraw. Refused by the chain: ' + String(e.error).split(':')[0];
+      case 'withdraw_refused': return e.clone + ' went broke and tried to run with what was left. The leash held.';
       case 'settled': return e.clone + ' settled: paid out ' + near(e.paid_out) + ' NEAR' + (e.broke ? ' (broke)' : '');
-      case 'merged': return e.clone + ' merged home (DeleteAccount)';
+      case 'merged': return e.clone + ' came home and handed over everything it had';
       default: return null;
     }
   }
@@ -545,6 +605,10 @@
       if (e.kind === 'deed') cry('Dawn: the merchant\'s deed pays ' + (e.player === guest ? 'you' : nameOf(e.player)) + ' a quarter of the night\'s fees: ' + near(e.share) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
+        guide(4, e.player === guest
+          ? 'Dawn, and the crown is yours: ' + e.clone + ' made the biggest profit and takes the night\'s fees. You hold the merchant\'s deed for the next night.'
+          : 'Dawn. The crown went to ' + e.clone + ' of ' + nameOf(e.player) + '. Ring again for the next night, or retrain your clones first.', e.player === guest ? 'deedCard' : 'morning');
+        store(GUIDE_KEY, '1');
         cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       }
     });
@@ -581,12 +645,14 @@
     $('crier').textContent = '';
     var opened = false, tries = 0, paused = {};
     btn.textContent = 'Ringing...';
-    setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds, each one a transaction per clone, cleared by the market contract.');
+    setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds.');
+    guide(2, 'The night is on. Watch the race for the crown: twice tonight the bell holds for your call.', 'raceBox');
     function step() {
       return post('/api/bell', { start: !opened }).then(function (out) {
         tries = 0;
         if (out.phase === 'dusk' || out.phase === 'hour' || out.phase === 'dawn') opened = true;
         handleStep(out);
+        if (out.phase === 'hour' || out.phase === 'dusk') refreshRace(out.phase === 'dusk');
         if (out.phase === 'dusk') loadGuest(true);
         btn.textContent = out.phase === 'dawn' ? 'Dawn: bringing them home' : out.phase === 'home' ? 'Home' : 'Night ' + out.night + ', hour ' + Math.min(out.round + 1, 12) + ' of 12';
         return refreshMine().then(function () {
@@ -621,14 +687,32 @@
     return player === guest ? 'you' : RIVAL_TITLES[short] || short;
   }
 
-  // Twice a night the bell waits: show each of my clones' plan for the coming hour.
+  // Twice a night the bell waits for your call: the race for the crown, and each of your clones'
+  // plan for the coming hour, with a whisper to change it. It rings on by itself after 20 seconds.
+  function whisperTo(cloneShort, w, label, li) {
+    var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === cloneShort; })[0];
+    if (!c || !token()) return Promise.resolve();
+    li.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    return post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
+      if (c.state && c.state.whispers_left != null) c.state.whispers_left -= 1;
+      li.classList.add('decided');
+      li.appendChild(el('div', 'whisper-note', 'You told ' + cloneShort + ': ' + label + '. It obeys this hour.'));
+      cry('You whispered to ' + cloneShort + ': ' + label + '.', 'order-row');
+    }).catch(function (err) {
+      li.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+      li.appendChild(el('div', 'whisper-note', err.message));
+    });
+  }
   function waitForPlayer(round) {
     var card = $('pauseCard'), list = $('planList');
     list.textContent = '';
     list.appendChild(el('li', null, 'Reading the board...'));
-    $('pauseTitle').textContent = 'The bell waits: hour ' + (round + 1);
+    $('pauseTitle').textContent = 'Your call: hour ' + (round + 1) + ' of 12';
     card.hidden = false;
-    if (!reduceMotion) card.scrollIntoView({ block: 'nearest' });
+    guide(3, 'The bell holds for your call. Check the race; whisper to a clone to change its next move, or let it be.', 'pauseCard');
+    if (!reduceMotion) card.scrollIntoView({ block: 'center' });
+    loadRace().then(function (rows) { paintRace($('pauseRace'), rows); }).catch(function () { $('pauseRace').textContent = ''; });
+    var left = 20, tick;
     post('/api/peek', { guest: guest }).then(function (res) {
       list.textContent = '';
       (res.plans || []).forEach(function (p) {
@@ -636,15 +720,37 @@
         li.appendChild(el('b', null, p.clone + ': '));
         li.appendChild(document.createTextNode(p.say + ' '));
         if (p.orders && p.orders.length) li.appendChild(el('code', null, p.orders.join('; ')));
+        var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === p.clone; })[0];
+        var wl = c && c.state && c.state.whispers_left != null ? c.state.whispers_left : 3;
+        if (token() && wl > 0) {
+          var row = el('div', 'choices');
+          [['Let it', null], ['Hold', { do: 'hold' }], ['Sell all', { do: 'sell_all' }]].forEach(function (o) {
+            var b = el('button', 'btn small' + (o[1] ? '' : ' ghost'), o[0]); b.type = 'button';
+            b.addEventListener('click', function () {
+              left = Math.max(left, 8);
+              if (!o[1]) { li.classList.add('decided'); row.querySelectorAll('button').forEach(function (x) { x.disabled = true; }); return; }
+              whisperTo(p.clone, o[1], o[0].toLowerCase(), li);
+            });
+            row.appendChild(b);
+          });
+          var buy = el('select'); buy.setAttribute('aria-label', 'Tell ' + p.clone + ' to buy');
+          [['', 'Buy...']].concat(GOODS.map(function (g) { return [g, 'buy ' + g]; })).forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; buy.appendChild(op); });
+          buy.addEventListener('change', function () { if (buy.value) { left = Math.max(left, 8); buy.disabled = true; whisperTo(p.clone, { do: 'buy', good: buy.value }, 'buy ' + buy.value, li); } });
+          row.appendChild(buy);
+          row.appendChild(el('span', 'whisper-left', wl + (wl === 1 ? ' whisper' : ' whispers') + ' left tonight'));
+          li.appendChild(row);
+        } else if (wl === 0) {
+          li.appendChild(el('div', 'whisper-note', 'no whispers left tonight'));
+        }
         list.appendChild(li);
       });
       if (!res.plans || !res.plans.length) list.appendChild(el('li', null, 'None of your clones is trading tonight.'));
-    }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; carry on or whisper as you like.')); });
+    }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; ring on, or whisper under a clone.')); });
     return new Promise(function (resolve) {
-      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearTimeout(auto); resolve(); };
-      var auto = setTimeout(go, 45000);
+      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
+      $('pauseCount').textContent = 'rings on in ' + left + 's';
+      tick = setInterval(function () { left -= 1; $('pauseCount').textContent = 'rings on in ' + left + 's'; if (left <= 0) go(); }, 1000);
       $('carryOn').addEventListener('click', go);
-      $('carryOn').focus();
     });
   }
 
@@ -677,7 +783,7 @@
       stake += Number(r.stake); paid += Number(r.paid_out);
     });
     $('morningTotal').textContent = 'In total: ' + near(stake) + ' NEAR sent in, ' + near(paid) + ' NEAR came home (' + signed(paid - stake) + ').' +
-      (night.some(function (r) { return r.broke; }) ? ' A broke clone tried to withdraw at dawn; its key could not, so the chain refused it.' : '');
+      (night.some(function (r) { return r.broke; }) ? ' A broke clone tried to run with what was left at dawn. The leash held.' : '');
     checkLog();
   }
   function checkLog() {
@@ -696,7 +802,8 @@
   }
   // The season: every player's net over the clones they settled this season, and past champions.
   function loadSeason() {
-    return view('get_season', { from: 0, limit: 200 }).then(function (sz) {
+    return Promise.all([view('get_season', { from: 0, limit: 200 }), town ? Promise.resolve(town) : loadTown()]).then(function (both) {
+      var sz = both[0];
       if (!sz) return;
       $('townBoard').hidden = false;
       var left = Math.max(0, sz.ends_night - (town ? town.night : 0));
@@ -739,14 +846,35 @@
         ol.appendChild(li);
       });
       if (town && town.deed) $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(town.deed) + ' (a quarter of tonight\'s fees at dawn' + (town.restock_order ? '; ordered a full restock of ' + town.restock_order : '') + (town.next_fee_bps ? '; set the next night\'s fee at ' + pctOf(town.next_fee_bps) : '') + ').';
-      var holder = !!(town && town.deed === guest && town.asleep && token());
-      $('restockRow').hidden = !holder;
-      $('feeRow').hidden = !holder;
-      if (holder && town.next_fee_bps) $('feeSel').value = String(town.next_fee_bps);
+      showDeed();
       if (town && town.crowned) {
         $('crownNote').textContent = 'Last crown: ' + String(town.crowned[0]).split('.')[0] + ' of ' + nameOf(String(town.crowned[0]).slice(String(town.crowned[0]).indexOf('.') + 1)) + ', night ' + town.crowned[2] + ', ' + near(town.crowned[1]) + ' NEAR of fees.';
       }
     }).catch(function () { /* the board is optional */ });
+  }
+  // The deed holder's moment: set the next night's fee and name a restock.
+  var FEES = [[50, '0.5%'], [100, '1%'], [150, '1.5%'], [200, '2%'], [250, '2.5%'], [300, '3%']];
+  function showDeed() {
+    var holder = !!(town && guest && town.deed === guest && town.asleep && token());
+    $('deedCard').hidden = !holder;
+    if (!holder) return;
+    var box = $('feeButtons'); box.textContent = '';
+    var current = Number(town.next_fee_bps) || 0;
+    FEES.forEach(function (f) {
+      var b = el('button', 'btn small' + (f[0] === current ? ' picked' : ' ghost'), f[1] + (f[0] === 200 ? ' (usual)' : '')); b.type = 'button';
+      b.addEventListener('click', function () {
+        box.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+        post('/api/setfee', { guest: guest, token: token(), bps: f[0] }).then(function () {
+          town.next_fee_bps = f[0];
+          $('deedDone').textContent = 'Done: the merchant takes ' + f[1] + ' of every trade next night, and a quarter of it is yours at dawn.';
+          cry('You set the next night\'s fee at ' + f[1] + '.', 'order-row');
+          showDeed();
+        }).catch(function (err) { box.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); $('deedDone').textContent = err.message; });
+      });
+      box.appendChild(b);
+    });
+    if (town.restock_order) { $('restockSel').value = town.restock_order; }
+    guide(4, 'You took the crown. You hold the merchant\'s deed: set the next night\'s fee, then ring the bell again.', 'deedCard');
   }
   function renderAccounts(list) {
     $('accountsCard').hidden = false;
@@ -882,17 +1010,18 @@
 
       if (inTown.length) {
         if (ringing) {
-          setStatus('The bell is ringing', 'Every clone in town is trading. Whisper to a clone with the box under its purse: it obeys in the next hour, once a night.');
+          setStatus('The bell is ringing', 'Every clone in town is trading. Whisper to a clone with the box under its purse: it obeys in the next hour.');
         } else if (nightOn()) {
           setStatus('A night is under way', 'Hour ' + (town.round + 1) + ' of ' + town.rounds + '. Ring the bell to carry it on and watch, or it finishes on its own.');
         } else if (!afterBell) {
-          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now and watch it, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). Press "Try to run" on any clone to watch the chain refuse its withdrawal.');
+          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now, about a minute. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). And press "Try to run" on any clone, to see whether it can.');
+          guide(2, 'Your clones are in town. Ring the bell to play the night: they trade twelve hours against everyone else\'s, and twice the bell holds for your call.', 'bellBtn');
         } else {
           setStatus('Dawn', inTown.length + (inTown.length === 1 ? ' clone stays' : ' clones stay') + ' in town for the nights you chose, holding their goods. Ring again to play the next night.');
         }
         if (!ringing) schedulePoll(nightOn() ? 8000 : 60000);
       } else if (results.length) {
-        setStatus('Morning', 'Your clones came home: each settled, then merged back into your guest account with a real DeleteAccount, and its own account is gone. The results live on chain.');
+        setStatus('Morning', 'Your clones came home and handed over what they made. Send in a new set below, or look in the Proof drawers for how each step happened on chain.');
       } else {
         setStatus('No clones here', 'There are no clones in town for ' + guest + ' and no results yet. If you just sent them in, give the chain a few seconds and reload.');
       }
@@ -922,19 +1051,13 @@
   $('bellBtn').addEventListener('click', ringBell);
   $('refusalClose').addEventListener('click', function () { $('refusal').hidden = true; });
   $('claimBtn').addEventListener('click', claim);
-  $('feeSel').addEventListener('change', function () {
-    var bps = Number($('feeSel').value); if (!bps) return;
-    $('feeSel').disabled = true;
-    post('/api/setfee', { guest: guest, token: token(), bps: bps }).then(function () {
-      $('feeSel').disabled = false;
-      $('deedNote').textContent = 'You set the next night\'s fee at ' + pctOf(bps) + '. A quarter of the fees is yours at dawn; your own clones pay it too.';
-    }).catch(function (err) { $('feeSel').disabled = false; cry(err.message, 'warn'); });
-  });
+  $('coachHide').addEventListener('click', function () { store(GUIDE_KEY, '1'); $('coach').hidden = true; document.querySelectorAll('.lit').forEach(function (n) { n.classList.remove('lit'); }); });
   $('restockSel').addEventListener('change', function () {
     var g = $('restockSel').value; if (!g) return;
     $('restockSel').disabled = true;
     post('/api/restock', { guest: guest, token: token(), good: g }).then(function () {
-      $('deedNote').textContent = 'You ordered a full restock of ' + g + ' for the next night.';
+      $('deedDone').textContent = 'The merchant restocks ' + g + ' in full at dusk.';
+      $('restockSel').disabled = false;
     }).catch(function (err) { $('restockSel').disabled = false; cry(err.message, 'warn'); });
   });
 

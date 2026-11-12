@@ -15,12 +15,17 @@
 <body>
 <header class="top">
   <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
-  <p class="tag">The hosted town. Send up to three copies of yourself in, then ring the bell and watch them trade a whole night in about a minute. Leave them and the bell rings by itself around 02:00 UTC.</p>
+  <p class="tag">Send up to three copies of yourself into a night market. They trade while you sleep, they fight other players' clones for the crown, and they can never run off with your money.</p>
   <a class="btn ghost town-nav" href="index.html">Watch a recorded night</a>
 </header>
 
 <main>
   <section class="stage-wrap" aria-label="The market town">
+    <div class="coach" id="coach" hidden aria-live="polite">
+      <ol class="coach-steps" id="coachSteps"></ol>
+      <p class="coach-text" id="coachText"></p>
+      <button class="coach-hide" id="coachHide" type="button" aria-label="Hide the guide">hide guide</button>
+    </div>
     <div class="scene town-scene" id="scene">
       <div class="sky" aria-hidden="true">
         <div class="stars"></div>
@@ -76,10 +81,11 @@
       </div>
 
       <div class="pause-card" id="pauseCard" hidden role="dialog" aria-labelledby="pauseTitle">
-        <h3 id="pauseTitle">The bell waits</h3>
-        <p class="sub">Here is what each of your clones means to do in the coming hour. Let it be, or whisper (under its purse) to change it.</p>
+        <h3 id="pauseTitle">Your call</h3>
+        <p class="sub">The bell holds. Here is the race for the crown, and what each of your clones means to do in the next hour. Let it, or change its mind.</p>
+        <ol class="race" id="pauseRace"></ol>
         <ul class="plans" id="planList"></ul>
-        <button class="btn" id="carryOn" type="button">Carry on the night</button>
+        <div class="pause-foot"><button class="btn" id="carryOn" type="button">Ring on</button><span class="count-line" id="pauseCount"></span></div>
       </div>
 
       <svg class="leashes" id="leashes" aria-hidden="true"></svg>
@@ -87,7 +93,7 @@
       <div class="refusal" id="refusal" role="alert" hidden>
         <div class="seal">
           <div class="seal-big">THE CHAINS HELD</div>
-          <div class="seal-err" id="refusalErr">RequiresFullAccess</div>
+          <div class="seal-err" id="refusalErr">the leash held</div>
           <p class="seal-why" id="refusalWhy"></p>
           <p class="seal-raw" id="refusalRaw"></p>
           <button class="btn small" id="refusalClose" type="button">Close</button>
@@ -109,7 +115,16 @@
     <h2 id="statusTitle">Loading</h2>
     <p id="statusText">Reading the town from the chain...</p>
     <p class="status-error" id="statusError" hidden></p>
+    <div class="race-box" id="raceBox" hidden><h3 class="board-sub">The race for the crown</h3><ol class="race" id="raceRows"></ol></div>
     <ul class="crier" id="crier" hidden aria-label="What happened in town"></ul>
+  </section>
+
+  <section class="paper deed-card" id="deedCard" hidden aria-labelledby="deedTitle">
+    <h2 id="deedTitle">You hold the merchant's deed</h2>
+    <p class="sub" id="deedIntro">Your clone took the crown, so the merchant answers to you for the next night. A quarter of every fee he takes is paid to you at dawn. Set the fee: higher pays you more, but your own clones pay it too.</p>
+    <div class="fee-buttons" id="feeButtons" role="group" aria-label="The next night's fee"></div>
+    <div class="result-actions" id="restockRow"><label for="restockSel" class="watch-note">And name one good he restocks in full at dusk (it opens cheap for everyone)</label><select id="restockSel"><option value="">choose a good...</option><option>grain</option><option>salt</option><option>wool</option><option>iron</option><option>amber</option></select></div>
+    <p class="watch-note" id="deedDone"></p>
   </section>
 
   <section class="paper morning" id="morning" hidden aria-labelledby="morningTitle">
@@ -126,11 +141,9 @@
 
   <section class="paper townboard" id="townBoard" hidden aria-labelledby="boardTitle">
     <h2 id="boardTitle">The town's standings</h2>
-    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (possessed: a NEAR AI model on her instruction), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the biggest profit (the crown), and its player holds the merchant's deed for the next night: a quarter of its fees, a restock, and the fee itself (0.5% to 3%). Seven nights make a season; the best net takes the season crown. Read from the market contract (<code>get_season</code>, <code>get_recent</code>).</p>
+    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (her clones are driven by an AI on her instruction), the Abbot (careful) and the Hound (greedy). At dawn the night's fees go to the clone with the biggest profit: the crown. Its player holds the merchant's deed for the next night: a quarter of his fees, a restock, and the fee itself (0.5% to 3%). Seven nights make a season; the best net takes the season crown.</p>
     <p class="sub" id="crownNote"></p>
     <p class="sub" id="deedNote"></p>
-    <div class="result-actions" id="feeRow" hidden><label for="feeSel" class="watch-note">You hold the deed: set the next night's fee (a quarter is yours, and your clones pay it too)</label><select id="feeSel"><option value="">choose a fee...</option><option value="50">0.5%</option><option value="100">1%</option><option value="150">1.5%</option><option value="200">2% (standard)</option><option value="250">2.5%</option><option value="300">3%</option></select></div>
-    <div class="result-actions" id="restockRow" hidden><label for="restockSel" class="watch-note">You hold the deed: order a full restock for the next night</label><select id="restockSel"><option value="">choose a good...</option><option>grain</option><option>salt</option><option>wool</option><option>iron</option><option>amber</option></select></div>
     <h3 class="board-sub" id="seasonTitle">Season standings</h3>
     <p class="sub" id="seasonNote"></p>
     <ol class="board-rows" id="standRows"></ol>

@@ -192,3 +192,45 @@
   .drawer > summary h2 { font-size: 22px; }
   .drawer { padding: 4px 12px; }
 }
+
+/* ---------- the guide through a first night ---------- */
+.coach { position: relative; margin: 0 auto 10px; max-width: 980px; padding: 10px 14px 10px; background: rgba(12, 10, 16, .92); border: 1px solid #6a6472; box-shadow: 0 0 0 1px #000, 0 0 22px rgba(159, 182, 207, .18); }
+.coach[hidden] { display: none; }
+.coach-steps { list-style: none; margin: 0 0 6px; padding: 0 90px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--goth); font-size: 15px; color: var(--ash); }
+.coach-steps li.done { color: #6f6a64; text-decoration: line-through; }
+.coach-steps li.now { color: var(--bone); text-shadow: 0 0 10px rgba(159, 182, 207, .5); }
+.coach-text { margin: 0; font-size: 16.5px; line-height: 1.35; color: var(--bone); }
+.coach-hide { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--ash); font: 13px var(--mono); cursor: pointer; text-decoration: underline; }
+.lit { outline: 2px solid var(--frost); outline-offset: 4px; animation: lit 1.6s ease-in-out infinite; }
+@keyframes lit { 50% { outline-color: rgba(159, 182, 207, .25); } }
+
+/* ---------- the race for the crown ---------- */
+.race { list-style: none; margin: 6px 0 8px; padding: 0; display: grid; gap: 3px; font-size: 15px; }
+.race li { display: grid; grid-template-columns: 3.2em 1fr auto; gap: 8px; align-items: baseline; padding: 2px 8px; background: rgba(255, 255, 255, .03); }
+.race li.mine { background: rgba(159, 182, 207, .12); border-left: 2px solid var(--frost); }
+.race li.muted { display: block; color: var(--ash); background: none; font-size: 14px; }
+.race .r-rank { font-family: var(--mono); color: var(--ash); }
+.race .b-num { font-family: var(--mono); }
+.race .b-num.gain { color: var(--gain); } .race .b-num.loss { color: var(--loss); }
+.race-box[hidden] { display: none; }
+
+/* ---------- your call at the bell's pauses ---------- */
+.plans li { padding: 4px 0 6px; border-bottom: 1px solid #2a2630; }
+.plans li.decided { opacity: .8; }
+.choices { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.choices select { font: 15px var(--mono); background: #0d0b10; color: var(--bone); border: 1px solid #6a6472; padding: 4px 6px; }
+.whisper-left { font-size: 13px; color: var(--ash); }
+.pause-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.count-line { font-family: var(--mono); font-size: 14px; color: var(--ash); }
+
+/* ---------- the deed holder's card ---------- */
+.deed-card { border-color: #b8903a; box-shadow: 0 0 0 1px #000, 0 0 24px rgba(217, 165, 58, .25); }
+.deed-card[hidden] { display: none; }
+.fee-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.fee-buttons .btn.picked { border-color: #d9a53a; box-shadow: 0 0 14px rgba(217, 165, 58, .45); }
+@media (max-width: 600px) {
+  .coach-steps { font-size: 13px; padding-right: 70px; }
+  .coach-text { font-size: 15px; }
+  .race li { font-size: 14px; grid-template-columns: 2.6em 1fr auto; }
+}
+@media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
