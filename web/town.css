@@ -94,7 +94,7 @@
 
 /* Possessed clones */
 .picker input.instr { position: static; opacity: 1; width: 100%; height: auto; }
-.knobs .instr { width: 100%; font-family: var(--serif); font-size: 14px; color: var(--bone); background: #0d0c10; border: 1px solid #6a6472; padding: 4px 6px; margin-top: 2px; }
+.knobs .instr { box-sizing: border-box; resize: vertical; line-height: 1.3; width: 100%; font-family: var(--serif); font-size: 14px; color: var(--bone); background: #0d0c10; border: 1px solid #6a6472; padding: 4px 6px; margin-top: 2px; }
 .knobs .instr[hidden] { display: none; }
 .knobs .instr:focus-visible { outline: 2px solid var(--frost); }
 .bubble.ai { border-color: #b48ad8; box-shadow: 0 0 0 1px #000, 0 0 16px rgba(180, 138, 216, .45); }

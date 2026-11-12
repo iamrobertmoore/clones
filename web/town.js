@@ -45,6 +45,7 @@
   var NS = 'http://www.w3.org/2000/svg';
   var town = null, guest = null, clonesNow = [], pollTimer = null, ringing = false, lastPrices = null;
   var units = {}; // short clone name -> { root, bub, coins, carry, worth }
+  var omenBefore = null; // the omen posted before this ring, to say at dusk whether it came true
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -176,7 +177,7 @@
       ul.appendChild(li);
     });
     if (prices) lastPrices = prices.slice();
-    if (town) $('boardNote').textContent = (town.night ? 'night ' + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), fee ' + pctOf(town.fee_bps) + '; bars: the merchant\'s stock';
+    if (town) $('boardNote').textContent = (town.night ? (town.asleep ? 'after night ' : 'night ') + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), fee ' + pctOf(town.fee_bps) + '; arrows: change since the hour before; bars: the merchant\'s stock';
   }
   function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
 
@@ -212,7 +213,7 @@
     if (!rows.length) { ol.appendChild(el('li', 'muted', 'Nobody is trading yet.')); return; }
     var mineAt = -1; rows.forEach(function (r, i) { if (mineAt < 0 && r.player === guest) mineAt = i; });
     rows.forEach(function (r, i) {
-      if (i > 2 && i !== mineAt) return;
+      if (i > 2 && r.player !== guest) return;
       var li = el('li', r.player === guest ? 'mine' : '');
       li.appendChild(el('span', 'r-rank', (i === 0 ? '\u265B ' : '') + (i + 1) + '.'));
       li.appendChild(el('span', 'b-who', r.id.split('.')[0] + ' of ' + nameOf(r.player) + (r.broke ? ' (broke)' : '')));
@@ -282,7 +283,7 @@
       var knobs = el('div', 'knobs');
       knobs.appendChild(segmented('stake' + i, STAKES, i === 1 ? 1000 : 500, 'NEAR'));
       knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), i === 0 ? 2 : 1, 'nights'));
-      var ins = el('input', 'instr'); ins.type = 'text'; ins.name = 'instr' + i; ins.maxLength = 160;
+      var ins = el('textarea', 'instr'); ins.rows = 2; ins.name = 'instr' + i; ins.maxLength = 160;
       ins.placeholder = 'Your instruction, e.g. buy amber when it falls, never all in';
       ins.value = 'Trade carefully and never risk more than half.';
       ins.setAttribute('aria-label', 'Instruction for clone-' + (i + 1));
@@ -302,7 +303,7 @@
       var st = document.querySelector('input[name="stake' + i + '"]:checked');
       var ni = document.querySelector('input[name="nights' + i + '"]:checked');
       var item = { temperament: c.value, stake: st ? Number(st.value) : 500, nights: ni ? Number(ni.value) : 1 };
-      if (c.value === 'possessed') item.instruction = (document.querySelector('input[name="instr' + i + '"]') || {}).value || '';
+      if (c.value === 'possessed') item.instruction = (document.querySelector('[name="instr' + i + '"]') || {}).value || '';
       out.push(item);
     }
     return out;
@@ -559,6 +560,7 @@
     say(short, "I'll just take what's on my account and go.", true);
     post('/api/escape', { clone: id }).then(function (res) {
       showRefusal(short, res.refusal);
+      say(short, 'The leash held. Back to the counter, then.', false);
       cry(short + ' tried to run with its purse. The leash held.', 'refused-row');
     }).catch(function (err) {
       cry('Could not reach the chain for ' + short + ': ' + err.message, 'warn');
@@ -597,7 +599,10 @@
           showOmen();
         }
         buildBoard(e.prices, e.stock);
-        if (e.kind === 'dusk' && MOODS[e.mood]) cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why);
+        if (e.kind === 'dusk' && MOODS[e.mood]) {
+          var said = omenBefore && MOODS[omenBefore] ? (omenBefore === e.mood ? ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ', and it came true.' : ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ': it lied.') : '';
+          cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why + said, said && omenBefore !== e.mood ? 'refused-row' : '');
+        }
         if (e.kind === 'dusk' && e.fee_bps) { if (town) town.fee_bps = e.fee_bps; cry('The merchant takes ' + pctOf(e.fee_bps) + ' of every trade tonight' + (e.fee_bps === 200 ? '.' : ', as the deed holder set it.'), 'muted'); }
       }
     });
@@ -645,7 +650,10 @@
     btn.disabled = true;
     $('refusal').hidden = true;
     $('crier').textContent = '';
+    $('crier').hidden = false;
     var opened = false, tries = 0, paused = {};
+    omenBefore = town && town.asleep ? town.omen : null;
+    cry('The bell rings. Clones that are due come home first, then the regulars arrive; the first hour starts in a few seconds.', 'muted');
     btn.textContent = 'Ringing...';
     setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds.');
     guide(2, 'The night is on. Watch the race for the crown: the bell holds twice for your call, and you can whisper under a clone at any hour (three whispers per clone a night).', 'raceBox');
@@ -694,15 +702,19 @@
   function whisperTo(cloneShort, w, label, li) {
     var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === cloneShort; })[0];
     if (!c || !token()) return Promise.resolve();
-    li.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    li.querySelectorAll('button, select').forEach(function (b) { b.disabled = true; });
+    var note = el('div', 'whisper-note', 'Telling ' + cloneShort + ': ' + label + '...');
+    li.appendChild(note);
     return post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
       if (c.state && c.state.whispers_left != null) c.state.whispers_left -= 1;
+      var wl = li.querySelector('.whisper-left');
+      if (wl && c.state) wl.textContent = c.state.whispers_left + (c.state.whispers_left === 1 ? ' whisper' : ' whispers') + ' left tonight';
       li.classList.add('decided');
-      li.appendChild(el('div', 'whisper-note', 'You told ' + cloneShort + ': ' + label + '. It obeys this hour.'));
+      note.textContent = 'You told ' + cloneShort + ': ' + label + '. It obeys this hour; after that it goes back to its own way.';
       cry('You whispered to ' + cloneShort + ': ' + label + '.', 'order-row');
     }).catch(function (err) {
-      li.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
-      li.appendChild(el('div', 'whisper-note', err.message));
+      li.querySelectorAll('button, select').forEach(function (b) { b.disabled = false; });
+      note.textContent = err.message;
     });
   }
   function waitForPlayer(round) {
@@ -749,7 +761,7 @@
       if (!res.plans || !res.plans.length) list.appendChild(el('li', null, 'None of your clones is trading tonight.'));
     }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; ring on, or whisper under a clone.')); });
     return new Promise(function (resolve) {
-      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
+      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
       $('pauseCount').textContent = 'rings on in ' + left + 's';
       tick = setInterval(function () { left -= 1; $('pauseCount').textContent = 'rings on in ' + left + 's'; if (left <= 0) go(); }, 1000);
       $('carryOn').addEventListener('click', go);
@@ -1010,7 +1022,7 @@
       buildGuestClones(list);
       var home = 0; list.forEach(function (c) { if (!c.state && c.result) home += Number(c.result.paid_out); });
       $('homeCash').textContent = near(home);
-      $('homeNote').textContent = inTown.length ? 'stake is out with the clones' : list.length ? 'paid home at dawn' : 'no clones yet';
+      $('homeNote').textContent = inTown.length && home ? 'home so far; ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' still out' : inTown.length ? 'stake is out with the clones' : list.length ? 'paid home at dawn' : 'no clones yet';
       renderAccounts(list);
       $('bellRow').hidden = !inTown.length;
       if (!showMyKey()) $('claimCard').hidden = !(stored('clones.claim.' + guest) && window.crypto && crypto.subtle);
@@ -1092,7 +1104,7 @@
     var gl = $('guestLink'); gl.textContent = g; gl.href = EXPLORER + '/address/' + encodeURIComponent(g);
     $('guestClones').hidden = false;
     $('enlistAgain').hidden = false;
-    loadGuest();
+    loadGuest().then(function () { if (params.has('fresh') && !reduceMotion) $('bellRow').scrollIntoView({ block: 'center' }); });
     if (params.has('fresh')) history.replaceState(null, '', 'town.html?g=' + encodeURIComponent(g));
   } else {
     loadTown().catch(function () { $('boardNote').textContent = 'could not reach the testnet RPC'; });
