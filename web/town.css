@@ -227,7 +227,7 @@
 .deed-card { border-color: #b8903a; box-shadow: 0 0 0 1px #000, 0 0 24px rgba(217, 165, 58, .25); }
 .deed-card[hidden] { display: none; }
 .fee-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.fee-buttons .btn.picked { border-color: #d9a53a; box-shadow: 0 0 14px rgba(217, 165, 58, .45); }
+.fee-buttons .btn.picked { border-color: #d9a53a; background: rgba(217, 165, 58, .28); color: #fff3d6; box-shadow: 0 0 14px rgba(217, 165, 58, .45); }
 @media (max-width: 600px) {
   .coach-steps { font-size: 13px; padding-right: 70px; }
   .coach-text { font-size: 15px; }

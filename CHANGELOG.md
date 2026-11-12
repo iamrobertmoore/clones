@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Players' feedback, round six: the deed card shows the fee and restock already set, together, after a reload, and the restock gets its own log line; the bell shows when other players have clones in town even if yours are home; a deed holder with nobody in town is told their choices wait for the next night.
 - Players' feedback, round five: the bell reports the omen posted before the night, and the omen box says all night whether it came true; between nights the board shows the next night's fee; the race says who took the crown at dawn; the morning ledger splits a crowned clone's result into trading and crown; every clone defaults to one night; the morning text links to a new set; the call rings on once every clone has an answer.
 - Players' feedback, round four: "Let it" confirms and the bell rings on once every clone has its call; a whisper updates the clone's own counter too; dawn names the crown and the deed from the night just played and reads the town again once the RPC catches up; dawn repeats whether the omen came true; a plan with no order says what the clone holds.
 - Players' feedback, round three: dusk says whether the omen came true or lied; the race for the crown lists every one of your clones; a call shows at once that it is being sent and counts the whispers left; the board says "after night N" between nights and what its arrows mean; the AI clone's instruction box shows two lines; the runaway's bubble ends when the leash holds; the bell is in view after sign-up and the clones after a call.

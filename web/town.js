@@ -45,6 +45,7 @@
   var NS = 'http://www.w3.org/2000/svg';
   var town = null, guest = null, clonesNow = [], pollTimer = null, ringing = false, lastPrices = null;
   var units = {}; // short clone name -> { root, bub, coins, carry, worth }
+  var othersInTown = false; // other players' clones (not the regulars') in town: the bell can open a night
   var omenBefore = null, omenVerdict = ''; // the omen posted before this ring, and whether it came true
 
   /* ---------- helpers ---------- */
@@ -915,12 +916,11 @@
     var box = $('feeButtons'); box.textContent = '';
     var current = Number(town.next_fee_bps) || 0;
     FEES.forEach(function (f) {
-      var b = el('button', 'btn small' + (f[0] === current ? ' picked' : ' ghost'), f[1] + (f[0] === 200 ? ' (usual)' : '')); b.type = 'button';
+      var b = el('button', 'btn small' + (f[0] === current ? ' picked' : ' ghost'), f[1] + (f[0] === 200 ? ' (usual)' : '') + (f[0] === current ? ' \u2713 set' : '')); b.type = 'button';
       b.addEventListener('click', function () {
         box.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
         post('/api/setfee', { guest: guest, token: token(), bps: f[0] }).then(function () {
           town.next_fee_bps = f[0];
-          $('deedDone').textContent = 'Done: the merchant takes ' + f[1] + ' of every trade next night, and a quarter of it is yours at dawn.';
           cry('You set the next night\'s fee at ' + f[1] + '.', 'order-row');
           showDeed();
         }).catch(function (err) { box.querySelectorAll('button').forEach(function (x) { x.disabled = false; }); $('deedDone').textContent = err.message; });
@@ -928,7 +928,13 @@
       box.appendChild(b);
     });
     if (town.restock_order) { $('restockSel').value = town.restock_order; }
-    guide(4, 'You took the crown. You hold the merchant\'s deed: set the next night\'s fee, then ring the bell again.', 'deedCard');
+    var done = [];
+    if (current) done.push('The merchant takes ' + pctOf(current) + ' of every trade next night, and a quarter of it is yours at dawn.');
+    if (town.restock_order) done.push('He restocks ' + town.restock_order + ' in full at dusk.');
+    $('deedDone').textContent = done.length ? 'Set: ' + done.join(' ') : '';
+    var someoneIn = othersInTown || clonesNow.some(function (c) { return c.state; });
+    if (!someoneIn) $('deedDone').textContent += (done.length ? ' ' : '') + 'Nobody has clones in town yet, so your choices wait for the next night: it opens when anyone sends clones in and rings. To play it yourself, send in a new set.';
+    guide(4, 'You took the crown. You hold the merchant\'s deed: set the next night\'s fee and name a restock. They apply when the next night opens.', 'deedCard');
   }
   function renderAccounts(list) {
     $('accountsCard').hidden = false;
@@ -1043,9 +1049,11 @@
     return Promise.all([
       loadTown().catch(function () { return null; }),
       Promise.all(ids.map(function (id) { return view('get_clone', { clone_id: id }).catch(function () { return null; }); })),
-      view('get_results', { player: guest }).catch(function () { return []; })
+      view('get_results', { player: guest }).catch(function () { return []; }),
+      view('get_state', {}).catch(function () { return null; })
     ]).then(function (all) {
       var states = all[1], results = all[2] || [];
+      othersInTown = !!(all[3] && all[3][1].some(function (c) { var pl = c[1].player || playerOfClone(c[0]); return pl !== guest && !RIVAL_TITLES[String(pl).split('.')[0]] && !c[1].due_home; }));
       var list = [];
       ids.forEach(function (id, k) {
         var r = null;
@@ -1059,7 +1067,8 @@
       $('homeCash').textContent = near(home);
       $('homeNote').textContent = inTown.length && home ? 'home so far; ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' still out' : inTown.length ? 'stake is out with the clones' : list.length ? 'paid home at dawn' : 'no clones yet';
       renderAccounts(list);
-      $('bellRow').hidden = !inTown.length;
+      $('bellRow').hidden = !inTown.length && !othersInTown;
+      if (!inTown.length && othersInTown) $('bellNote').textContent = 'Your clones are home, but other players have clones in town: ring the bell to play the next night for them and watch.';
       if (!showMyKey()) $('claimCard').hidden = !(stored('clones.claim.' + guest) && window.crypto && crypto.subtle);
 
       if (inTown.length) {
@@ -1111,8 +1120,10 @@
     var g = $('restockSel').value; if (!g) return;
     $('restockSel').disabled = true;
     post('/api/restock', { guest: guest, token: token(), good: g }).then(function () {
-      $('deedDone').textContent = 'The merchant restocks ' + g + ' in full at dusk.';
       $('restockSel').disabled = false;
+      if (town) town.restock_order = g;
+      cry('You ordered a full restock of ' + g + ' for the next night.', 'order-row');
+      showDeed();
     }).catch(function (err) { $('restockSel').disabled = false; cry(err.message, 'warn'); });
   });
 
