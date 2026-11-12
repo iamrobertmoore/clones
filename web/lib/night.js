@@ -619,6 +619,8 @@ async function ring(t, { start = false } = {}) {
           night: dusk.town.night,
           mood: dusk.town.mood,
           omen: dusk.town.omen,
+          // The omen posted for this night before it opened, so the page can say if it came true.
+          omen_was: after.town.omen,
           prices: dusk.town.prices,
           stock: dusk.town.hour_stock,
         },

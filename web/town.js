@@ -177,7 +177,7 @@
       ul.appendChild(li);
     });
     if (prices) lastPrices = prices.slice();
-    if (town) $('boardNote').textContent = (town.night ? (town.asleep ? 'after night ' : 'night ') + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), fee ' + pctOf(town.fee_bps) + '; arrows: change since the hour before; bars: the merchant\'s stock';
+    if (town) $('boardNote').textContent = (town.night ? (town.asleep ? 'after night ' : 'night ') + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), ' + (town.asleep ? 'next night\'s fee ' + pctOf(town.next_fee_bps || 200) + (town.next_fee_bps ? '' : ' unless the deed holder sets it') : 'fee ' + pctOf(town.fee_bps)) + '; arrows: change since the hour before; bars: the merchant\'s stock';
   }
   function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
 
@@ -225,7 +225,9 @@
   }
   function ordinal(n) { var s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
   var raceAt = 0;
+  var raceOver = false;
   function refreshRace(force) {
+    if (raceOver) return;
     if (!force && Date.now() - raceAt < 2500) return;
     raceAt = Date.now();
     loadRace().then(function (rows) { $('raceBox').hidden = false; paintRace($('raceRows'), rows); }).catch(function () { /* the race is optional */ });
@@ -237,7 +239,7 @@
     $('omen').hidden = false;
     $('omenWhen').textContent = on ? 'tonight\'s mood (the omen for the night after: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for the coming night, the one the bell plays next (omens lie three nights in ten)';
     $('omenMood').textContent = m.name;
-    $('omenWhy').textContent = m.why;
+    $('omenWhy').textContent = m.why + (on && omenVerdict ? ' ' + omenVerdict : '');
   }
   function loadTown() {
     return view('get_town', {}).then(function (t) {
@@ -282,8 +284,8 @@
       pick.appendChild(el('span', 'why'));
       var knobs = el('div', 'knobs');
       knobs.appendChild(segmented('stake' + i, STAKES, i === 1 ? 1000 : 500, 'NEAR'));
-      knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), i === 0 ? 2 : 1, 'nights'));
-      var ins = el('textarea', 'instr'); ins.rows = 2; ins.name = 'instr' + i; ins.maxLength = 160;
+      knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), 1, 'nights'));
+      var ins = el('textarea', 'instr'); ins.rows = 2; ins.setAttribute('autocomplete', 'off'); ins.name = 'instr' + i; ins.maxLength = 160;
       ins.placeholder = 'Your instruction, e.g. buy amber when it falls, never all in';
       ins.value = 'Trade carefully and never risk more than half.';
       ins.setAttribute('aria-label', 'Instruction for clone-' + (i + 1));
@@ -600,8 +602,10 @@
         }
         buildBoard(e.prices, e.stock);
         if (e.kind === 'dusk' && MOODS[e.mood]) {
+          if (e.omen_was) omenBefore = e.omen_was;
           omenVerdict = omenBefore && MOODS[omenBefore] ? 'The omen said ' + MOODS[omenBefore].name.toLowerCase() + (omenBefore === e.mood ? ', and it came true.' : ', but it lied: the night was ' + MOODS[e.mood].name.toLowerCase() + '.') : '';
           var said = omenBefore && MOODS[omenBefore] ? (omenBefore === e.mood ? ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ', and it came true.' : ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ': it lied.') : '';
+          showOmen();
           cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why + said, said && omenBefore !== e.mood ? 'refused-row' : '');
         }
         if (e.kind === 'dusk' && e.fee_bps) { if (town) town.fee_bps = e.fee_bps; cry('The merchant takes ' + pctOf(e.fee_bps) + ' of every trade tonight' + (e.fee_bps === 200 ? '.' : ', as the deed holder set it.'), 'muted'); }
@@ -614,6 +618,9 @@
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
         if (omenVerdict) cry('Dawn. ' + omenVerdict, 'muted');
+        raceOver = true;
+        Array.prototype.forEach.call($('raceRows').querySelectorAll('li.muted'), function (n) { n.remove(); });
+        $('raceRows').appendChild(el('li', 'muted', 'Dawn: the crown went to ' + e.clone + ' of ' + nameOf(e.player) + ', with the night\'s fees on top.'));
         $('crownNote').textContent = 'Last crown: ' + e.clone + ' of ' + nameOf(e.player) + ', night ' + (town ? town.night : '') + ', ' + near(e.pot) + ' NEAR of fees.';
         $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(e.player) + ' for the next night.';
         guide(4, (omenVerdict ? omenVerdict + ' ' : '') + (e.player === guest
@@ -656,7 +663,7 @@
     $('crier').textContent = '';
     $('crier').hidden = false;
     var opened = false, tries = 0, paused = {};
-    omenBefore = town && town.asleep ? town.omen : null;
+    omenBefore = town && town.asleep ? town.omen : null; omenVerdict = ''; raceOver = false;
     cry('The bell rings. Clones that are due come home first, then the regulars arrive; the first hour starts in a few seconds.', 'muted');
     btn.textContent = 'Ringing...';
     setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds.');
@@ -779,8 +786,10 @@
         list.appendChild(li);
       });
       if (!res.plans || !res.plans.length) list.appendChild(el('li', null, 'None of your clones is trading tonight.'));
-      var waiting = list.querySelectorAll('.choices').length;
-      decidedOne = function () { waiting -= 1; if (waiting <= 0) { left = Math.min(left, 2); $('pauseCount').textContent = 'every clone has its call; ringing on'; } };
+      decidedOne = function () {
+        var open = Array.prototype.filter.call(list.children, function (li) { return li.querySelector('.choices') && !li.classList.contains('decided'); });
+        if (!open.length) { left = Math.min(left, 2); $('pauseCount').textContent = 'every clone has its call; ringing on'; }
+      };
     }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; ring on, or whisper under a clone.')); });
     return new Promise(function (resolve) {
       var go = function () { decidedOne = function () {}; card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
@@ -814,6 +823,10 @@
       num.appendChild(document.createTextNode(near(r.stake) + ' → ' + near(r.paid_out)));
       num.appendChild(el('br'));
       num.appendChild(el('span', diff >= 0 ? 'gain' : 'loss', signed(diff) + ' NEAR'));
+      if (town && town.crowned && town.crowned[0] === r.clone && Number(town.crowned[2]) === Number(r.night)) {
+        num.appendChild(el('br'));
+        num.appendChild(el('small', null, 'trading ' + signed(diff - town.crowned[1]) + ', crown ' + signed(town.crowned[1])));
+      }
       li.appendChild(num);
       ul.appendChild(li);
       stake += Number(r.stake); paid += Number(r.paid_out);
@@ -1062,7 +1075,8 @@
         }
         if (!ringing) schedulePoll(nightOn() ? 8000 : 60000);
       } else if (results.length) {
-        setStatus('Morning', 'Your clones came home and handed over what they made. Send in a new set below, or look in the Proof drawers for how each step happened on chain.');
+        setStatus('Morning', 'Your clones came home and handed over what they made. Look in the Proof drawers for how each step happened on chain, or ');
+        var again = el('a', null, 'send in a new set'); again.href = 'town.html?new=1'; $('statusText').appendChild(again); $('statusText').appendChild(document.createTextNode('.'));
       } else {
         setStatus('No clones here', 'There are no clones in town for ' + guest + ' and no results yet. If you just sent them in, give the chain a few seconds and reload.');
       }
