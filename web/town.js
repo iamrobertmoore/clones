@@ -474,7 +474,7 @@
         return box;
       }
       var sel = el('select'); sel.setAttribute('aria-label', 'Whisper to ' + short);
-      [['', 'whisper... (' + (s.whispers_left != null ? s.whispers_left : 3) + ' left)'], ['hold', 'hold this hour'], ['sell_all', 'sell everything']].concat(GOODS.map(function (g) { return ['buy:' + g, 'buy ' + g]; }))
+      [['', 'whisper, next hour only (' + (s.whispers_left != null ? s.whispers_left : 3) + ' left)'], ['hold', 'hold this hour'], ['sell_all', 'sell everything']].concat(GOODS.map(function (g) { return ['buy:' + g, 'buy ' + g]; }))
         .forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; sel.appendChild(op); });
       sel.addEventListener('change', function () {
         if (!sel.value) return;
@@ -680,9 +680,48 @@
     }
     tickClock();
   }
+  // Someone else is ringing this night: follow it from the chain instead of driving it too (many
+  // bells at once slow the night down and race each other). Resolves 'done' at dawn, or 'stalled'
+  // if no hour has been rung for 60 seconds (longer than any call), so this tab can carry the night on itself.
+  function followNight() {
+    var seen = town ? town.round : -1, at = Date.now();
+    setStatus('A night is under way', 'Another player is ringing it, so you are watching it from the chain. Whisper under a clone\'s purse to steer it: a whisper is for the next hour only.');
+    guide(2, 'Someone else rang the bell, so you are watching this night from the chain. Whisper under your clones to steer them, for the next hour only.', 'raceBox');
+    return new Promise(function (resolve) {
+      (function tick() {
+        loadTown().then(function (t) {
+          if (t.round !== seen) {
+            if (t.round > seen && seen >= 0) cry('Hour ' + Math.min(t.round + 1, t.rounds) + ' rings (another player\'s bell).', 'muted');
+            seen = t.round; at = Date.now();
+            refreshMine(); refreshRace(true);
+            if (window.ClonesSound) ClonesSound.event('hour', { round: t.round });
+          }
+          $('bellBtn').textContent = 'Watching: night ' + t.night + ', hour ' + Math.min(t.round + 1, t.rounds) + ' of ' + t.rounds;
+          if (t.asleep) return resolve('done');
+          if (Date.now() - at > 60000) return resolve('stalled');
+          setTimeout(tick, document.hidden ? 6000 : 2000);
+        }).catch(function () { setTimeout(tick, 4000); });
+      })();
+    });
+  }
   function ringBell() {
     if (ringing) return;
     ringing = true;
+    var btn0 = $('bellBtn');
+    btn0.disabled = true;
+    loadTown().catch(function () { return null; }).then(function () {
+      if (!nightOn()) return 'drive';
+      return followNight().then(function (how) { return how === 'stalled' ? 'drive' : 'done'; });
+    }).then(function (how) {
+      if (how === 'drive') return driveBell();
+      ringing = false;
+      btn0.disabled = false;
+      btn0.textContent = 'Ring the bell: play the next night';
+      loadGuest(true);
+      setTimeout(function () { if (!ringing) loadGuest(true); }, 4000);
+    });
+  }
+  function driveBell() {
     var btn = $('bellBtn');
     btn.disabled = true;
     $('refusal').hidden = true;
@@ -750,7 +789,7 @@
     return post('/api/whisper', { guest: guest, token: token(), clone: c.id, whisper: w }).then(function () {
       if (c.state && c.state.whispers_left != null) c.state.whispers_left -= 1;
       var wl = li.querySelector('.whisper-left');
-      if (wl && c.state) wl.textContent = c.state.whispers_left + (c.state.whispers_left === 1 ? ' whisper' : ' whispers') + ' left tonight';
+      if (wl && c.state) wl.textContent = 'next hour only · ' + c.state.whispers_left + (c.state.whispers_left === 1 ? ' whisper' : ' whispers') + ' left tonight';
       li.classList.add('decided');
       if (window.ClonesSound) ClonesSound.play('whisper');
       note.textContent = 'You told ' + cloneShort + ': ' + label + '. It obeys this hour; after that it goes back to its own way.';
@@ -783,6 +822,7 @@
         li.appendChild(document.createTextNode(p.say + ' '));
         var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === p.clone; })[0];
         if (p.orders && p.orders.length) li.appendChild(el('code', null, p.orders.join('; ')));
+        else if (c && c.state && c.state.temperament === 'possessed') li.appendChild(el('code', null, 'its AI decides when the hour rings: it may buy, sell or hold'));
         else if (c && c.state) {
           var held = (c.state.stock || []).map(function (q, g) { return q ? q + ' ' + GOODS[g] : null; }).filter(Boolean);
           li.appendChild(el('code', null, 'no order this hour; it holds ' + near(c.state.cash) + ' NEAR in cash' + (held.length ? ' and ' + held.join(', ') : '')));
@@ -807,7 +847,7 @@
           [['', 'Buy...']].concat(GOODS.map(function (g) { return [g, 'buy ' + g]; })).forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; buy.appendChild(op); });
           buy.addEventListener('change', function () { if (buy.value) { left = Math.max(left, 15); buy.disabled = true; whisperTo(p.clone, { do: 'buy', good: buy.value }, 'buy ' + buy.value, li); } });
           row.appendChild(buy);
-          row.appendChild(el('span', 'whisper-left', wl + (wl === 1 ? ' whisper' : ' whispers') + ' left tonight'));
+          row.appendChild(el('span', 'whisper-left', 'next hour only · ' + wl + (wl === 1 ? ' whisper' : ' whispers') + ' left tonight'));
           li.appendChild(row);
         } else if (wl === 0) {
           li.appendChild(el('div', 'whisper-note', 'no whispers left tonight'));

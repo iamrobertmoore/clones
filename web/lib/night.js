@@ -250,11 +250,15 @@ function audit(town, clones, orders) {
       const w = whisperFor(c, town.night, round);
       const got = turns.get(`${round}|${c.id}`) || [];
       // A possessed clone's moves come from its model, so only their prices and fees are checked.
-      const want = w ? rules.obey(w, view).intents : c.temperament === "possessed" ? null : rules.decide(c.temperament, view).intents;
-      const same =
-        !want ||
-        (want.length === got.length &&
-          want.every((i, k) => rules.GOODS[i.good] === got[k].good && i.side === got[k].side && i.qty === got[k].qty));
+      const own = c.temperament === "possessed" ? null : rules.decide(c.temperament, view).intents;
+      const want = w ? rules.obey(w, view).intents : own;
+      const matches = (list) =>
+        !list ||
+        (list.length === got.length &&
+          list.every((i, k) => rules.GOODS[i.good] === got[k].good && i.side === got[k].side && i.qty === got[k].qty));
+      // A whisper stored after the clone had already taken that hour's turn (another bell rang it
+      // first): the contract checked that turn against the temperament, so that is what it must match.
+      const same = matches(want) || (w && matches(own));
       if (!same) problems.push(`${short(c.id)} hour ${round}: expected ${JSON.stringify(want)}, chain has ${JSON.stringify(got)}`);
       if (!got.length) continue;
       const intents = got.map((o) => ({ good: rules.GOODS.indexOf(o.good), side: o.side, qty: o.qty, limit: o.price }));
@@ -471,6 +475,9 @@ const isRival = (t, player) => RIVALS.some((r) => rivalId(t, r) === player);
 async function ensureRivals(t, town, clones, env = process.env) {
   const { enlist } = require("../api/enlist.js");
   const here = new Set(clones.map((c) => c.player));
+  // Read the town again right before acting: another bell may have brought a regular in since.
+  const [, fresh] = await patient(() => t.view("get_state")).catch(() => [null, []]);
+  for (const c of fresh || []) here.add(c.player);
   const missing = RIVALS.filter((r) => !here.has(rivalId(t, r)));
   const results = await Promise.all(
     missing.map(async (r) => {
@@ -517,7 +524,10 @@ async function tidyRival(t, id) {
   const rival = await t.as(id);
   for (const n of [1, 2, 3]) {
     const clone = `clone-${n}.${id}`;
-    if (await exists(t, clone)) {
+    // Never merge a clone the market has in town: with two bells ringing at once, the other one
+    // may have just sent it in.
+    const inTown = await patient(() => t.view("get_clone", { clone_id: clone })).catch(() => null);
+    if (!inTown && (await exists(t, clone))) {
       await patient(() => rival.functionCall({ contractId: clone, methodName: "merge", args: {}, gas: 100n * TGAS })).catch((e) =>
         console.error(`tidy ${clone}:`, message(e)),
       );

@@ -25,6 +25,14 @@ module.exports = async function handler(req, res) {
       return;
     }
     const t = await openTown();
+    // A clone that has already taken this hour's turn (another player's bell rang it first) cannot
+    // obey a whisper for it: say so instead of storing a whisper it will never follow.
+    const [town] = await patient(() => t.view("get_state"));
+    const c = await patient(() => t.view("get_clone", { clone_id: who.clone })).catch(() => null);
+    if (c && c.last_turn && c.last_turn[0] === town.night && c.last_turn[1] === town.round) {
+      res.status(409).json({ error: "too late for this hour: it has already traded. Try again next hour." });
+      return;
+    }
     const guest = await t.as(who.guest);
     const out = await patient(() =>
       guest.functionCall({

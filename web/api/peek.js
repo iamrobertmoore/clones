@@ -32,7 +32,7 @@ module.exports = async function handler(req, res) {
       .filter((c) => c.player === guest && c.from_night <= town.night)
       .map((c) => {
         const short = c.id.split(".")[0];
-        if (c.temperament === "possessed") return { clone: short, say: "The voice will decide.", orders: [] };
+        if (c.temperament === "possessed") return { clone: short, say: "My voice will choose when the hour rings.", orders: [] };
         const v = { round: town.round, book, prices: town.prices, prev: town.prev_prices, ledger: { cash: c.cash, stock: c.stock.slice() }, stake: c.stake };
         const d = rules.decide(c.temperament, v);
         return {
