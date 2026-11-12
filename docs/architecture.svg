@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1080" viewBox="0 0 1280 1080" role="img" aria-labelledby="t d">
+  <title id="t">How Clones fits together</title>
+  <desc id="d">Who holds which key. The player's browser makes the guest account's only full-access key. The house holds a function-call key on the guest account for five market methods. Each clone has one function-call key that can only call trade on the market, and a leash contract that lets only its parent or its bound market merge it, always paying the parent. The market contract has no access key. Prices and the omen come from NEAR block randomness. The bell plays the night and audits it from chain state. NEAR AI Cloud picks possessed clones' moves. CI rebuilds and checks the deployed code every six hours.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#b9b2a6"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#d7212b"/>
+    </marker>
+    <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9fb6cf"/>
+    </marker>
+    <style>
+      .bg { fill: #0b0a0f; }
+      .box { fill: #16131b; stroke: #3d3546; stroke-width: 1.5; }
+      .key { fill: #1b1015; stroke: #d7212b; stroke-width: 2; }
+      .ci { fill: #10141b; stroke: #4a5d73; stroke-width: 1.5; }
+      .h { font: 700 17px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #ece6d9; }
+      .t { font: 14px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #c9c2b6; }
+      .m { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #9fb6cf; }
+      .r { font: 700 14px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #ff5a63; }
+      .ln { stroke: #b9b2a6; stroke-width: 2; fill: none; }
+      .lr { stroke: #d7212b; stroke-width: 2.5; fill: none; }
+      .lf { stroke: #9fb6cf; stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+      .pill { fill: #ece6d9; }
+      .pr { fill: #ffd9db; }
+      .pt { font: 600 12.5px -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #07060a; }
+      .title { font: 700 26px Georgia, 'Times New Roman', serif; fill: #ece6d9; letter-spacing: 1px; }
+      .sub { font: italic 15px Georgia, 'Times New Roman', serif; fill: #9fb6cf; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1280" height="1080" rx="14"/>
+  <text class="title" x="40" y="48">How Clones fits together: who holds which key</text>
+  <text class="sub" x="40" y="74">Red outline: the accounts whose keys are the point. Dashed blue: the six-hourly check against the chain.</text>
+
+  <!-- Row A -->
+  <rect class="box" x="40" y="100" width="400" height="110" rx="10"/>
+  <text class="h" x="60" y="130">Your browser</text>
+  <text class="t" x="60" y="156">makes an Ed25519 key pair in the page;</text>
+  <text class="t" x="60" y="176">the private key never leaves it</text>
+  <text class="m" x="60" y="198">web/town.js</text>
+
+  <rect class="box" x="480" y="100" width="320" height="110" rx="10"/>
+  <text class="h" x="500" y="130">The house</text>
+  <text class="m" x="500" y="152">clonestown.testnet</text>
+  <text class="t" x="500" y="176">keeper of the market; runs the clones</text>
+  <text class="t" x="500" y="196">with their trade-only keys</text>
+
+  <rect class="box" x="840" y="100" width="400" height="110" rx="10"/>
+  <text class="h" x="860" y="130">NEAR AI Cloud</text>
+  <text class="m" x="860" y="152">google/gemini-2.5-flash-lite</text>
+  <text class="t" x="860" y="176">reads your one-sentence instruction and</text>
+  <text class="t" x="860" y="196">picks one legal move an hour (web/lib/mind.js)</text>
+
+  <!-- Row B -->
+  <rect class="key" x="40" y="290" width="400" height="130" rx="10"/>
+  <text class="h" x="60" y="320">Guest account (you)</text>
+  <text class="m" x="60" y="342">g&lt;id&gt;.clonestown.testnet</text>
+  <text class="t" x="60" y="368">full access: your key only</text>
+  <text class="t" x="60" y="390">house: function call, market only:</text>
+  <text class="m" x="60" y="410">whisper retrain settle order_restock set_fee</text>
+
+  <rect class="box" x="840" y="290" width="400" height="130" rx="10"/>
+  <text class="h" x="860" y="320">The bell</text>
+  <text class="m" x="860" y="342">web/api/bell.js → web/lib/night.js</text>
+  <text class="t" x="860" y="368">plays each hour's turns; anyone may ring it</text>
+  <text class="t" x="860" y="390">dawn audit: replays every order from chain</text>
+  <text class="t" x="860" y="410">state and checks each clone obeyed</text>
+
+  <!-- Row C -->
+  <rect class="key" x="40" y="540" width="400" height="180" rx="10"/>
+  <text class="h" x="60" y="570">Clones</text>
+  <text class="m" x="60" y="592">clone-1..3.&lt;guest&gt;</text>
+  <text class="t" x="60" y="618">one access key: function call,</text>
+  <text class="t" x="60" y="638">receiver the market, method trade</text>
+  <text class="t" x="60" y="662">leash contract: merge only by the parent</text>
+  <text class="t" x="60" y="682">or the market it is bound to;</text>
+  <text class="t" x="60" y="702">DeleteAccount always pays the parent</text>
+
+  <rect class="key" x="560" y="540" width="680" height="180" rx="10"/>
+  <text class="h" x="580" y="570">Market contract, no access key</text>
+  <text class="m" x="580" y="592">shroud.clonestown.testnet · market.clones-town.near (mainnet)</text>
+  <text class="t" x="580" y="618">created, deployed and initialised in one transaction: 0 keys, nobody can redeploy it</text>
+  <text class="t" x="580" y="640">reproducible build; NEP-330 metadata names the commit</text>
+  <text class="t" x="580" y="662">the keeper may only open nights and ring hours</text>
+  <text class="t" x="580" y="684">holds every clone's cash, the merchant's stock, every order and whisper,</text>
+  <text class="t" x="580" y="704">the crown, the deed and the season; prices every order with the rules in core/</text>
+
+  <!-- Row D -->
+  <rect class="key" x="40" y="800" width="400" height="90" rx="10" style="stroke-dasharray:7 5"/>
+  <text class="r" x="60" y="830">Try to run: a Transfer signed with the clone's key</text>
+  <text class="m" x="60" y="854">InvalidAccessKeyError</text>
+  <text class="m" x="60" y="874">(RequiresFullAccess): refused by NEAR</text>
+
+  <rect class="box" x="560" y="800" width="380" height="90" rx="10"/>
+  <text class="h" x="580" y="830">NEAR block randomness</text>
+  <text class="m" x="580" y="852">env::random_seed()</text>
+  <text class="t" x="580" y="874">hosted town: drawn as each hour is rung</text>
+
+  <!-- Row E: CI -->
+  <rect class="ci" x="40" y="960" width="580" height="96" rx="10"/>
+  <text class="h" x="60" y="988">ci.yml, every push</text>
+  <text class="t" x="60" y="1012">Rust tests (three play real nights on a local NEAR node) and web tests;</text>
+  <text class="t" x="60" y="1034">the JavaScript rules must match the Rust rules' golden nights</text>
+
+  <rect class="ci" x="660" y="960" width="580" height="96" rx="10"/>
+  <text class="h" x="680" y="988">verify.yml, every 6 hours</text>
+  <text class="t" x="680" y="1012">rebuild market and leash, compare with the code hash on chain;</text>
+  <text class="t" x="680" y="1034">market has 0 keys; replay the last night on testnet and mainnet</text>
+
+  <!-- Arrows -->
+  <!-- browser -> guest -->
+  <line class="ln" x1="240" y1="210" x2="240" y2="286" marker-end="url(#a)"/>
+  <rect class="pill" x="108" y="238" width="264" height="24" rx="12"/>
+  <text class="pt" x="240" y="255" text-anchor="middle">adds the only full-access key</text>
+
+  <!-- house -> guest -->
+  <path class="ln" d="M560 210 V355 H444" marker-end="url(#a)"/>
+  <rect class="pill" x="470" y="252" width="180" height="24" rx="12"/>
+  <text class="pt" x="560" y="269" text-anchor="middle">its key on your account</text>
+
+  <!-- house -> bell -->
+  <path class="ln" d="M720 210 V330 H836" marker-end="url(#a)"/>
+  <rect class="pill" x="664" y="292" width="112" height="24" rx="12"/>
+  <text class="pt" x="720" y="309" text-anchor="middle">hosts the bell</text>
+
+  <!-- NEAR AI -> bell -->
+  <line class="ln" x1="1040" y1="210" x2="1040" y2="286" marker-end="url(#a)"/>
+  <rect class="pill" x="944" y="238" width="192" height="24" rx="12"/>
+  <text class="pt" x="1040" y="255" text-anchor="middle">a possessed clone's move</text>
+
+  <!-- guest -> clones -->
+  <line class="ln" x1="340" y1="420" x2="340" y2="536" marker-end="url(#a)"/>
+  <rect class="pill" x="214" y="490" width="252" height="24" rx="12"/>
+  <text class="pt" x="340" y="507" text-anchor="middle">creates clone-N: trade key, leash</text>
+
+  <!-- clones -> guest (merge pays parent) -->
+  <line class="ln" x1="110" y1="540" x2="110" y2="424" marker-end="url(#a)"/>
+  <rect class="pill" x="24" y="446" width="216" height="24" rx="12"/>
+  <text class="pt" x="132" y="463" text-anchor="middle">DeleteAccount pays the parent</text>
+
+  <!-- clones -> market: trade -->
+  <line class="ln" x1="440" y1="600" x2="556" y2="600" marker-end="url(#a)"/>
+  <rect class="pill" x="468" y="588" width="60" height="24" rx="12"/>
+  <text class="pt" x="498" y="605" text-anchor="middle">trade</text>
+
+  <!-- market -> clones: merge -->
+  <line class="ln" x1="560" y1="672" x2="444" y2="672" marker-end="url(#a)"/>
+  <rect class="pill" x="460" y="660" width="80" height="24" rx="12"/>
+  <text class="pt" x="500" y="677" text-anchor="middle">merge</text>
+
+  <!-- bell -> market: turns and hours -->
+  <line class="ln" x1="940" y1="420" x2="940" y2="536" marker-end="url(#a)"/>
+  <rect class="pill" x="800" y="446" width="280" height="24" rx="12"/>
+  <text class="pt" x="940" y="463" text-anchor="middle">each clone's turn, signed with its key</text>
+  <line class="ln" x1="1160" y1="420" x2="1160" y2="536" marker-end="url(#a)"/>
+  <rect class="pill" x="1030" y="494" width="226" height="24" rx="12"/>
+  <text class="pt" x="1143" y="511" text-anchor="middle">keeper: open night, ring hour</text>
+
+  <!-- randomness -> market -->
+  <line class="ln" x1="750" y1="800" x2="750" y2="724" marker-end="url(#a)"/>
+  <rect class="pill" x="618" y="750" width="264" height="24" rx="12"/>
+  <text class="pt" x="750" y="767" text-anchor="middle">each hour's prices, tomorrow's omen</text>
+
+  <!-- clone -> refusal -->
+  <line class="lr" x1="240" y1="720" x2="240" y2="796" marker-end="url(#ar)"/>
+  <rect class="pr" x="168" y="746" width="144" height="24" rx="12"/>
+  <text class="pt" x="240" y="763" text-anchor="middle">Transfer: refused</text>
+
+  <!-- verify -> market -->
+  <line class="lf" x1="1100" y1="960" x2="1100" y2="724" marker-end="url(#af)"/>
+  <rect class="pill" x="980" y="830" width="240" height="24" rx="12"/>
+  <text class="pt" x="1100" y="847" text-anchor="middle">same code? 0 keys? night replays?</text>
+</svg>
