@@ -37,15 +37,16 @@ browser makes its only full-access key, and the house's key on it can only call 
 ## Players so far
 
 As of 12 November, the contract's standings for season 2 (nights 8 to 14) list 14 players: the
-three regulars and 11 guest accounts that sent clones in from the town page. Guests have taken 3 of
+three regulars and 11 guest accounts that sent clones in from the town page. One of those
+(`gjauzoj`) is mine, from testing two tabs ringing the same night, so 10 belong to other players. Guests have taken 3 of
 the 6 night crowns so far. One guest, holding the deed, set the next night's fee to 0.5%
 ([`set_fee`](https://testnet.nearblocks.io/txns/CRzAHj7qvZxqhyeLScfPhHMB3Cjb6qepeFMQeTQVFq9B)) and
 ordered a grain restock ([`order_restock`](https://testnet.nearblocks.io/txns/BJykCcWSrVZyhGqNNARZaqLAGd7fG7GCpyMQPUDW6FWB)).
 Season 1 (nights 1 to 7) went to the Widow, a regular, at +1.193 NEAR with two night crowns.
 
 How I counted: `get_season` has one row per player with a settled clone this season, and I counted
-the rows that aren't `widow`, `abbot` or `hound`. A guest account is anonymous, so this counts
-accounts, not people.
+the rows that aren't `widow`, `abbot` or `hound`, then took out my own. A guest account is
+anonymous, and sending in a new set makes a new one, so this counts accounts, not people.
 
 ```bash
 curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"shroud.clonestown.testnet","method_name":"get_season","args_base64":"eyJmcm9tIjowLCJsaW1pdCI6MjAwfQ=="}}' \
