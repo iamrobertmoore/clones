@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Players' feedback, round two: the countdown says the bell also rings sooner if anyone rings it, the call at each pause lasts 35 seconds and any choice buys more time, the morning total says it counts only clones that came home, and the key drawer stays shut after sign-up. Earlier: the omen names the night it is for, the bell says it is shared, the crown is the biggest profit in NEAR, prices read 1,000 = 1 NEAR, the third clone starts possessed with its instruction shown, standings show clones still out, a slow network gets a message.
 - Review round 7 fixes. The town page plays first: a guide through the first night (the omen says which temperament the mood favours), the bell's two pauses become a 20-second call with the race for the crown and one-tap whispers, a race for the crown during the night, and a card for the deed holder to set the fee. Chain words moved into the Proof drawers. The season counter no longer shows the wrong number of nights left while the town loads.
 - One full night on mainnet in the keyless `market.clones-town.near`: 26 orders, the crown, a broke clone refused by the chain, all three clones merged home. The audit replays it from chain state, and the six-hourly check repeats that and confirms the market has no key.
 - The runner paces RPC calls (`NEAR_PACE_MS`), sends one turn at a time when paced, recognises a rate limit anywhere in an error's causes (and no longer mistakes a long number for one), and attaches 20 Tgas to a trade. The mainnet script resumes a stopped run.

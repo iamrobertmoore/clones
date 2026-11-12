@@ -144,7 +144,7 @@
       $('clockLabel').textContent = 'dawn, night ' + town.night;
     } else {
       $('clockTime').textContent = c.short;
-      $('clockLabel').textContent = 'to the nightly bell, 02:00 UTC';
+      $('clockLabel').textContent = 'until the bell rings by itself (02:00 UTC); anyone can ring it sooner';
     }
     var cd = document.querySelector('[data-countdown]');
     if (cd) cd.textContent = c.short;
@@ -690,7 +690,7 @@
   }
 
   // Twice a night the bell waits for your call: the race for the crown, and each of your clones'
-  // plan for the coming hour, with a whisper to change it. It rings on by itself after 20 seconds.
+  // plan for the coming hour, with a whisper to change it. It rings on by itself after 35 seconds; any choice buys a little more time.
   function whisperTo(cloneShort, w, label, li) {
     var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === cloneShort; })[0];
     if (!c || !token()) return Promise.resolve();
@@ -714,7 +714,7 @@
     guide(3, 'The bell holds for your call. Check the race; whisper to a clone to change its next move, or let it be.', 'pauseCard');
     if (!reduceMotion) card.scrollIntoView({ block: 'center' });
     loadRace().then(function (rows) { paintRace($('pauseRace'), rows); }).catch(function () { $('pauseRace').textContent = ''; });
-    var left = 20, tick;
+    var left = 35, tick;
     post('/api/peek', { guest: guest }).then(function (res) {
       list.textContent = '';
       (res.plans || []).forEach(function (p) {
@@ -729,7 +729,7 @@
           [['Let it', null], ['Hold', { do: 'hold' }], ['Sell all', { do: 'sell_all' }]].forEach(function (o) {
             var b = el('button', 'btn small' + (o[1] ? '' : ' ghost'), o[0]); b.type = 'button';
             b.addEventListener('click', function () {
-              left = Math.max(left, 8);
+              left = Math.max(left, 15);
               if (!o[1]) { li.classList.add('decided'); row.querySelectorAll('button').forEach(function (x) { x.disabled = true; }); return; }
               whisperTo(p.clone, o[1], o[0].toLowerCase(), li);
             });
@@ -737,7 +737,7 @@
           });
           var buy = el('select'); buy.setAttribute('aria-label', 'Tell ' + p.clone + ' to buy');
           [['', 'Buy...']].concat(GOODS.map(function (g) { return [g, 'buy ' + g]; })).forEach(function (o) { var op = el('option', null, o[1]); op.value = o[0]; buy.appendChild(op); });
-          buy.addEventListener('change', function () { if (buy.value) { left = Math.max(left, 8); buy.disabled = true; whisperTo(p.clone, { do: 'buy', good: buy.value }, 'buy ' + buy.value, li); } });
+          buy.addEventListener('change', function () { if (buy.value) { left = Math.max(left, 15); buy.disabled = true; whisperTo(p.clone, { do: 'buy', good: buy.value }, 'buy ' + buy.value, li); } });
           row.appendChild(buy);
           row.appendChild(el('span', 'whisper-left', wl + (wl === 1 ? ' whisper' : ' whispers') + ' left tonight'));
           li.appendChild(row);
@@ -784,7 +784,9 @@
       ul.appendChild(li);
       stake += Number(r.stake); paid += Number(r.paid_out);
     });
-    $('morningTotal').textContent = 'In total: ' + near(stake) + ' NEAR sent in, ' + near(paid) + ' NEAR came home (' + signed(paid - stake) + ').' +
+    var still = clonesNow.filter(function (c) { return c.state; }).length;
+    $('morningTotal').textContent = 'Clones that came home: ' + near(stake) + ' NEAR sent in, ' + near(paid) + ' NEAR came home (' + signed(paid - stake) + ').' +
+      (still ? ' ' + still + (still === 1 ? ' clone is' : ' clones are') + ' still in town and not counted yet.' : '') +
       (night.some(function (r) { return r.broke; }) ? ' A broke clone tried to run with what was left at dawn. The leash held.' : '');
     checkLog();
   }
@@ -1091,7 +1093,6 @@
     $('guestClones').hidden = false;
     $('enlistAgain').hidden = false;
     loadGuest();
-    if (params.has('fresh')) $('claimCard').open = true;
     if (params.has('fresh')) history.replaceState(null, '', 'town.html?g=' + encodeURIComponent(g));
   } else {
     loadTown().catch(function () { $('boardNote').textContent = 'could not reach the testnet RPC'; });
