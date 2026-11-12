@@ -66,6 +66,7 @@ Here the promise is an access key, and the chain checks it on every transaction.
 | Clones move each other's prices | The merchant's stock is stored in the contract (`get_town`: `stock`, `hour_stock`) | Watch the stock bars under the board while the bell rings; `core` test `clones_move_each_others_prices` |
 | The code on chain is this repository's code | The market was built with `cargo near build reproducible-wasm` in a pinned image; its NEP-330 metadata (`contract_source_metadata`) names the commit. Code hash `8tpg98Xa7fMj5xCtex1gQkNkSA4kqrLvgUv824UeKnCG` | `cargo near build reproducible-wasm --manifest-path contracts/market/Cargo.toml` at that commit gives the same hash; the [verify workflow](.github/workflows/verify.yml) checks it every six hours, with the leash every clone gets |
 | Any finished night can be replayed from the chain | Every order, each hour's prices, each clone's dusk holdings and every whisper are on chain; a clone that went home keeps its dusk ledger and whispers in its settlement | `cd web && node scripts/verify-night.js` (read-only, no keys); the verify workflow runs it every six hours |
+| It runs on mainnet, in a market nobody can change | [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) has no access key; night 7 there: 26 orders, a crown, a broke clone refused, three clones merged home | `cd web && MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com node scripts/verify-night.js`; the verify workflow also checks it has no key, every six hours |
 
 ## How it uses NEAR
 
@@ -118,13 +119,21 @@ page. From then on your winnings stay with you, and you can remove the house key
 
 ## Mainnet
 
-`cargo run --release -p clones-replay --example mainnet_night -- <funder> <house>.near` plays one
-seeded night on mainnet with 0.25 NEAR clones in a market created with no access key, so nobody,
-the house included, can change its code or rules; the house is only its keeper. The night's log goes
-to `web/data/night-mainnet.json`.
+One full night has been played on NEAR mainnet, in a market nobody can change.
+
+- [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) was created, funded, deployed and initialised in [one transaction](https://nearblocks.io/txns/Cuv4CvkqR27DnkhA81vP6ow21eagdqBnYu8c98KG3KBS) and has no access key. Its code hash is `D6N3XwQyRQzQDDmqY9pvH66VbMRKBDQTvjj3maHCRF6w`, a `cargo near` build of commit `17515bd`, the same source as the reproducibly built testnet market. The house, `clones-town.near`, is only its keeper.
+- Night 7: three clones of [`you.clones-town.near`](https://nearblocks.io/address/you.clones-town.near) with 0.25 NEAR stakes placed 26 orders on chain. The cautious clone took the crown and came home with 0.330 NEAR. The greedy one went broke, tried to send its own balance home and was refused, because its only key may call `trade` and nothing else; it came home with 0.054 NEAR. The loyal one came home with 0.257 NEAR. All three were merged into the player with DeleteAccount.
+- The night replays from mainnet state alone with the dawn audit, and the six-hourly check does that again and confirms the market still has no key:
+
+```bash
+cd web && MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com node scripts/verify-night.js
+```
+
+`replay/examples/mainnet_night.rs` is the script that played it. It resumes a run that stopped: it rings an unfinished night through to dawn, brings stranded clones home, and picks a night up at its first hour.
 
 ## What broke while I built it
 
+- Mainnet took nine runs. The public RPC allows about one `block` request every five seconds, and the NEAR library asks for one before every transaction, so a night of clone trades was refused while the house's bell got through. The runner now paces every call (`NEAR_PACE_MS`) and sends one turn at a time. Then every trade was refused for another reason: a clone holds a few hundredths of NEAR above its storage, and a 50 Tgas trade has to hold more than that up front. A trade burns about 2.5 Tgas, so it now attaches 20. Each failed run left clones with no keys, so the script learned to bring them home and the clones' key is now saved before they exist.
 - The third review said my own table now solved the choice (read the omen, look it up) and the town felt empty. Omens now lie three nights in ten, the night's fees go to the best clone in town, and three regulars play every night.
 - With eleven clones in town the public RPC rate-limited some turns; the audit flagged the missing orders at dawn. The runner now sends at most four turns at once, backs off longer, resends any turn that didn't land before ringing the hour, and spreads accounts across two RPC hostnames.
 - The second review said the game had a dominant strategy, by my own published numbers: cautious never lost, so the one choice had an obvious answer. Each night now has a mood that favours a different temperament, posted a night ahead, and you can whisper, retrain and recall. A greedy clone that switched goods every hour paid fees and slippage each time and lost even in a boom; it now holds unless something is clearly rising faster.

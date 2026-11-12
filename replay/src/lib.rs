@@ -100,20 +100,77 @@ fn tx_hash(out: &near_workspaces::result::ExecutionFinalResult) -> String {
     out.outcome().transaction_hash.to_string()
 }
 
+/// True when `NEAR_PACE_MS` asks for paced RPC calls.
+pub fn paced() -> bool {
+    std::env::var("NEAR_PACE_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .is_some_and(|v| v > 0)
+}
+
+/// Wait for this process's next RPC slot. `NEAR_PACE_MS` (default 0: no pacing) spaces every call
+/// made through `retry!`, so a run stays under a public endpoint's per-client rate limit.
+pub async fn pace() {
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, Instant};
+    static GAP: OnceLock<Duration> = OnceLock::new();
+    static NEXT: Mutex<Option<Instant>> = Mutex::new(None);
+    let gap = *GAP.get_or_init(|| {
+        Duration::from_millis(
+            std::env::var("NEAR_PACE_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
+        )
+    });
+    if gap.is_zero() {
+        return;
+    }
+    let slot = {
+        let mut next = NEXT.lock().unwrap();
+        let now = Instant::now();
+        let slot = next.map_or(now, |n| n.max(now));
+        *next = Some(slot + gap);
+        slot
+    };
+    tokio::time::sleep_until(slot.into()).await;
+}
+
+/// True when an RPC error, or anything in its chain of causes, says we are over a rate limit.
+pub fn rate_limited<E: std::error::Error + ?Sized>(err: &E) -> bool {
+    let mut text = format!("{err} {err:?}");
+    let mut src = err.source();
+    while let Some(s) = src {
+        text.push_str(&format!(" {s} {s:?}"));
+        src = s.source();
+    }
+    let t = text.to_lowercase().replace([' ', '_', '-'], "");
+    // Not a bare "429": transaction errors are full of long numbers.
+    t.contains("ratelimit")
+        || t.contains("toomanyrequests")
+        || t.contains("code:-429")
+        || t.contains("\"code\":-429")
+        || t.contains("statuscode429")
+}
+
 /// Re-run an RPC call while the node says we are over its rate limit. A rate-limited request is
 /// refused before a transaction is accepted, so retrying cannot run a transaction twice.
+#[macro_export]
 macro_rules! retry {
     ($e:expr) => {{
         let mut wait = std::time::Duration::from_millis(500);
         let mut attempt = 0;
         loop {
+            $crate::pace().await;
             match $e {
-                Err(err)
-                    if attempt < 15 && format!("{err:?}").to_lowercase().contains("rate limit") =>
-                {
+                Err(err) if attempt < 60 && $crate::rate_limited(&err) => {
                     attempt += 1;
+                    eprintln!(
+                        "(the RPC is rate limiting us; waiting {}s)",
+                        wait.as_secs().max(1)
+                    );
                     tokio::time::sleep(wait).await;
-                    wait = (wait * 2).min(std::time::Duration::from_secs(20));
+                    wait = (wait * 2).min(std::time::Duration::from_secs(30));
                 }
                 other => break other,
             }
@@ -121,7 +178,7 @@ macro_rules! retry {
     }};
 }
 
-async fn account_exists<T: Network + 'static>(
+pub async fn account_exists<T: Network + 'static>(
     worker: &Worker<T>,
     id: &AccountId,
 ) -> anyhow::Result<bool> {
@@ -232,7 +289,9 @@ async fn take_turn(
         c.account
             .call(market.id(), "trade")
             .args_json(json!({ "round": round, "orders": orders }))
-            .gas(Gas::from_tgas(50))
+            // A trade burns about 2.5 Tgas. The sender must hold the attached gas's price up front,
+            // and a mainnet clone has only a few hundredths of NEAR above its storage.
+            .gas(Gas::from_tgas(20))
             .transact()
             .await
     );
@@ -536,7 +595,17 @@ pub async fn run_night<T: Network + 'static>(
                 orders[g][s],
             )
         });
-        let results = futures::future::join_all(turns).await;
+        // Paced runs (a public mainnet endpoint) send one transaction at a time: those endpoints
+        // refuse a client's overlapping sends long before its request rate.
+        let results = if paced() {
+            let mut out = Vec::new();
+            for t in turns {
+                out.push(t.await);
+            }
+            out
+        } else {
+            futures::future::join_all(turns).await
+        };
         for (&(g, s), turn) in seats.iter().zip(results) {
             // One clone's trouble (an RPC error, a stale read) never stops the night for others.
             let (events, placed) = turn.unwrap_or_else(|e| {
@@ -772,4 +841,48 @@ async fn settle(
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| anyhow::anyhow!("unreadable settle log: {line}"))?;
     Ok((paid_out, line.ends_with(", broke"), tx))
+}
+
+#[cfg(test)]
+mod rpc_tests {
+    use super::rate_limited;
+
+    #[derive(Debug)]
+    struct Wrapped(&'static str, Option<Box<Wrapped>>);
+    impl std::fmt::Display for Wrapped {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str(self.0)
+        }
+    }
+    impl std::error::Error for Wrapped {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            self.1.as_deref().map(|e| e as _)
+        }
+    }
+
+    #[test]
+    fn a_rate_limit_one_level_down_is_seen() {
+        let e = Wrapped(
+            "unable to fulfill the query request",
+            Some(Box::new(Wrapped(
+                "this client has exceeded the rate limit",
+                None,
+            ))),
+        );
+        assert!(rate_limited(&e));
+        let e = Wrapped(r#"{"code": -429, "message": "Rate limits exceeded"}"#, None);
+        assert!(rate_limited(&e));
+    }
+
+    #[test]
+    fn a_balance_error_full_of_numbers_is_not_a_rate_limit() {
+        let e = Wrapped(
+            "unable to broadcast the transaction to the network",
+            Some(Box::new(Wrapped(
+                "NotEnoughBalance { balance: 470000000000000000000000, cost: 50429919942359000000000 }",
+                None,
+            ))),
+        );
+        assert!(!rate_limited(&e));
+    }
 }

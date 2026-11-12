@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- One full night on mainnet in the keyless `market.clones-town.near`: 26 orders, the crown, a broke clone refused by the chain, all three clones merged home. The audit replays it from chain state, and the six-hourly check repeats that and confirms the market has no key.
+- The runner paces RPC calls (`NEAR_PACE_MS`), sends one turn at a time when paced, recognises a rate limit anywhere in an error's causes (and no longer mistakes a long number for one), and attaches 20 Tgas to a trade. The mainnet script resumes a stopped run.
 - The town page leads with play; the keys, the explorer panel, the audit and the rules sit in a Proof drawer (`town.html#proof` opens it).
 - The deed holder sets the next night's fee, 0.5% to 3% (`set_fee`); the fee is part of the rules' `Book`, in Rust and JavaScript, and the golden nights cover every fee. The Hound sets 3% when it holds the deed, the Abbot 1%, the Widow 2.5%.
 - Seasons of seven nights: the contract keeps each player's net and night crowns (`get_season`), and the best net takes the season crown at the next dusk. The town page shows the season standings.

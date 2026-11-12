@@ -7,6 +7,8 @@ name: verify the live town
 #     (web/api/leash.wasm on main) is built from the same commit, so it is rebuilt and compared
 #     too, and so is the code on any clone in town right now;
 #  2. the last finished night replays from chain state alone with the dawn audit.
+# And once on mainnet: the market at market.clones-town.near still has no access key, and its
+# night replays from chain state with the same audit.
 
 on:
   schedule:
@@ -82,3 +84,14 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           MARKET_ACCOUNT=$MARKET node scripts/verify-night.js
+      - name: Mainnet - the market has no key and its night replays with the dawn audit
+        working-directory: web
+        env:
+          MAINNET_MARKET: market.clones-town.near
+          NEAR_RPCS: https://archival-rpc.mainnet.fastnear.com,https://rpc.mainnet.fastnear.com
+        run: |
+          keys=$(curl -sf https://archival-rpc.mainnet.fastnear.com -H 'content-type: application/json' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"view_access_key_list","finality":"final","account_id":"'"$MAINNET_MARKET"'"}}' | jq '.result.keys | length')
+          echo "$MAINNET_MARKET access keys: $keys"
+          test "$keys" = "0"
+          MARKET_ACCOUNT=$MAINNET_MARKET node scripts/verify-night.js
