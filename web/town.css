@@ -234,3 +234,5 @@
   .race li { font-size: 14px; grid-template-columns: 2.6em 1fr auto; }
 }
 @media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
+.season-crown { font-family: var(--goth); font-size: 19px; color: #f3d48a; margin: 10px 0 4px; padding: 6px 10px; border: 1px solid #b8903a; background: rgba(217, 165, 58, .1); }
+.crier li.season-row { border-left-color: #d9a53a; color: #f3d48a; font-weight: 600; }

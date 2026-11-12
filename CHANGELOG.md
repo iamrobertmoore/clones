@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Players' feedback, round seven: the season crown gets its own line in the log and the guide at the dusk that ends a season, and stands out above the standings; the crown's pot is called the night's fees after the deed's quarter; the tie rule is stated.
 - Players' feedback, round six: the deed card shows the fee and restock already set, together, after a reload, and the restock gets its own log line; the bell shows when other players have clones in town even if yours are home; a deed holder with nobody in town is told their choices wait for the next night.
 - Players' feedback, round five: the bell reports the omen posted before the night, and the omen box says all night whether it came true; between nights the board shows the next night's fee; the race says who took the crown at dawn; the morning ledger splits a crowned clone's result into trading and crown; every clone defaults to one night; the morning text links to a new set; the call rings on once every clone has an answer.
 - Players' feedback, round four: "Let it" confirms and the bell rings on once every clone has its call; a whisper updates the clone's own counter too; dawn names the crown and the deed from the night just played and reads the town again once the RPC catches up; dawn repeats whether the omen came true; a plan with no order says what the clone holds.

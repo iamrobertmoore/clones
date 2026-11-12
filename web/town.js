@@ -609,6 +609,15 @@
           showOmen();
           cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why + said, said && omenBefore !== e.mood ? 'refused-row' : '');
         }
+        if (e.kind === 'dusk' && e.night > 1 && (e.night - 1) % 7 === 0) {
+          view('get_season', { from: 0, limit: 1 }).then(function (sz) {
+            var ch = (sz && sz.champions || []).slice(-1)[0];
+            if (!ch) return;
+            var li = cry('\u265B Season ' + ch.season + ' is over. The season crown goes to ' + nameOf(ch.player) + ', ' + signed(ch.net) + ' NEAR over seven nights. Season ' + sz.season + ' starts tonight.', ch.player === guest ? 'order-row season-row' : 'season-row');
+            guide(3, 'Season ' + ch.season + ' is over: ' + nameOf(ch.player) + ' takes the season crown. A new season starts tonight, and everyone starts level.', 'raceBox');
+            return li;
+          }).catch(function () { /* the season line is optional */ });
+        }
         if (e.kind === 'dusk' && e.fee_bps) { if (town) town.fee_bps = e.fee_bps; cry('The merchant takes ' + pctOf(e.fee_bps) + ' of every trade tonight' + (e.fee_bps === 200 ? '.' : ', as the deed holder set it.'), 'muted'); }
       }
     });
@@ -628,7 +637,7 @@
           ? 'Dawn, and the crown is yours: ' + e.clone + ' made the biggest profit in NEAR of any clone in town and takes the night\'s fees. You hold the merchant\'s deed: set the next night\'s fee and name a good to restock.'
           : 'Dawn. The crown (the night\'s fees, to the one clone with the biggest profit in NEAR) went to ' + e.clone + ' of ' + nameOf(e.player) + ', who now holds the merchant\'s deed: the next night\'s fee and a restock. Ring again for the next night.'), e.player === guest ? 'deedCard' : 'morning');
         store(GUIDE_KEY, '1');
-        cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
+        cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown: the night\'s fees after the deed\'s quarter, ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       }
     });
     mine.forEach(function (e) {
@@ -877,8 +886,10 @@
       if (!sz.rows.length) st.appendChild(el('li', 'muted', 'Nobody has come home yet this season.'));
       var ch = sz.champions || [];
       $('champNote').textContent = ch.length
-        ? 'Season crowns: ' + ch.slice(-5).reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; }).join('; ') + '.'
+        ? '\u265B Season crowns: ' + ch.slice(-5).reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; }).join('; ') + '.'
         : '';
+      $('champNote').className = ch.length ? 'season-crown' : 'sub';
+      if (ch.length) $('standRows').parentNode.insertBefore($('champNote'), $('seasonTitle'));
     }).catch(function () { /* older markets have no season */ });
   }
   function loadBoard() {
