@@ -45,7 +45,7 @@
   var NS = 'http://www.w3.org/2000/svg';
   var town = null, guest = null, clonesNow = [], pollTimer = null, ringing = false, lastPrices = null;
   var units = {}; // short clone name -> { root, bub, coins, carry, worth }
-  var omenBefore = null; // the omen posted before this ring, to say at dusk whether it came true
+  var omenBefore = null, omenVerdict = ''; // the omen posted before this ring, and whether it came true
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -600,6 +600,7 @@
         }
         buildBoard(e.prices, e.stock);
         if (e.kind === 'dusk' && MOODS[e.mood]) {
+          omenVerdict = omenBefore && MOODS[omenBefore] ? 'The omen said ' + MOODS[omenBefore].name.toLowerCase() + (omenBefore === e.mood ? ', and it came true.' : ', but it lied: the night was ' + MOODS[e.mood].name.toLowerCase() + '.') : '';
           var said = omenBefore && MOODS[omenBefore] ? (omenBefore === e.mood ? ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ', and it came true.' : ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ': it lied.') : '';
           cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why + said, said && omenBefore !== e.mood ? 'refused-row' : '');
         }
@@ -612,9 +613,12 @@
       if (e.kind === 'deed') cry('Dawn: the merchant\'s deed pays ' + (e.player === guest ? 'you' : nameOf(e.player)) + ' a quarter of the night\'s fees: ' + near(e.share) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       if (e.kind === 'crowned') {
         var whose = e.player === guest ? 'yours' : nameOf(e.player);
-        guide(4, e.player === guest
+        if (omenVerdict) cry('Dawn. ' + omenVerdict, 'muted');
+        $('crownNote').textContent = 'Last crown: ' + e.clone + ' of ' + nameOf(e.player) + ', night ' + (town ? town.night : '') + ', ' + near(e.pot) + ' NEAR of fees.';
+        $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(e.player) + ' for the next night.';
+        guide(4, (omenVerdict ? omenVerdict + ' ' : '') + (e.player === guest
           ? 'Dawn, and the crown is yours: ' + e.clone + ' made the biggest profit in NEAR of any clone in town and takes the night\'s fees. You hold the merchant\'s deed: set the next night\'s fee and name a good to restock.'
-          : 'Dawn. The crown (the night\'s fees, to the one clone with the biggest profit in NEAR) went to ' + e.clone + ' of ' + nameOf(e.player) + ', who now holds the merchant\'s deed: the next night\'s fee and a restock. Ring again for the next night.', e.player === guest ? 'deedCard' : 'morning');
+          : 'Dawn. The crown (the night\'s fees, to the one clone with the biggest profit in NEAR) went to ' + e.clone + ' of ' + nameOf(e.player) + ', who now holds the merchant\'s deed: the next night\'s fee and a restock. Ring again for the next night.'), e.player === guest ? 'deedCard' : 'morning');
         store(GUIDE_KEY, '1');
         cry('Dawn: ' + e.clone + ' (' + whose + ') takes the crown, the night\'s fees: ' + near(e.pot) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       }
@@ -687,6 +691,10 @@
       btn.disabled = false;
       btn.textContent = 'Ring the bell: play the next night';
       loadGuest(true);
+      // RPC nodes lag a few blocks behind the dawn transactions: read again so the crown, the
+      // deed and the morning ledger show this night, not the last.
+      setTimeout(function () { if (!ringing) loadGuest(true); }, 4000);
+      setTimeout(function () { if (!ringing) loadGuest(true); }, 12000);
     });
   }
 
@@ -711,12 +719,16 @@
       if (wl && c.state) wl.textContent = c.state.whispers_left + (c.state.whispers_left === 1 ? ' whisper' : ' whispers') + ' left tonight';
       li.classList.add('decided');
       note.textContent = 'You told ' + cloneShort + ': ' + label + '. It obeys this hour; after that it goes back to its own way.';
+      var u = units[cloneShort], old = u && u.root.querySelector('.acts');
+      if (old) old.replaceWith(actsFor(c));
+      decidedOne();
       cry('You whispered to ' + cloneShort + ': ' + label + '.', 'order-row');
     }).catch(function (err) {
       li.querySelectorAll('button, select').forEach(function (b) { b.disabled = false; });
       note.textContent = err.message;
     });
   }
+  var decidedOne = function () {};
   function waitForPlayer(round) {
     var card = $('pauseCard'), list = $('planList');
     list.textContent = '';
@@ -733,8 +745,12 @@
         var li = el('li');
         li.appendChild(el('b', null, p.clone + ': '));
         li.appendChild(document.createTextNode(p.say + ' '));
-        if (p.orders && p.orders.length) li.appendChild(el('code', null, p.orders.join('; ')));
         var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === p.clone; })[0];
+        if (p.orders && p.orders.length) li.appendChild(el('code', null, p.orders.join('; ')));
+        else if (c && c.state) {
+          var held = (c.state.stock || []).map(function (q, g) { return q ? q + ' ' + GOODS[g] : null; }).filter(Boolean);
+          li.appendChild(el('code', null, 'no order this hour; it holds ' + near(c.state.cash) + ' NEAR in cash' + (held.length ? ' and ' + held.join(', ') : '')));
+        }
         var wl = c && c.state && c.state.whispers_left != null ? c.state.whispers_left : 3;
         if (token() && wl > 0) {
           var row = el('div', 'choices');
@@ -742,7 +758,11 @@
             var b = el('button', 'btn small' + (o[1] ? '' : ' ghost'), o[0]); b.type = 'button';
             b.addEventListener('click', function () {
               left = Math.max(left, 15);
-              if (!o[1]) { li.classList.add('decided'); row.querySelectorAll('button').forEach(function (x) { x.disabled = true; }); return; }
+              if (!o[1]) {
+                li.classList.add('decided'); row.querySelectorAll('button, select').forEach(function (x) { x.disabled = true; });
+                li.appendChild(el('div', 'whisper-note', p.clone + ' does what it planned.'));
+                decidedOne(); return;
+              }
               whisperTo(p.clone, o[1], o[0].toLowerCase(), li);
             });
             row.appendChild(b);
@@ -759,9 +779,11 @@
         list.appendChild(li);
       });
       if (!res.plans || !res.plans.length) list.appendChild(el('li', null, 'None of your clones is trading tonight.'));
+      var waiting = list.querySelectorAll('.choices').length;
+      decidedOne = function () { waiting -= 1; if (waiting <= 0) { left = Math.min(left, 2); $('pauseCount').textContent = 'every clone has its call; ringing on'; } };
     }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; ring on, or whisper under a clone.')); });
     return new Promise(function (resolve) {
-      var go = function () { card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
+      var go = function () { decidedOne = function () {}; card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
       $('pauseCount').textContent = 'rings on in ' + left + 's';
       tick = setInterval(function () { left -= 1; $('pauseCount').textContent = 'rings on in ' + left + 's'; if (left <= 0) go(); }, 1000);
       $('carryOn').addEventListener('click', go);
