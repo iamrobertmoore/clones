@@ -68,7 +68,7 @@
         var value = 0, what = orders.map(function (o) {
           var g = GOODS.indexOf(o.good), close = dawnPrices[g];
           value += o.side === 'sell' ? o.qty * (o.price - close) : o.qty * (close - o.price);
-          return (o.side === 'sell' ? 'sold ' : 'bought ') + o.qty + ' ' + o.good + ' at ' + near(o.price) + ' (dawn: ' + near(close) + ')';
+          return (o.side === 'sell' ? 'sold ' : 'bought ') + o.qty + ' ' + o.good + ' at ' + near(o.price) + ' NEAR (dawn: ' + near(close) + ')';
         }).join(', ');
         line += what + '. Against holding to dawn, that call ' + (value >= 0 ? 'made ' : 'cost ') + near(Math.abs(value)) + ' NEAR.';
       }
@@ -765,13 +765,13 @@
         Array.prototype.forEach.call($('raceRows').querySelectorAll('li.muted'), function (n) { n.remove(); });
         // The list is the race as of the last hour; the contract crowns on dawn's prices, so name the
         // winner at the top and take the crown mark off whoever was leading an hour ago.
-        Array.prototype.forEach.call($('raceRows').querySelectorAll('.r-rank'), function (n) { n.textContent = n.textContent.replace('\u265B ', ''); });
+        $('raceRows').textContent = ''; // the hour-by-hour race is over; the ledger below has each clone's result
         var top = el('li', e.player === guest ? 'mine crowned' : 'crowned');
         top.appendChild(el('span', 'r-rank', '\u265B'));
         top.appendChild(el('span', 'b-who', e.clone + ' of ' + nameOf(e.player) + ': the crown, on dawn\'s prices'));
         top.appendChild(el('span', 'b-num gain', '+' + near(e.pot) + ' fees'));
         $('raceRows').insertBefore(top, $('raceRows').firstChild);
-        $('raceRows').appendChild(el('li', 'muted', 'Dawn: the crown went to ' + e.clone + ' of ' + nameOf(e.player) + ', with the night\'s fees on top.'));
+        $('raceRows').appendChild(el('li', 'muted', 'Dawn: the contract valued every clone at dawn\'s prices and crowned ' + e.clone + ' of ' + nameOf(e.player) + ', with the night\'s fees on top. Each of your clones\' result is in the morning ledger.'));
         $('crownNote').textContent = 'Last crown: ' + e.clone + ' of ' + nameOf(e.player) + ', night ' + (town ? town.night : '') + ', ' + near(e.pot) + ' NEAR of fees.';
         $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(e.player) + ' for the next night.';
         guide(4, (omenVerdict ? omenVerdict + ' ' : '') + (e.player === guest

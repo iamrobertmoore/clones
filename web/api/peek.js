@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
         return {
           clone: short,
           say: d.say,
-          orders: d.intents.map((i) => `${i.side} ${i.qty} ${rules.GOODS[i.good]} at ${book.quote(i.good, i.side, i.qty)}`),
+          orders: d.intents.map((i) => `${i.side} ${i.qty} ${rules.GOODS[i.good]} at ${(book.quote(i.good, i.side, i.qty) / 1000).toFixed(3)} NEAR`),
         };
       });
     res.status(200).json({ round: town.round, plans });
