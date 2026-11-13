@@ -37,6 +37,8 @@ jobs:
         working-directory: web
         env:
           HOUSE_ACCOUNT: clonestown.testnet
+          MIN_NEAR: "80"
+          TOPUPS: "5"
         run: node scripts/topup.js
       - name: Ring the bell
         working-directory: web
