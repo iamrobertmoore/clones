@@ -293,7 +293,7 @@
       });
       pick.appendChild(el('span', 'why'));
       var knobs = el('div', 'knobs');
-      knobs.appendChild(segmented('stake' + i, STAKES, i === 1 ? 1000 : 500, 'NEAR'));
+      knobs.appendChild(segmented('stake' + i, STAKES, 250, 'NEAR'));
       knobs.appendChild(segmented('nights' + i, NIGHTS.map(function (n) { return [n, String(n)]; }), 1, 'nights'));
       var ins = el('textarea', 'instr'); ins.rows = 2; ins.setAttribute('autocomplete', 'off'); ins.name = 'instr' + i; ins.maxLength = 160;
       ins.placeholder = 'Your instruction, e.g. buy amber when it falls, never all in';
