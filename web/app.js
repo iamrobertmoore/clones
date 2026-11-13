@@ -301,7 +301,7 @@
       case 'bubble': return who + ': "' + e.say + '"';
       case 'order': {
         var n = e.price * e.qty, f = feeOf(n);
-        return who + (e.side === 'buy' ? ' bought ' : ' sold ') + e.qty + ' ' + e.good + ' at ' + e.price +
+        return who + (e.side === 'buy' ? ' bought ' : ' sold ') + e.qty + ' ' + e.good + ' at ' + near(e.price) +
           ' (' + near(n) + (e.side === 'buy' ? ' + fee ' : ' - fee ') + near(e.side === 'buy' ? f : Math.min(f, n)) + ' NEAR)';
       }
       case 'order_failed': return who + ' order failed: ' + e.error;

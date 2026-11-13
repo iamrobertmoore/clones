@@ -68,7 +68,7 @@
         var value = 0, what = orders.map(function (o) {
           var g = GOODS.indexOf(o.good), close = dawnPrices[g];
           value += o.side === 'sell' ? o.qty * (o.price - close) : o.qty * (close - o.price);
-          return (o.side === 'sell' ? 'sold ' : 'bought ') + o.qty + ' ' + o.good + ' at ' + o.price + ' (dawn: ' + close + ')';
+          return (o.side === 'sell' ? 'sold ' : 'bought ') + o.qty + ' ' + o.good + ' at ' + near(o.price) + ' (dawn: ' + near(close) + ')';
         }).join(', ');
         line += what + '. Against holding to dawn, that call ' + (value >= 0 ? 'made ' : 'cost ') + near(Math.abs(value)) + ' NEAR.';
       }
@@ -171,9 +171,10 @@
       recent.forEach(function (x) { if (isGuest(x.player)) first[x.player] = 1; });
       (nowRecent || []).forEach(function (x) { if (isGuest(x.player) && !first[x.player]) here[x.player] = 1; });
       ((nowSeason && nowSeason.rows) || []).forEach(function (x) { if (isGuest(x[0]) && !first[x[0]]) here[x[0]] = 1; });
-      var crowns = (sz.champions || []).slice().reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; });
+      function list(ch) { return (ch || []).slice().reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ')'; }).join('; '); }
       var nf = Object.keys(first).length, nh = Object.keys(here).length;
-      $('historyNote').textContent = '\u265B Season crowns at the first market: ' + crowns.join('; ') + '. Its last six nights had ' + nf + ' guest accounts, and season ' + sz.season + ' had ' + sz.players + ' players when the town moved to this market on 13 November' + (nh ? '; ' + nh + ' more guest ' + (nh === 1 ? 'account has' : 'accounts have') + ' played here since' : '') + '. Seasons here start again at 1, and everyone started level.';
+      var hereCrowns = list(nowSeason && nowSeason.champions);
+      $('historyNote').textContent = '\u265B Season crowns. This market, since 13 November: ' + (hereCrowns || 'none yet') + '. The first market, 11 to 13 November: ' + list(sz.champions) + '. Its last six nights had ' + nf + ' guest accounts' + (nh ? ', and ' + nh + ' more ' + (nh === 1 ? 'has' : 'have') + ' played here since' : '') + '.';
       $('historyNote').hidden = false;
     }).catch(function () { /* the history line is optional */ });
   }
@@ -702,7 +703,7 @@
   }
   function describe(e) {
     switch (e.kind) {
-      case 'order': return e.clone + ' ' + (e.side === 'buy' ? 'bought ' : 'sold ') + e.qty + ' ' + e.good + ' at ' + e.price;
+      case 'order': return e.clone + ' ' + (e.side === 'buy' ? 'bought ' : 'sold ') + e.qty + ' ' + e.good + ' at ' + near(e.price) + ' NEAR';
       case 'order_failed': return e.clone + ': a turn did not clear';
       case 'withdraw_refused': return e.clone + ' went broke and tried to run with what was left. The leash held.';
       case 'settled': return e.clone + ' settled: paid out ' + near(e.paid_out) + ' NEAR' + (e.broke ? ' (broke)' : '');
@@ -1072,12 +1073,8 @@
           st.appendChild(li);
         });
       if (!sz.rows.length) st.appendChild(el('li', 'muted', 'Nobody has come home yet this season.'));
-      var ch = sz.champions || [];
-      $('champNote').textContent = ch.length
-        ? '\u265B Season crowns: ' + ch.slice(-5).reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; }).join('; ') + '.'
-        : '';
-      $('champNote').className = ch.length ? 'season-crown' : 'sub';
-      if (ch.length) $('standRows').parentNode.insertBefore($('champNote'), $('seasonTitle'));
+      // This market's season crowns go in the one history line at the top of the board (loadHistory).
+      $('champNote').textContent = '';
       return view('get_recent', {}).then(function (rows) { return loadHistory(rows, sz); });
     }).catch(function () { /* older markets have no season */ });
   }

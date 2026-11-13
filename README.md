@@ -171,6 +171,13 @@ cd web && MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.
 - The dawn audit could only see a clone's last whisper, so a night with two whispers to one clone could not be replayed afterwards, and a clone that had gone home took its dusk holdings with it. The contract now keeps every whisper of the night and puts the dusk holdings in each settlement, and a scheduled job replays the last finished night from chain state.
 - Earlier: the public RPC rate-limited the first testnet night (calls now retry on rate limits only), merging with maximum gas reserved more than a small player held (merge asks for 100 Tgas), and settling an already merged clone would have stranded its cash (`after_payout` pays the player instead).
 
+## After the hackathon
+
+- **The town keeps running without me.** The house is a testnet account; a GitHub Actions job funds it from testnet's faucet every three hours and rings the bell every night, and the site is a static page plus serverless functions on Vercel's free tier. The only running cost is NEAR AI Cloud credit for the AI clones; without it they trade as cautious and say so.
+- **Real stakes are one step away, not a rewrite.** The mainnet market is already live, keyless and played. What's missing is sign-up: on testnet the house pays your stakes, and on mainnet you'd fund your own guest account from your wallet. The leash, the market and the audit stay the same. Before real money I'd also want prices drawn from something no single validator can bias (see Known limits).
+- **The deed is the business model the game already has.** The crown's player earns a quarter of the next night's fees and sets the fee, so the town's economy pays whoever runs the merchant, with no token.
+- **The leash outlives the game.** `contracts/leash` is a standalone crate with its own guide: any agent you want to let act on your behalf but never let leave, such as a trading bot on its own sub-account, can use it as it is.
+
 ## Known limits
 
 - The hosted town runs on testnet. The one mainnet night used 0.25 NEAR stakes of my own.
