@@ -763,6 +763,14 @@
         if (omenVerdict) cry('Dawn. ' + omenVerdict, 'muted');
         raceOver = true;
         Array.prototype.forEach.call($('raceRows').querySelectorAll('li.muted'), function (n) { n.remove(); });
+        // The list is the race as of the last hour; the contract crowns on dawn's prices, so name the
+        // winner at the top and take the crown mark off whoever was leading an hour ago.
+        Array.prototype.forEach.call($('raceRows').querySelectorAll('.r-rank'), function (n) { n.textContent = n.textContent.replace('\u265B ', ''); });
+        var top = el('li', e.player === guest ? 'mine crowned' : 'crowned');
+        top.appendChild(el('span', 'r-rank', '\u265B'));
+        top.appendChild(el('span', 'b-who', e.clone + ' of ' + nameOf(e.player) + ': the crown, on dawn\'s prices'));
+        top.appendChild(el('span', 'b-num gain', '+' + near(e.pot) + ' fees'));
+        $('raceRows').insertBefore(top, $('raceRows').firstChild);
         $('raceRows').appendChild(el('li', 'muted', 'Dawn: the crown went to ' + e.clone + ' of ' + nameOf(e.player) + ', with the night\'s fees on top.'));
         $('crownNote').textContent = 'Last crown: ' + e.clone + ' of ' + nameOf(e.player) + ', night ' + (town ? town.night : '') + ', ' + near(e.pot) + ' NEAR of fees.';
         $('deedNote').textContent = 'The merchant\'s deed: ' + nameOf(e.player) + ' for the next night.';
