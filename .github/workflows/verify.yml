@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 env:
-  MARKET: shroud.clonestown.testnet
+  MARKET: pyre.clonestown.testnet
   RPC: https://rpc.testnet.fastnear.com
 
 jobs:

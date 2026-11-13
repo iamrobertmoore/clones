@@ -6,7 +6,7 @@
 //!         <funder account> <house name, e.g. clonestown.testnet> <NEAR to fund it with | new-market>
 //!
 //! `new-market` keeps the house and deploys a fresh market as `<MARKET_NAME>.<house>` (default
-//! `shroud`), for when the market's stored state changes shape. NEAR refuses to delete an account
+//! `pyre`), for when the market's stored state changes shape. NEAR refuses to delete an account
 //! holding a lot of state, so an old market is left where it is rather than deleted.
 
 use clones_replay::contracts;
@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let house_id: AccountId = args[1].parse()?;
     let key_file = dir.join(format!("{house_id}.json"));
 
-    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "shroud".into());
+    let market_name = std::env::var("MARKET_NAME").unwrap_or_else(|_| "pyre".into());
     let house = if args[2] == "new-market" {
         let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&key_file)?)?;
         let key: SecretKey = v["private_key"].as_str().unwrap_or_default().parse()?;
@@ -71,7 +71,7 @@ async fn main() -> anyhow::Result<()> {
     house
         .batch(&market_id)
         .create_account()
-        .transfer(NearToken::from_near(3))
+        .transfer(NearToken::from_near(4))
         .deploy(&market_wasm)
         .call(
             near_workspaces::operations::Function::new("new")

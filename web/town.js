@@ -11,7 +11,7 @@
   var RPCS = ['https://test.rpc.fastnear.com', 'https://rpc.testnet.fastnear.com'];
   var rpcAt = 0; // the host that answered last
   var HOUSE = 'clonestown.testnet';
-  var MARKET = 'shroud.' + HOUSE;
+  var MARKET = 'pyre.' + HOUSE;
   var EXPLORER = 'https://testnet.nearblocks.io';
   var LOGS = 'https://raw.githubusercontent.com/iamrobertmoore/clones/town-data/nights/latest/';
   var STORE_KEY = 'clones.guest';

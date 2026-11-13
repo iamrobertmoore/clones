@@ -81,7 +81,7 @@
 
   <rect class="key" x="560" y="540" width="680" height="180" rx="10"/>
   <text class="h" x="580" y="570">Market contract, no access key</text>
-  <text class="m" x="580" y="592">shroud.clonestown.testnet · market.clones-town.near (mainnet)</text>
+  <text class="m" x="580" y="592">pyre.clonestown.testnet · market.clones-town.near (mainnet)</text>
   <text class="t" x="580" y="618">created, deployed and initialised in one transaction: 0 keys, nobody can redeploy it</text>
   <text class="t" x="580" y="640">reproducible build; NEP-330 metadata names the commit</text>
   <text class="t" x="580" y="662">the keeper may only open nights and ring hours</text>

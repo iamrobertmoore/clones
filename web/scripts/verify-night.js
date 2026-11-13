@@ -2,11 +2,11 @@
 // bell runs at dawn, and fail if the chain and the rules disagree. Read-only: public RPC views, no
 // keys. CI runs it every six hours (.github/workflows/verify.yml).
 //
-//     MARKET_ACCOUNT=shroud.clonestown.testnet node scripts/verify-night.js
+//     MARKET_ACCOUNT=pyre.clonestown.testnet node scripts/verify-night.js
 
 const { audit, playedFrom } = require("../lib/night.js");
 
-const MARKET = process.env.MARKET_ACCOUNT || "shroud.clonestown.testnet";
+const MARKET = process.env.MARKET_ACCOUNT || "pyre.clonestown.testnet";
 const RPCS = (process.env.NEAR_RPCS || "https://rpc.testnet.fastnear.com,https://test.rpc.fastnear.com").split(",");
 
 async function view(methodName, args = {}) {
