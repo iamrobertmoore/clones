@@ -77,7 +77,7 @@
 
       <div class="bell-row" id="bellRow" hidden>
         <button class="btn big bell" id="bellBtn" type="button">Ring the bell: play the night now</button>
-        <p class="send-note" id="bellNote">The bell is shared: one ring plays the next night for every clone in town, about a minute. It also rings by itself around 02:00 UTC.</p>
+        <p class="send-note" id="bellNote">The bell is shared: one ring plays the next night for every clone in town, in a few minutes. It also rings by itself around 02:00 UTC.</p>
       </div>
 
       <div class="pause-card" id="pauseCard" hidden role="dialog" aria-labelledby="pauseTitle">
@@ -102,7 +102,7 @@
 
       <div class="intro" id="progress" hidden>
         <div class="intro-card" role="status" aria-live="polite">
-          <p class="intro-kicker">Testnet, about 20 seconds</p>
+          <p class="intro-kicker">Testnet, about half a minute</p>
           <h2>Making your clones</h2>
           <div class="bar" aria-hidden="true"><span id="barFill"></span></div>
           <ol class="steps" id="steps"></ol>
@@ -133,6 +133,7 @@
     <p class="result-key" id="verdict" hidden></p>
     <ul class="result-rows" id="morningRows"></ul>
     <p class="morning-total" id="morningTotal"></p>
+    <ul class="calls-note" id="callsNote" hidden aria-label="What your calls did tonight"></ul>
     <div class="result-actions">
       <a class="btn" id="watchBtn" href="#" aria-disabled="true">Watch your night again</a>
       <span class="watch-note" id="watchNote"></span>
@@ -154,6 +155,13 @@
 
   <section class="proof" id="proof" aria-labelledby="proofTitle">
     <h2 class="proof-title" id="proofTitle">Proof <small>open any drawer; everything here is read from the chain</small></h2>
+    <details class="paper drawer break-card" id="breakCard">
+    <summary><h2 id="breakTitle">Try to break the leash</h2><span class="drawer-hint">six ways out, all refused by NEAR</span></summary>
+    <p class="sub">Pick one of your clones and try every way out. Each button sends a real transaction signed with the clone's own key. Its only key may call <code>trade</code> on the market with no NEAR attached, so NEAR turns each one away before it reaches a block. Nothing is spent, and the error is NEAR's, not ours.</p>
+    <div class="result-actions"><label class="watch-note" for="breakClone">Clone</label><select id="breakClone"></select></div>
+    <div class="break-buttons" id="breakButtons"></div>
+    <ul class="break-results" id="breakResults"></ul>
+  </details>
     <details class="paper drawer claim" id="claimCard" hidden>
     <summary><h2 id="claimTitle">Make this account yours</h2><span class="drawer-hint">your account, your key</span></summary>
     <p id="claimIntro">Right now the house holds the only key to your guest account. Add a key that only you hold: your browser makes it, and the private key never leaves this page. After that, what your clones bring home stays with you instead of going back to the house, and you can remove the house key whenever you like.</p>

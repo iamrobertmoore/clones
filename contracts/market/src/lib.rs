@@ -107,7 +107,7 @@ pub struct OrderIn {
     pub price: u64,
 }
 
-/// One order a player shouts to a clone for the next hour, once a night. The runner obeys it
+/// One order a player shouts to a clone for the next hour, up to WHISPERS_A_NIGHT a night. The runner obeys it
 /// instead of the clone's temperament for that hour.
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -816,7 +816,7 @@ impl Market {
         ids
     }
 
-    /// Called by the player during a night: one order for the clone's next hour, once a night.
+    /// Called by the player during a night: one order for the clone's next hour, up to WHISPERS_A_NIGHT a night.
     /// The night runner obeys it instead of the clone's temperament for that hour.
     pub fn whisper(&mut self, clone_id: AccountId, whisper: Whisper) {
         require!(!self.asleep(), "whisper while the night is on");

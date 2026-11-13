@@ -236,3 +236,21 @@
 @media (prefers-reduced-motion: reduce) { .lit { animation: none; } }
 .season-crown { font-family: var(--goth); font-size: 19px; color: #f3d48a; margin: 10px 0 4px; padding: 6px 10px; border: 1px solid #b8903a; background: rgba(217, 165, 58, .1); }
 .crier li.season-row { border-left-color: #d9a53a; color: #f3d48a; font-weight: 600; }
+.break-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.break-results { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; font-size: 15px; }
+.break-results li { padding: 4px 8px; border-left: 2px solid #45404c; background: rgba(255, 255, 255, .02); }
+.break-results li.refused { border-left-color: var(--blood-hi); background: rgba(215, 33, 43, .08); }
+.break-results li.refused b { color: #ffd0cf; font-family: var(--mono); font-size: 13.5px; margin-right: 6px; }
+.break-results li.warn { color: var(--loss); }
+/* On a phone, one clone per row: the figure on the left, its choices beside it. */
+@media (max-width: 600px) {
+  .slots { grid-template-columns: 1fr; gap: 8px; }
+  .slot { display: grid; grid-template-columns: 64px 1fr; align-items: start; column-gap: 8px; }
+  .slot legend { grid-column: 1 / -1; }
+  .slot .body { grid-column: 1; }
+  .slot .picker { grid-column: 2; }
+  .picker .why { min-height: 0; }
+}
+.calls-note { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 15px; }
+.calls-note[hidden] { display: none; }
+.calls-note li { padding: 4px 8px; border-left: 2px solid var(--frost); background: rgba(159, 182, 207, .07); }

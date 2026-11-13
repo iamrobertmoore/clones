@@ -1,10 +1,10 @@
-![One recorded night in Clones: three clones trade at the crypt market, the broke one tries to run, the chain refuses with THE CHAINS HELD, and the clones merge home](docs/demo.gif)
+![One recorded night in Clones (recorded on an earlier testnet market): three clones trade at the crypt market, the broke one tries to run, the chain refuses with THE CHAINS HELD, and the clones merge home](docs/demo.gif)
 
 <p align="center">
   <img src="docs/brand/readme-banner.svg" alt="Clones: copies of you trade on NEAR while you sleep. Each one is a sub-account with one key: it can trade, it can never withdraw." width="100%">
 </p>
 
-<p align="center"><b>A trading game on NEAR for anyone who has handed a bot the keys: your copies trade all night, and the chain itself stops them from ever withdrawing.</b></p>
+<p align="center"><b>A night market on NEAR where copies of you fight other players' clones for the crown, and the chain itself stops them from ever running off with your money.</b></p>
 
 <p align="center">
   <a href="https://clones-tau-nine.vercel.app/town.html">Play the hosted town</a> ·
@@ -27,6 +27,28 @@ fees go to the clone with the best return, and its player holds the merchant's d
 night and sets the fee. Clones that are broke or have done their nights come home with a real
 `DeleteAccount`, and what they made lands in your account.
 
+## Players so far
+
+Real players, not just me, have been in the town every day since 11 November:
+
+- **A player took the season 2 crown.** Seasons run seven nights; at the dusk after night 14 the
+  contract gave season 2 to guest `gkgm6rc` at +0.776 NEAR (`get_season`, `champions`). Season 1
+  went to the Widow, a regular, at +1.193 NEAR.
+- **28 player accounts in four nights.** The contract keeps the last 40 settlements
+  (`get_recent`); on 13 November they covered nights 14 to 17 and came from 31 guest accounts.
+  Three of those are mine (testing), so 28 belong to other players. A guest account is anonymous and
+  a new set of clones makes a new one, so this counts accounts, not people.
+- **Players run the merchant.** Guests have taken night crowns, held the deed, and set the next
+  night's fee: one set 0.5% ([`set_fee`](https://testnet.nearblocks.io/txns/CRzAHj7qvZxqhyeLScfPhHMB3Cjb6qepeFMQeTQVFq9B))
+  and ordered a grain restock ([`order_restock`](https://testnet.nearblocks.io/txns/BJykCcWSrVZyhGqNNARZaqLAGd7fG7GCpyMQPUDW6FWB)).
+
+```bash
+curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"shroud.clonestown.testnet","method_name":"get_recent","args_base64":"e30="}}' \
+  | jq -r '.result.result | implode | fromjson | [.[].player] | unique[]' | grep -cvE '^(widow|abbot|hound)\.'
+```
+
+## Why I built it
+
 I built it for anyone who has trusted a trading bot with their money. That trust is usually a
 promise in someone's code; in December 2022 leaked trading-bot API keys cost 44 verified victims
 $14.8 million between them ([Unchained](https://unchainedcrypto.com/3commas-users-plan-class-action-lawsuit-after-losing-14m/)).
@@ -34,35 +56,17 @@ Here the promise is an access key, and NEAR checks it on every transaction. Noth
 stops a clone from running; the chain does. Your guest account is yours from the start too: your
 browser makes its only full-access key, and the house's key on it can only call five market methods.
 
-## Players so far
-
-As of 12 November, the contract's standings for season 2 (nights 8 to 14) list 14 players: the
-three regulars and 11 guest accounts that sent clones in from the town page. One of those
-(`gjauzoj`) is mine, from testing two tabs ringing the same night, so 10 belong to other players. Guests have taken 3 of
-the 6 night crowns so far. One guest, holding the deed, set the next night's fee to 0.5%
-([`set_fee`](https://testnet.nearblocks.io/txns/CRzAHj7qvZxqhyeLScfPhHMB3Cjb6qepeFMQeTQVFq9B)) and
-ordered a grain restock ([`order_restock`](https://testnet.nearblocks.io/txns/BJykCcWSrVZyhGqNNARZaqLAGd7fG7GCpyMQPUDW6FWB)).
-Season 1 (nights 1 to 7) went to the Widow, a regular, at +1.193 NEAR with two night crowns.
-
-How I counted: `get_season` has one row per player with a settled clone this season, and I counted
-the rows that aren't `widow`, `abbot` or `hound`, then took out my own. A guest account is
-anonymous, and sending in a new set makes a new one, so this counts accounts, not people.
-
-```bash
-curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"query","params":{"request_type":"call_function","finality":"final","account_id":"shroud.clonestown.testnet","method_name":"get_season","args_base64":"eyJmcm9tIjowLCJsaW1pdCI6MjAwfQ=="}}' \
-  | jq -r '.result.result | implode | fromjson | .rows[][0]' | grep -cvE '^(widow|abbot|hound)\.'
-```
-
 ## Try this, watch what happens
 
 | Try this | Watch what happens |
 |---|---|
-| [Open the town](https://clones-tau-nine.vercel.app/town.html) and press **Send them in** | No login, no wallet. About 20 seconds later you have a guest account on testnet with up to three clones in town, each holding the stake you chose. |
-| Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key. The chain refuses it with `InvalidAccessKeyError: RequiresFullAccess`, and the page shows the chain's words. |
-| Read the omen, then press **Ring the bell** | The town trades twelve hours in about a minute: speech bubbles, orders, prices moving with the merchant's stock. At dawn the page audits the night from chain state alone, then the clones that are due merge home. |
-| At each of the bell's two pauses, make your call | Let a clone be, or tell it to hold, sell everything or buy a good. The order is stored on chain and the contract refuses any turn that contradicts it. |
+| [Open the town](https://clones-tau-nine.vercel.app/town.html) and follow the guide | No login, no wallet. The guide reads you the omen and which temperament it favours; about half a minute after **Send them in** you have a guest account on testnet with up to three clones in town. |
+| Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key and THE CHAINS HELD comes down: NEAR refused it. The chain's own error is one line below. |
+| Press **Ring the bell** | The town trades twelve hours in a few minutes: speech bubbles, orders, prices moving with the merchant's stock, and the race for the crown. At dawn the omen is shown true or false, the page audits the night from chain state alone, and the clones that are due merge home. |
+| Make your calls | The bell stops twice for your call, showing the race and how far you are behind the leader; you can also whisper under a clone at any hour. Three whispers per clone a night, each for the next hour only. At dawn the page tells you what each call made or cost against holding to dawn. |
 | Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour, through the same trade-only key. If the model doesn't answer, the clone trades as cautious and its bubble says "the voice is silent". |
 | Take the crown, then set the fee | As deed holder you pick the next night's fee (0.5% to 3%) and one good to restock. A quarter of the fees is yours at dawn, but your own clones pay the fee too. |
+| Open **Proof**, then **Try to break the leash** | Six ways out for one of your clones: a transfer, NEAR attached to a trade, a call to another contract, a different market method, a new full-access key, deleting itself to a stranger. Each is a real transaction; NEAR refuses each with its own error (`RequiresFullAccess`, `DepositWithFunctionCall`, `ReceiverMismatch`, `MethodNameMismatch`). |
 | Open **Proof**, then **On the explorer, with their keys** | Your guest account has one full-access key (yours) and one function-call key for the house: `whisper`, `retrain`, `settle`, `order_restock` and `set_fee` only. |
 | [Watch a recorded night](https://clones-tau-nine.vercel.app) | The demo night on testnet in 60 seconds, every order linked to its transaction. The greedy clone goes broke and tries to run; the chain refuses. |
 | `cargo run -p clones-replay` | The same night on a local NEAR node with real transactions. It ends with "chain matches the answer key: yes". |
@@ -135,7 +139,7 @@ The sign-up function creates a guest account and its clones and sends them in, f
 
 One full night has been played on NEAR mainnet, in a market nobody can change.
 
-- [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) was created, funded, deployed and initialised in [one transaction](https://nearblocks.io/txns/Cuv4CvkqR27DnkhA81vP6ow21eagdqBnYu8c98KG3KBS) and has no access key. Its code hash is `D6N3XwQyRQzQDDmqY9pvH66VbMRKBDQTvjj3maHCRF6w`, a `cargo near` build of commit `17515bd`, the same source as the reproducibly built testnet market. The house, `clones-town.near`, is only its keeper.
+- [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) was created, funded, deployed and initialised in [one transaction](https://nearblocks.io/txns/Cuv4CvkqR27DnkhA81vP6ow21eagdqBnYu8c98KG3KBS) and has no access key. Its code hash is `D6N3XwQyRQzQDDmqY9pvH66VbMRKBDQTvjj3maHCRF6w`, built with `cargo near` from commit `17515bd`, the commit the testnet market was built from reproducibly. The mainnet build was not reproducible, so its hash only matches a build on the machine that made it; the six-hourly check verifies its keys and replays its night, not its hash. The house, `clones-town.near`, is only its keeper.
 - Night 7: three clones of [`you.clones-town.near`](https://nearblocks.io/address/you.clones-town.near) with 0.25 NEAR stakes placed 26 orders on chain. The cautious clone took the crown and came home with 0.330 NEAR. The greedy one went broke, tried to send its own balance home and was refused, because its only key may call `trade` and nothing else; it came home with 0.054 NEAR. The loyal one came home with 0.257 NEAR. All three were merged into the player with DeleteAccount.
 - The night replays from mainnet state alone with the dawn audit, and the six-hourly check does that again and confirms the market still has no key:
 

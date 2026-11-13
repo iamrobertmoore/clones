@@ -343,6 +343,37 @@ async function dawnVerdict(t) {
 
 // A clone tries to send 0.01 NEAR from its own account to its player. Its only key is a
 // function-call key for the market, so the chain refuses. Returns the chain's refusal.
+// Six ways a clone might try to get out of its leash. Each is a real transaction signed with the
+// clone's own key; the key only lets it call `trade` on the market with no NEAR attached, so NEAR
+// turns each one away before it reaches a block (nothing is spent).
+const BREAKS = {
+  transfer: (t, c, player) => c.sendMoney(player, BigInt(utils.format.parseNearAmount("0.01"))),
+  deposit: (t, c) =>
+    c.functionCall({ contractId: t.market, methodName: "trade", args: { round: 0, orders: [] }, gas: 30n * TGAS, attachedDeposit: 1n }),
+  other_contract: (t, c, player) =>
+    c.functionCall({ contractId: player, methodName: "anything", args: {}, gas: 30n * TGAS }),
+  other_method: (t, c) =>
+    c.functionCall({ contractId: t.market, methodName: "settle", args: { clone_id: c.accountId }, gas: 30n * TGAS }),
+  add_key: (t, c) =>
+    c.signAndSendTransaction({ receiverId: c.accountId, actions: [transactions.addKey(KeyPair.fromRandom("ed25519").getPublicKey(), transactions.fullAccessKey())] }),
+  delete_to_stranger: (t, c) =>
+    c.signAndSendTransaction({ receiverId: c.accountId, actions: [transactions.deleteAccount(t.house)] }),
+};
+async function breakOut(t, cloneId, player, kind) {
+  const go = BREAKS[kind];
+  if (!go) throw new Error(`unknown attempt ${kind}`);
+  const clone = await t.as(cloneId);
+  try {
+    await go(t, clone, player);
+  } catch (e) {
+    const m = message(e);
+    const type = (e && e.type) || (m.match(/RequiresFullAccess|DepositWithFunctionCall|ReceiverMismatch|MethodNameMismatch|NotEnoughAllowance|InvalidAccessKey\w*/) || [])[0];
+    if (type && /RequiresFullAccess|DepositWithFunctionCall|ReceiverMismatch|MethodNameMismatch|InvalidAccessKey/.test(type + m)) return `${type}: ${m}`.slice(0, 400);
+    throw e;
+  }
+  throw new Error(`${cloneId}: ${kind} went through: the leash failed`);
+}
+
 async function tryToRun(t, cloneId, player) {
   const clone = await t.as(cloneId);
   try {
@@ -645,4 +676,4 @@ async function ring(t, { start = false } = {}) {
   };
 }
 
-module.exports = { openTown, ring, readState, tryToRun, bringHome, patient, message, audit, playedFrom, ordersTonight, RIVALS, isRival };
+module.exports = { openTown, ring, readState, tryToRun, breakOut, BREAKS, bringHome, patient, message, audit, playedFrom, ordersTonight, RIVALS, isRival };
