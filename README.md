@@ -34,10 +34,12 @@ Real players, not just me, have been in the town every day since 11 November:
 - **A player took the season 2 crown.** Seasons run seven nights; at the dusk after night 14 the
   contract gave season 2 to guest `gkgm6rc` at +0.776 NEAR (`get_season`, `champions`). Season 1
   went to the Widow, a regular, at +1.193 NEAR.
-- **28 player accounts in four nights.** The contract keeps the last 40 settlements
-  (`get_recent`); on 13 November they covered nights 14 to 17 and came from 31 guest accounts.
-  Three of those are mine (testing), so 28 belong to other players. These seasons were played at the earlier market, `shroud.clonestown.testnet`; its `get_season` and `get_recent` still answer. A guest account is anonymous and
-  a new set of clones makes a new one, so this counts accounts, not people.
+- **20 guest accounts in the last six nights at the first market.** The contract keeps the last
+  40 settlements (`get_recent`). At the first market, `shroud.clonestown.testnet`, they cover nights
+  14 to 19 and come from 20 guest accounts, a few of them mine from testing. The town moved to the
+  current market, `pyre`, on 13 November and the first one plays no more nights, so the command
+  below keeps giving the same answer. A guest account is anonymous and a new set of clones makes a
+  new one, so this counts accounts, not people.
 - **Players run the merchant.** Guests have taken night crowns, held the deed, and set the next
   night's fee: one set 0.5% ([`set_fee`](https://testnet.nearblocks.io/txns/CRzAHj7qvZxqhyeLScfPhHMB3Cjb6qepeFMQeTQVFq9B))
   and ordered a grain restock ([`order_restock`](https://testnet.nearblocks.io/txns/BJykCcWSrVZyhGqNNARZaqLAGd7fG7GCpyMQPUDW6FWB)).
@@ -111,7 +113,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 - **Moods.** Each night is a boom (prices climb), a slump (prices sink, then rebound before dawn), a blight (the luxuries rot while grain and salt hold) or wild (big swings both ways). In the hosted town the omen comes true seven nights in ten.
 - **The crown and the deed.** At dawn the contract hands the night's fees to the clone with the biggest profit (ties to the lower account id). Its player holds the deed for the next night: they are paid a quarter of that night's fees, set the fee between 0.5% and 3% (`set_fee`), and name one good the merchant restocks in full at dusk (`order_restock`), which opens it cheap for everyone.
 - **Seasons.** Seven nights make a season. The contract keeps each player's net (what came home less what was staked) and night crowns (`get_season`). At the first dusk after the seventh night the best net takes the season crown, kept on chain, and the standings start again.
-- **Whispers bind.** A whisper is stored on chain for the coming hour, and the contract refuses any turn that contradicts it. Twice a night the bell pauses and shows what each of your clones means to do next.
+- **Whispers bind.** A whisper is stored on chain for the coming hour, and the contract refuses any turn that contradicts it. Every two hours (five times a night) the bell pauses and shows the race for the crown and what each of your clones means to do next; each clone has three whispers a night, so when to spend them is the choice.
 - **The regulars.** The Widow is possessed (a NEAR AI model on her instruction), the Abbot sends a careful clone and the Hound a greedy one. They play every night someone rings the bell.
 - **Prices.** Each good's usual price moves hour by hour with the mood, scaled by the merchant's stock: short of a good, it charges more. A big order is quoted at the price after the trade, so a clone can't profit from its own buying.
 - **Turns.** Cautious buys what's cheap and takes profit at +10%. Greedy puts everything into whatever is rising fastest and only switches when something else is rising clearly faster. Loyal trades only grain and salt and never risks more than a third. A whisper replaces that decision for one hour. Every order in an hour is quoted from the stock when the hour began, so the order clones act in never changes the result.
@@ -193,7 +195,7 @@ the rules). The recorded nights are in `web/data/`.
 ## How this maps to the judging criteria
 
 - **Game loop:** read the omen (and doubt it), choose temperament, stake and nights for each clone, ring the bell, make your calls, fight the regulars and other guests for the crown, see who comes home, retrain or recall the ones still out, ring again. Your clones share one merchant with everyone else's.
-- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 90 Rust tests, including three suites that play real nights on a local NEAR node, and 23 web tests (the night audit among them) run in CI on every push. Every six hours CI rebuilds the deployed contract, compares its hash with the chain, and replays the last live night from chain state.
+- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 108 Rust tests, including three suites that play real nights on a local NEAR node, and 26 web tests (the night audit among them) run in CI on every push. Every six hours CI rebuilds the deployed contract, compares its hash with the chain, and replays the last live night from chain state.
 - **NEAR integration:** the leash is a NEAR function-call access key, and every price, fill and payout is computed by the market contract.
 - **Design:** you lie asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the chain or a night log, and the proof (keys, audit, rules) sits in drawers under the game.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave, and the leash is packaged as a crate with a guide ([`contracts/leash`](contracts/leash/README.md)).

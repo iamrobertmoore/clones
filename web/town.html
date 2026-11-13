@@ -152,7 +152,8 @@
 
   <section class="paper townboard" id="townBoard" hidden aria-labelledby="boardTitle">
     <h2 id="boardTitle">The town's standings</h2>
-    <p class="sub">You play against every other guest and three regulars who come every night: the Widow (her clones are driven by an AI on her instruction), the Abbot (careful) and the Hound (greedy). At dawn the night's fees, after the deed holder's quarter, go to the one clone with the biggest profit in NEAR: the crown (a tie goes to the clone whose account name comes first in the alphabet). Its player holds the merchant's deed for the next night: a quarter of his fees, a restock, and the fee itself (0.5% to 3%). Seven nights make a season; the best net takes the season crown.</p>
+    <p class="town-history" id="historyNote" hidden></p>
+    <p class="sub">You play every other guest and three regulars: the Widow (an AI follows her instruction), the Abbot (careful) and the Hound (greedy). The biggest profit at dawn takes the crown and the merchant's deed; seven nights make a season. The rules drawer at the bottom has the details.</p>
     <p class="sub" id="crownNote"></p>
     <p class="sub" id="deedNote"></p>
     <h3 class="board-sub" id="seasonTitle">Season standings</h3>
@@ -221,7 +222,7 @@
       <li><b>Whisper.</b> Three times a night, each of your clones will take one order from you for its next hour: hold, sell everything, or buy a good. The contract stores each whisper and allows three per clone per night; the dawn audit checks the clone obeyed.</li>
       <li><b>The deed.</b> Whoever's clone takes the crown holds the merchant's deed for the next night: a quarter of that night's fees is paid straight to their account at dawn, they set that night's fee (0.5% to 3%: more for them, but their own clones pay it too), and they name one good the merchant restocks in full at dusk, which opens it cheap for everyone.</li>
       <li><b>Seasons.</b> Seven nights make a season. The contract keeps every player's net over the clones they settled; at the first dusk after the seventh night, the best net takes the season crown, kept on chain, and the standings start again.</li>
-      <li><b>The bell waits.</b> Twice a night the bell pauses and shows what each of your clones means to do next. Let it be, or whisper.</li>
+      <li><b>The bell waits.</b> Every two hours (five times a night) the bell pauses and shows the race for the crown and what each of your clones means to do next. Let it be, or whisper: each clone has three whispers a night, so pick your moments.</li>
       <li><b>Between nights.</b> Retrain a clone that is staying out, or bring it home early.</li>
       <li><b>Dawn.</b> A clone comes home after the nights you chose, or as soon as it goes broke: it settles, then merges back into your guest account (a real DeleteAccount). A clone with nights left keeps its goods and plays the next night.</li>
     </ul>

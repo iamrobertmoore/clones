@@ -150,6 +150,26 @@
         return text ? JSON.parse(text) : null;
       });
   }
+  function viewAt(account, method, args) {
+    return rpc({ request_type: 'call_function', finality: 'optimistic', account_id: account, method_name: method, args_base64: b64(JSON.stringify(args || {})) })
+      .then(function (res) { var text = new TextDecoder().decode(new Uint8Array(res.result)); return text ? JSON.parse(text) : null; });
+  }
+  // The town moved to this market on 13 November; seasons 1 to 3 were played at the first one.
+  // Read its crowns and players live, so the page shows the town's whole history.
+  var FIRST_MARKET = 'shroud.' + HOUSE;
+  function loadHistory(nowRecent, nowSeason) {
+    return Promise.all([viewAt(FIRST_MARKET, 'get_season', { from: 0, limit: 200 }), viewAt(FIRST_MARKET, 'get_recent', {})]).then(function (r) {
+      var sz = r[0], recent = r[1] || [], guests = {};
+      if (!sz) return;
+      function isGuest(p) { var s = String(p).split('.')[0]; return !RIVAL_TITLES[s] && /^g[a-z0-9]{6}$/.test(s); }
+      recent.concat(nowRecent || []).forEach(function (x) { if (isGuest(x.player)) guests[x.player] = 1; });
+      (sz.rows || []).concat((nowSeason && nowSeason.rows) || []).forEach(function (x) { if (isGuest(x[0])) guests[x[0]] = 1; });
+      var crowns = (sz.champions || []).slice().reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; });
+      var n = Object.keys(guests).length;
+      $('historyNote').textContent = '\u265B Season crowns so far: ' + crowns.join('; ') + '. Season ' + sz.season + ' had ' + sz.players + ' players when the town moved to this market on 13 November, and this season started level. At least ' + n + ' guest accounts have played since 11 November.';
+      $('historyNote').hidden = false;
+    }).catch(function () { /* the history line is optional */ });
+  }
   function keysOf(id) {
     return rpc({ request_type: 'view_access_key_list', finality: 'optimistic', account_id: id }).then(function (r) { return r.keys || []; });
   }
@@ -821,7 +841,7 @@
     cry('The bell rings. Clones that are due come home first, then the regulars arrive; the first hour starts in a few seconds.', 'muted');
     btn.textContent = 'Ringing...';
     setStatus('The bell is ringing', 'Bringing home any clones that are due, then letting the regulars in. The first hour starts in a few seconds; after that, one hour every few seconds.');
-    guide(2, 'The night is on. Watch the race for the crown: the bell holds twice for your call, and you can whisper under a clone at any hour (three whispers per clone a night).', 'raceBox');
+    guide(2, 'The night is on. Watch the race for the crown: the bell holds for your call every two hours, and you can whisper under a clone at any hour (three whispers per clone a night).', 'raceBox');
     function step() {
       return post('/api/bell', { start: !opened }).then(function (out) {
         tries = 0;
@@ -834,7 +854,7 @@
           if (out.phase === 'empty') { setStatus('The town is empty', 'There are no clones in town to play a night with.'); return 'stop'; }
           if (out.phase === 'waiting' || (out.phase === 'home' && !out.next)) return 'stop';
           var playing = clonesNow.some(function (c) { return c.state && c.state.from_night <= (town ? town.night : 0); });
-          if (out.phase === 'hour' && (out.round === 4 || out.round === 8) && !paused[out.round] && playing && token()) {
+          if (out.phase === 'hour' && out.round > 0 && out.round % 2 === 0 && out.round < 12 && !paused[out.round] && playing && token()) {
             paused[out.round] = true;
             return waitForPlayer(out.round).then(step);
           }
@@ -867,8 +887,9 @@
     return player === guest ? 'you' : RIVAL_TITLES[short] || short;
   }
 
-  // Twice a night the bell waits for your call: the race for the crown, and each of your clones'
-  // plan for the coming hour, with a whisper to change it. It rings on by itself after 35 seconds; any choice buys a little more time.
+  // Every two hours (five times a night) the bell waits for your call: the race for the crown, and each of
+  // your clones' plan for the coming hour, with a whisper to change it. Each clone has three whispers a night,
+  // so when to spend them is the choice. It rings on by itself after 25 seconds; any choice buys a little more time.
   function whisperTo(cloneShort, w, label, li) {
     var c = clonesNow.filter(function (x) { return x.id.split('.')[0] === cloneShort; })[0];
     if (!c || !token()) return Promise.resolve();
@@ -904,7 +925,7 @@
     guide(3, 'The bell holds for your call. Check the race; whisper to a clone to change its next move, or let it be.', 'pauseCard');
     if (!reduceMotion) card.scrollIntoView({ block: 'center' });
     loadRace().then(function (rows) { paintRace($('pauseRace'), rows); }).catch(function () { $('pauseRace').textContent = ''; });
-    var left = 35, tick;
+    var left = 25, tick;
     post('/api/peek', { guest: guest }).then(function (res) {
       list.textContent = '';
       (res.plans || []).forEach(function (p) {
@@ -953,7 +974,7 @@
       };
     }).catch(function () { list.textContent = ''; list.appendChild(el('li', null, 'Could not read the plans; ring on, or whisper under a clone.')); });
     return new Promise(function (resolve) {
-      var go = function () { decidedOne = function () {}; pauseRound = null; card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Twice a night the bell holds for your call.', 'raceBox'); resolve(); };
+      var go = function () { decidedOne = function () {}; pauseRound = null; card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Every two hours the bell holds for your call, and each clone has three whispers a night.', 'raceBox'); resolve(); };
       $('pauseCount').textContent = 'rings on in ' + left + 's';
       tick = setInterval(function () { left -= 1; $('pauseCount').textContent = 'rings on in ' + left + 's'; if (left <= 0) go(); }, 1000);
       $('carryOn').addEventListener('click', go);
@@ -1041,6 +1062,7 @@
         : '';
       $('champNote').className = ch.length ? 'season-crown' : 'sub';
       if (ch.length) $('standRows').parentNode.insertBefore($('champNote'), $('seasonTitle'));
+      return view('get_recent', {}).then(function (rows) { return loadHistory(rows, sz); });
     }).catch(function () { /* older markets have no season */ });
   }
   function loadBoard() {
@@ -1289,7 +1311,7 @@
           $('bellBtn').textContent = 'Ring the bell: bring them home';
         } else if (!afterBell) {
           $('bellBtn').textContent = 'Ring the bell: play the night now';
-          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now: a few minutes, with two stops for your call. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). And press "Try to run" on any clone, to see whether it can.');
+          setStatus('They are in town', 'Your ' + inTown.length + (inTown.length === 1 ? ' clone is' : ' clones are') + ' at the merchant\'s counter. Ring the bell to play the night now: a few minutes, with a stop for your call every two hours. Or leave them: the bell rings by itself around 02:00 UTC (' + countdownText().local + ' your time). And press "Try to run" on any clone, to see whether it can.');
           guide(2, 'Your clones are in town. Ring the bell to play the night: they trade twelve hours against everyone else\'s. The bell is shared, so if someone else rings first your clones still play, and you see how they did here.', 'bellBtn');
         } else {
           setStatus('Dawn', inTown.length + (inTown.length === 1 ? ' clone stays' : ' clones stay') + ' in town for the nights you chose, holding their goods. Ring again to play the next night.');
