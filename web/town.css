@@ -268,3 +268,14 @@
 .board-more > summary { cursor: pointer; list-style: none; }
 .board-more > summary::before { content: "+ "; color: var(--ash); }
 .board-more[open] > summary::before { content: "\2212  "; }
+/* The other players' clones at the counter */
+.crowd { position: relative; z-index: 2; margin: 2px auto 6px; max-width: 900px; text-align: center; }
+.crowd-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; }
+.mini { position: relative; width: 58px; display: flex; flex-direction: column; align-items: center; --rim: #4b4656; }
+.mini .fig { width: 30px; height: 48px; display: block; }
+.mini-who { font-family: var(--goth); font-size: 12px; color: var(--ash); max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-say { position: absolute; bottom: 100%; left: 50%; transform: translate(-50%, 4px); margin-bottom: -2px; padding: 2px 6px; white-space: nowrap; z-index: 3;
+  background: rgba(8, 7, 11, .92); color: var(--bone); border: 1px solid #6a6472; font: italic 12.5px/1.2 var(--serif); opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; }
+.mini-say.on { opacity: 1; transform: translate(-50%, 0); }
+.crowd-label { margin: 2px 0 0; font: italic 13px var(--serif); color: var(--ash); }
+@media (max-width: 600px) { .mini { width: 46px; } .mini .fig { width: 24px; height: 38px; } .mini-who { font-size: 11px; max-width: 46px; } }

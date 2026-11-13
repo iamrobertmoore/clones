@@ -271,11 +271,45 @@
   function playerOfClone(id) { var s = String(id); return s.slice(s.indexOf('.') + 1); }
   function loadRace() {
     return view('get_state', {}).then(function (st) {
+      paintCrowd(st);
       var t = st[0], night = t.night;
       return st[1].filter(function (c) { return c[1].from_night <= night; }).map(function (c) {
         return { id: c[0], player: c[1].player || playerOfClone(c[0]), profit: c[1].worth - c[1].stake, broke: c[1].broke };
       }).sort(function (a, b) { return b.profit - a.profit || (a.id < b.id ? -1 : 1); });
     });
+  }
+  // Everyone else's clones in town, drawn at the counter beside yours; their trades show as bubbles.
+  var crowdSays = {}, crowdKeys = '';
+  function paintCrowd(st) {
+    if (!st || !st[1]) return;
+    var others = st[1].filter(function (c) { return (c[1].player || playerOfClone(c[0])) !== guest; });
+    var keys = others.map(function (c) { return c[0]; }).join(',');
+    if (keys === crowdKeys) return;
+    crowdKeys = keys;
+    var row = $('crowdRow'); row.textContent = ''; crowdSays = {};
+    $('crowd').hidden = !others.length;
+    if (!others.length) return;
+    var players = {};
+    others.slice(0, 14).forEach(function (c) {
+      var player = c[1].player || playerOfClone(c[0]), short = c[0].split('.')[0];
+      players[player] = 1;
+      var m = el('div', 'mini');
+      var tint = (TEMPS[c[1].temperament] || {}).tint || '#8a8a8a';
+      m.style.setProperty('--tunic', tint); m.style.setProperty('--tint', tint);
+      var say = el('span', 'mini-say'); m.appendChild(say);
+      m.appendChild(svgUse('person', 'fig'));
+      m.appendChild(el('span', 'mini-who', cap(nameOf(player))));
+      m.title = short + ' of ' + nameOf(player) + ' (' + c[1].temperament + ')';
+      row.appendChild(m);
+      crowdSays[player + '/' + short] = say;
+    });
+    var n = Object.keys(players).length;
+    $('crowdLabel').textContent = others.length + (others.length === 1 ? ' clone' : ' clones') + ' of ' + n + (n === 1 ? ' other player' : ' other players') + ' at the counter' + (others.length > 14 ? ' (14 shown)' : '') + '; their buying moves your prices.';
+  }
+  function crowdSay(player, short, text) {
+    var s = crowdSays[player + '/' + short]; if (!s) return;
+    s.textContent = text; s.classList.add('on');
+    clearTimeout(s._t); s._t = setTimeout(function () { s.classList.remove('on'); }, 2200);
   }
   function paintRace(ol, rows) {
     ol.textContent = '';
@@ -452,6 +486,7 @@
       store(STORE_KEY, g.guest);
       if (g.inTown) { location.href = 'town.html?g=' + encodeURIComponent(g.guest); return; }
       paintGoogle();
+  view('get_state', {}).then(paintCrowd).catch(function () { /* the crowd is optional */ });
       if (window.ClonesSound) ClonesSound.play('bell', { f: 262, vol: 0.12 });
     }).catch(function (err) { $('googleOutNote').textContent = err.message; });
   }
@@ -756,6 +791,7 @@
     });
     out.events.forEach(function (e) {
       if (e.kind === 'rival') cry(cap(e.title) + ' sends clones into town.', 'muted');
+      if (e.kind === 'order' && e.player && e.player !== guest) crowdSay(e.player, e.clone, (e.side === 'buy' ? 'buys ' : 'sells ') + e.qty + ' ' + e.good);
       if (e.kind === 'fee') cry(cap(e.title) + ' holds the merchant\'s deed and sets tonight\'s fee at ' + pctOf(e.bps) + '.', 'muted');
       if (e.kind === 'deed') cry('Dawn: the merchant\'s deed pays ' + (e.player === guest ? 'you' : nameOf(e.player)) + ' a quarter of the night\'s fees: ' + near(e.share) + ' NEAR.', e.player === guest ? 'order-row' : 'muted');
       if (e.kind === 'crowned') {
