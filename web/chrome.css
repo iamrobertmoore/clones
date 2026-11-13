@@ -1,0 +1,25 @@
+/* Shared page chrome for every page: the nav, the goods drifting in the dark, the glow behind the header. */
+.lnav { position: sticky; top: 0; z-index: 20; margin: 0; padding: 10px max(16px, calc((100% - 1100px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--goth); font-size: 17px; background: rgba(7, 6, 10, .74); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.lnav.static { position: relative; }
+.lnav a { color: var(--ash); text-decoration: none; transition: color .15s; }
+.lnav a:hover { color: var(--bone); }
+.lnav-home { font-family: var(--frak); font-size: 26px; color: var(--bone) !important; }
+.lnav-links { display: flex; gap: 6px 20px; flex-wrap: wrap; align-items: center; }
+.lnav-play { color: var(--bone) !important; border: 1px solid var(--blood-hi, #d7212b); padding: 2px 14px; background: rgba(215, 33, 43, .18); }
+/* one size for every button in the nav */
+.lnav .lnav-btn, .lnav .who-chip { font-family: var(--goth); font-weight: 700; font-size: 15px; line-height: 1; height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--ash); background: transparent; border: 1px solid #45404c; border-radius: 2px; cursor: pointer; }
+.lnav .lnav-btn:hover { color: var(--bone); border-color: var(--bone); }
+.lnav .who-chip[hidden] { display: none; }
+.lnav .who-out { font: inherit; color: var(--bone); background: none; border: 0; padding: 0 0 0 6px; cursor: pointer; text-decoration: underline; }
+
+/* Goods and coins drifting up behind the page */
+.page-drift { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.page-drift svg { position: absolute; width: 24px; height: 24px; opacity: 0; animation: rise 18s linear infinite; filter: drop-shadow(0 0 6px rgba(255, 200, 120, .3)); }
+.page-drift .d1 { left: 3%; animation-delay: 0s; } .page-drift .d2 { left: 9%; animation-delay: -6s; width: 18px; }
+.page-drift .d3 { left: 92%; animation-delay: -3s; } .page-drift .d4 { left: 97%; animation-delay: -11s; width: 18px; }
+.page-drift .d5 { left: 5%; animation-delay: -14s; width: 20px; } .page-drift .d6 { left: 94%; animation-delay: -8s; width: 20px; }
+@keyframes rise { 0% { top: 104%; opacity: 0; transform: rotate(0); } 15% { opacity: .5; } 80% { opacity: .3; } 100% { top: 10%; opacity: 0; transform: rotate(240deg); } }
+body.chrome > header, body.chrome > main, body.chrome > footer { position: relative; z-index: 1; }
+body.chrome { background: radial-gradient(ellipse 70% 420px at 50% 0, rgba(58, 10, 16, .55), rgba(7, 6, 10, 0) 100%), #07060a; background-attachment: fixed; }
+@media (max-width: 760px) { .page-drift { display: none; } .lnav-links { gap: 4px 12px; font-size: 15px; } }
+@media (prefers-reduced-motion: reduce) { .page-drift { display: none; } }

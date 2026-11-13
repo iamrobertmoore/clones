@@ -279,3 +279,14 @@
 .mini-say.on { opacity: 1; transform: translate(-50%, 0); }
 .crowd-label { margin: 2px 0 0; font: italic 13px var(--serif); color: var(--ash); }
 @media (max-width: 600px) { .mini { width: 46px; } .mini .fig { width: 24px; height: 38px; } .mini-who { font-size: 11px; max-width: 46px; } }
+/* Header and omen, tidied to match the landing page */
+.game-hero { padding-top: 14px; padding-bottom: 8px; }
+.game-hero .logo-svg { width: 320px; filter: drop-shadow(0 0 22px rgba(215, 33, 43, .4)); }
+.game-hero .hero-line { font-size: 24px; }
+.game-hero .hero-sub { font-size: 17px; }
+.town-scene { padding-top: 78px; }
+.omen { top: 12px; right: 12px; max-width: 440px; padding: 6px 12px 7px; border-color: #5a5462; background: rgba(5, 4, 7, .86); box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, .6); }
+.omen small { font-size: 12.5px; white-space: nowrap; }
+.omen b { display: inline; font-size: 24px; margin-right: 8px; }
+.omen span { display: inline; font-size: 14px; }
+@media (max-width: 600px) { .game-hero .logo-svg { width: 240px; } .game-hero .hero-line { font-size: 19px; } .game-hero .hero-sub { font-size: 15px; } .town-scene { padding-top: 56px; } .omen small { white-space: normal; } }

@@ -341,7 +341,7 @@
     var m = MOODS[on ? town.mood : town.omen];
     var past = lastDusk && lastDusk.night === town.night && MOODS[lastDusk.mood] ? lastDusk : null;
     $('omen').hidden = false;
-    $('omenWhen').textContent = on ? 'night ' + town.night + '\'s mood (the omen for the night after: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for night ' + (town.night + 1) + ', the one the bell plays next (omens lie three nights in ten)';
+    $('omenWhen').textContent = on ? 'night ' + town.night + '\'s mood · the omen for the next: ' + MOODS[town.omen].name.toLowerCase() : 'the omen for night ' + (town.night + 1) + ' · it lies three nights in ten';
     $('omenMood').textContent = m.name;
     $('omenWhy').textContent = m.why + (on
       ? (past && past.verdict ? ' ' + past.verdict : '')

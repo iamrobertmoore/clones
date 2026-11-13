@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Every page shares the landing page's chrome: one nav with same-sized buttons, goods drifting in the dark, and the red glow behind the header. On the town page the omen sits in a compact box that no longer crowds the market board.
 - The README opens with badges (tests, the six-hourly rebuild and replay, the keyless mainnet market, MIT) and a "For judges: start here" table with the exact output each command should print; the games brief is answered point by point; a disclosures table answers the rulebook's questions. The site serves `llms.txt`, a plain summary for AI screeners.
 - The site has a front door: the root is a landing page (what Clones is, a loop of the town at night, live numbers read from the chain, how a night works, the leash, what it uses on NEAR, and how to check it), and `judges.html` walks a judge through playing it and checking every claim in five minutes, with how it fits the brief and what isn't true yet. The recorded night moved to `night.html`.
 - The town is visibly shared: every other player's clone in town (the regulars and other guests) stands at the counter beside yours, in its temperament's colour and labelled with its owner, and says what it buys or sells as the hour rings. Final screening pass: the crown is described as the biggest profit everywhere, the mainnet night's keeper-chosen seed and missing NEP-245 goods are stated, and custody and the sweep are described for each kind of account.
