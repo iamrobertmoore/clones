@@ -372,7 +372,7 @@
       var lis = $('boardGoods').children;
       for (var g = 0; g < lis.length; g++) {
         var li = lis[g], p = s.prices ? s.prices[g] : null, q = s.prev ? s.prev[g] : null;
-        li.querySelector('.gprice').textContent = p == null ? '--' : String(p);
+        li.querySelector('.gprice').textContent = p == null ? '--' : (Number(p) / 1000).toFixed(3);
         var mv = li.querySelector('.gmove');
         li.classList.remove('up', 'down');
         if (p != null && q != null && p !== q) {

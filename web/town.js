@@ -220,7 +220,7 @@
       li.appendChild(svgUse('g-' + g));
       li.appendChild(el('span', 'gname', g));
       var p = prices ? prices[k] : null;
-      li.appendChild(el('span', 'gprice', p != null ? String(p) : '--'));
+      li.appendChild(el('span', 'gprice', p != null ? near(p) : '--'));
       var mv = el('span', 'gmove', '·');
       if (lastPrices && p != null && lastPrices[k] !== p) {
         var pct = Math.round((p - lastPrices[k]) * 100 / lastPrices[k]);
@@ -238,7 +238,7 @@
       ul.appendChild(li);
     });
     if (prices) lastPrices = prices.slice();
-    if (town) $('boardNote').textContent = (town.night ? (town.asleep ? 'after night ' : 'night ') + town.night + ', ' : '') + 'price per unit in milliNEAR (1,000 = 1 NEAR), ' + (town.asleep ? 'next night\'s fee ' + pctOf(town.next_fee_bps || 200) + (town.next_fee_bps ? '' : ' unless the deed holder sets it') : 'fee ' + pctOf(town.fee_bps)) + '; arrows: change since the hour before; bars: the merchant\'s stock';
+    if (town) $('boardNote').textContent = (town.night ? (town.asleep ? 'after night ' : 'night ') + town.night + ', ' : '') + 'price per unit in NEAR, ' + (town.asleep ? 'next night\'s fee ' + pctOf(town.next_fee_bps || 200) + (town.next_fee_bps ? '' : ' unless the deed holder sets it') : 'fee ' + pctOf(town.fee_bps)) + '; arrows: change since the hour before; bars: the merchant\'s stock';
   }
   function pctOf(bps) { return ((Number(bps) || 200) / 100).toFixed(1).replace(/\.0$/, '') + '%'; }
 
