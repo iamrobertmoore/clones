@@ -16,7 +16,7 @@
 <header class="top">
   <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
   <p class="tag">Send up to three copies of yourself into a night market. They trade while you sleep, they fight other players' clones for the crown, and they can never run off with your money.</p>
-  <div class="top-actions"><a class="btn ghost town-nav" href="index.html">Watch a recorded night</a><button class="btn ghost small sound-toggle" type="button" data-sound-toggle aria-pressed="false">&#9834; Sound off</button></div>
+  <div class="top-actions"><a class="btn ghost town-nav" href="index.html">Watch a recorded night</a><button class="btn ghost small sound-toggle" type="button" data-sound-toggle aria-pressed="false">&#9834; Sound off</button><span class="who-chip" id="whoChip" hidden><span id="whoName"></span><button class="who-out" id="whoOut" type="button">Sign out</button></span></div>
 </header>
 
 <main>
@@ -53,8 +53,14 @@
       <form class="clones enlist" id="enlistForm" hidden novalidate>
         <div class="slots" id="slots"></div>
         <div class="google-row" id="googleRow" hidden>
-          <div id="googleBtn"></div>
-          <p class="send-note" id="googleNote">Sign in with Google to keep one account on every device and come back to it. Or skip it: no login is needed.</p>
+          <div class="google-out" id="googleOut">
+            <div id="googleBtn"></div>
+            <p class="google-note" id="googleOutNote">Optional: sign in to keep one account and come back to your clones from any device. Or skip it, no login needed.</p>
+          </div>
+          <div class="google-in" id="googleIn" hidden>
+            <p class="google-who" id="googleWho"></p>
+            <p class="google-note" id="googleNote"></p>
+          </div>
         </div>
         <div class="send-row">
           <button class="btn big" id="sendBtn" type="submit">Send them in</button>

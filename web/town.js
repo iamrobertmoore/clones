@@ -393,16 +393,28 @@
   /* ---------- Sign in with Google: one account on every device ---------- */
   var GOOGLE_KEY = 'clones.google';
   function googleSession() { try { return JSON.parse(stored(GOOGLE_KEY) || 'null'); } catch (e) { return null; } }
+  // Signed in: a chip in the header on every town page, and on the send-in screen a line saying
+  // where the clones will go. Sign out forgets the Google session and this browser's link to the
+  // account; the account and its clones stay on chain, and signing in again finds them.
   function paintGoogle() {
     var g = googleSession();
+    $('whoChip').hidden = !g;
+    if ($('googleIn')) { $('googleIn').hidden = !g; $('googleOut').hidden = !!g; }
     if (!g) return;
-    $('googleNote').textContent = 'Signed in' + (g.name ? ' as ' + g.name : '') + '. Your clones go into your own account, ' + g.guest.split('.')[0] + ', the same on every device. ';
-    var out = el('a', null, 'Sign out'); out.href = '#';
-    out.addEventListener('click', function (e) { e.preventDefault(); store(GOOGLE_KEY, null); location.href = 'town.html?new=1'; });
-    $('googleNote').appendChild(out);
+    $('whoName').textContent = (g.name || 'Signed in') + ' \u00b7 ';
+    $('whoChip').title = 'Signed in with Google: account ' + g.guest;
+    $('googleWho').textContent = 'Signed in' + (g.name ? ' as ' + g.name : '') + ' with Google';
+    $('googleNote').textContent = 'Your clones go into your own account, ' + g.guest.split('.')[0] + ', the same on every device. Sign out from the top of the page.';
+  }
+  function signOut() {
+    var g = googleSession();
+    store(GOOGLE_KEY, null);
+    if (g && stored(STORE_KEY) === g.guest) store(STORE_KEY, null);
+    try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) { /* not loaded */ }
+    location.href = 'town.html?new=1';
   }
   function onGoogle(resp) {
-    $('googleNote').textContent = 'Checking your Google sign-in...';
+    $('googleOutNote').textContent = 'Checking your Google sign-in...';
     post('/api/google', { credential: resp.credential }).then(function (g) {
       store(GOOGLE_KEY, JSON.stringify({ guest: g.guest, token: g.token, name: g.name }));
       store('clones.token.' + g.guest, g.token);
@@ -410,7 +422,7 @@
       if (g.inTown) { location.href = 'town.html?g=' + encodeURIComponent(g.guest); return; }
       paintGoogle();
       if (window.ClonesSound) ClonesSound.play('bell', { f: 262, vol: 0.12 });
-    }).catch(function (err) { $('googleNote').textContent = err.message; });
+    }).catch(function (err) { $('googleOutNote').textContent = err.message; });
   }
   function setupGoogle() {
     fetch('/api/config').then(function (r) { return r.json(); }).then(function (cfg) {
@@ -421,7 +433,7 @@
       sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
       sc.onload = function () {
         window.google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogle });
-        window.google.accounts.id.renderButton($('googleBtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'rectangular' });
+        window.google.accounts.id.renderButton($('googleBtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', logo_alignment: 'left', width: 260 });
       };
       document.head.appendChild(sc);
     }).catch(function () { /* no Google sign-in here */ });
@@ -1318,6 +1330,8 @@
   $('bellBtn').addEventListener('click', ringBell);
   $('refusalClose').addEventListener('click', function () { $('refusal').hidden = true; });
   $('claimBtn').addEventListener('click', claim);
+  $('whoOut').addEventListener('click', signOut);
+  paintGoogle();
   $('coachHide').addEventListener('click', function () { store(GUIDE_KEY, '1'); $('coach').hidden = true; document.querySelectorAll('.lit').forEach(function (n) { n.classList.remove('lit'); }); });
   $('restockSel').addEventListener('change', function () {
     var g = $('restockSel').value; if (!g) return;

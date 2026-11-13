@@ -254,6 +254,13 @@
 .calls-note { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 15px; }
 .calls-note[hidden] { display: none; }
 .calls-note li { padding: 4px 8px; border-left: 2px solid var(--frost); background: rgba(159, 182, 207, .07); }
-.google-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; justify-content: center; margin: 4px auto 10px; max-width: 760px; }
-.google-row[hidden] { display: none; }
-.google-row .send-note { margin: 0; flex: 1 1 260px; text-align: left; }
+.google-row { margin: 10px auto 14px; max-width: 560px; text-align: center; }
+.google-row[hidden], .google-row [hidden] { display: none; }
+.google-out { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 14px 10px; border-top: 1px solid #2a2630; border-bottom: 1px solid #2a2630; }
+.google-out #googleBtn { min-height: 40px; display: flex; justify-content: center; }
+.google-note { margin: 0; font-size: 14.5px; color: var(--ash); line-height: 1.4; max-width: 440px; }
+.google-in { padding: 8px 14px; border: 1px solid #3c3742; background: rgba(159, 182, 207, .06); }
+.google-who { margin: 0 0 2px; font-family: var(--goth); font-size: 17px; color: var(--bone); }
+.who-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 14px; color: var(--ash); border: 1px solid #45404c; padding: 4px 10px; }
+.who-chip[hidden] { display: none; }
+.who-out { background: none; border: 0; padding: 0; color: var(--frost); font: inherit; text-decoration: underline; cursor: pointer; }
