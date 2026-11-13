@@ -7,12 +7,42 @@
 <p align="center"><b>A night market on NEAR where copies of you fight other players' clones for the crown, and the chain itself stops them from ever running off with your money.</b></p>
 
 <p align="center">
+  <a href="https://github.com/iamrobertmoore/clones/actions/workflows/ci.yml"><img alt="tests on every push" src="https://github.com/iamrobertmoore/clones/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/iamrobertmoore/clones/actions/workflows/verify.yml"><img alt="rebuild and replay every six hours" src="https://github.com/iamrobertmoore/clones/actions/workflows/verify.yml/badge.svg"></a>
+  <a href="https://nearblocks.io/address/market.clones-town.near"><img alt="mainnet market: 0 access keys" src="https://img.shields.io/badge/mainnet%20market-0%20access%20keys-2b6e3b"></a>
+  <img alt="134 tests" src="https://img.shields.io/badge/tests-108%20Rust%20%2B%2026%20web-3b4b6e">
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-555"></a>
+</p>
+
+<p align="center">
   <a href="https://clones-tau-nine.vercel.app/town.html">Play the hosted town</a> ·
   <a href="https://clones-tau-nine.vercel.app/night.html">Watch a recorded night (60 s)</a> ·
   <a href="https://clones-tau-nine.vercel.app/judges.html">For judges: five minutes</a> ·
   <a href="https://testnet.nearblocks.io/address/pyre.clonestown.testnet">Market on testnet</a> ·
   <a href="https://nearblocks.io/address/market.clones-town.near">Market on mainnet</a>
 </p>
+
+## For judges: start here
+
+| Step | Do | You should see |
+|---|---|---|
+| 1 | Open the [hosted town](https://clones-tau-nine.vercel.app/town.html) and press **Send them in** | A guest account on testnet and three clones at the merchant's counter, in about half a minute. No wallet, no login |
+| 2 | Press **Try to run** on any clone | THE CHAINS HELD, with NEAR's own error: `InvalidAccessKeyError (RequiresFullAccess)` |
+| 3 | Press **Ring the bell** | The town trades twelve hours in a few minutes; every two hours the bell stops for your call; at dawn the crown, the deed and "Audit passed" |
+| 4 | Read the [five-minute judges' page](https://clones-tau-nine.vercel.app/judges.html) | Every claim with a way to check it, and what isn't true yet |
+
+From a terminal, with no keys:
+
+```bash
+git clone https://github.com/iamrobertmoore/clones && cd clones/web && npm ci
+node scripts/verify-night.js
+# last line: "Audit passed: every order, price, fee, crown and payout is what the rules say." (exit 0)
+# while someone is ringing a night: "A night is under way ... Nothing to audit now." (exit 0)
+MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com node scripts/verify-night.js
+# "night 7: 3 clones, 26 orders replayed, crown clone-1.you.clones-town.near" then "Audit passed: ..." (exit 0)
+cd .. && cargo test --workspace
+# 108 tests pass (the sandbox suites fetch a local NEAR node on first run, so they need network)
+```
 
 You send up to three copies of yourself into a market town. Each copy is a real NEAR account,
 `clone-1.<you>`, and its only key can call `trade` on the market and nothing else. It can buy and
@@ -60,6 +90,17 @@ stops a clone from running; the chain does. The guard is not a signer or a filte
 server holds each clone's trade key to play its turns, and even it can't use that key to move
 the money. Your guest account is yours from the start too: your
 browser makes its only full-access key, and the house's key on it can only call five market methods.
+
+## The games track, point by point
+
+| The brief asks for | Where Clones does it | Check it |
+|---|---|---|
+| NPCs with wallets | The Widow, the Abbot and the Hound send clones in every night; each clone is a NEAR account holding testnet NEAR, and the Widow's trade on a NEAR AI Cloud model | `get_state` on `pyre.clonestown.testnet` lists every clone in town with its player |
+| Player-owned markets | The crown's player holds the merchant's deed for a night: a quarter of the fees, the fee itself (`set_fee`, 0.5% to 3%) and a restock (`order_restock`) | Guests have set the fee and ordered restocks (transactions under "Players so far") |
+| Economies that evolve without a dev patch | The merchant's stock moves with every trade, moods and omens come from block randomness, seasons turn every seven nights, and the market has no access key, so nobody, me included, can change its rules | `view_access_key_list` on the market returns `[]`; `get_season` shows the season and its champions |
+| Judged on the game loop | Read the omen, pick temperaments, ring the bell, make five calls a night with three whispers per clone, fight the town for the crown, set the fee if you win | Play a night in the hosted town |
+| Bonus if players never notice the chain | No wallet, no gas, no login (Google sign-in optional); the chain only shows when a clone tries to run | Step 1 above |
+| Hints: agent NPCs, social login, NEAR Intents, NEP-245 | Agent NPCs: yes. Social login: yes (Google). NEP-245: yes, the goods are multi-tokens with the standard's views and events. NEAR Intents: not used | `mt_metadata_contract`, `mt_tokens` on the market |
 
 ## Try this, watch what happens
 
@@ -209,6 +250,19 @@ the rules). The recorded nights are in `web/data/`.
 - **NEAR integration:** the leash is a NEAR function-call access key, and every price, fill and payout is computed by the market contract.
 - **Design:** you lie asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the chain or a night log, and the proof (keys, audit, rules) sits in drawers under the game.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave, and the leash is packaged as a crate with a guide ([`contracts/leash`](contracts/leash/README.md)).
+
+## Hackathon disclosures
+
+| Rulebook question | Answer |
+|---|---|
+| Code from before the window (Q-001 to Q-004) | None. The first commit is 9 November 2026 |
+| Another chain or an existing product (Q-002) | No |
+| AI-written code, templates and libraries (Q-005) | Much of the code was written with Claude Code under my direction and review; no templates; libraries under "Built with" |
+| A second project by the same person (Q-015) | None: Clones is my only project in NEAR HACKATHON |
+| Network | Hosted town on NEAR testnet; one night played on mainnet |
+| How long the demo stays up | Through judging and at least until 25 November 2026; the house refills itself from testnet's faucet every three hours |
+| Licence (Q-014) | MIT |
+| AI screening (Q-017) | This README, the [judges' page](https://clones-tau-nine.vercel.app/judges.html) and [`llms.txt`](https://clones-tau-nine.vercel.app/llms.txt) list every claim with a way to check it |
 
 ## Built with
 

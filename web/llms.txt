@@ -1,0 +1,28 @@
+# Clones
+
+> A night market on NEAR, built for NEAR HACKATHON (November 2026, games and agents tracks) by Robert Moore. Players send up to three copies of themselves ("clones") to trade against other players' clones and three AI-driven regulars for the crown. Each clone is a NEAR sub-account whose only access key is a function-call key that can call `trade` on one market, so it can never withdraw; it comes home with DeleteAccount.
+
+## Try it
+- Hosted town (NEAR testnet, no wallet or login): https://clones-tau-nine.vercel.app/town.html
+- One recorded night in 60 seconds: https://clones-tau-nine.vercel.app/night.html
+- Five-minute judges' path, with what isn't true yet: https://clones-tau-nine.vercel.app/judges.html
+- Code (MIT): https://github.com/iamrobertmoore/clones
+
+## Check it (no keys needed)
+- `cd web && npm ci && node scripts/verify-night.js` replays the last finished night in the hosted town from chain state and prints "Audit passed".
+- `MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com node scripts/verify-night.js` replays the mainnet night: 3 clones, 26 orders.
+- `cargo test --workspace`: 108 Rust tests. `cd web && node --test api/*.test.js lib/*.test.js`: 26 web tests.
+- The markets `pyre.clonestown.testnet` and `market.clones-town.near` have no access keys. The testnet market is built reproducibly from commit 7bd9d25 (code hash Fh4Z8qs8kFJnubytxtB9EzG3LB4i3qTNquvypA5c7iZk); `.github/workflows/verify.yml` rebuilds it and replays a night every six hours.
+
+## On NEAR
+- Sub-accounts as agents; function-call keys as the leash; DeleteAccount to bring a clone home (`contracts/leash`, a reusable crate).
+- A market contract with no access key that quotes, clears and charges every order (`contracts/market`), with NEP-245 goods (views and events; transfers always refuse, so goods stay at the market).
+- Block randomness (`env::random_seed`) for each hour's prices and the nightly omen in the hosted town.
+- NEAR AI Cloud (`google/gemini-2.5-flash-lite` via cloud-api.near.ai) for possessed clones; optional Google sign-in.
+
+## Limits
+- Play is on testnet. The one mainnet night used the builder's own 0.25 NEAR stakes, a seed chosen by the keeper, and a build that isn't reproducible.
+- The house runs every clone and the regulars and decides when nights happen; it can't move the NEAR of an account whose only full key the player's browser made (for Google sign-in accounts it holds a full key).
+- Validators produce the block randomness and could in principle bias it.
+- Player counts include a few of the builder's own test accounts.
+- NEAR Intents are not used.
