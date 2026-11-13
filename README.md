@@ -212,6 +212,12 @@ the rules). The recorded nights are in `web/data/`.
 ## Built with
 
 Rust, near-sdk, near-workspaces and cargo-near for the contracts and the reference runner; plain
-HTML, CSS and JavaScript for the pages; near-api-js for the functions and the night runner;
-NEAR AI Cloud for possessed clones. I built this with Claude Code as my coding assistant during the
-event (9 to 13 November 2026).
+HTML, CSS and JavaScript for the pages, with no framework and no template; near-api-js for the
+functions and the night runner; NEAR AI Cloud for possessed clones; Google Identity Services for the
+optional sign-in; Google Fonts (UnifrakturMaguntia, Grenze Gotisch, EB Garamond, JetBrains Mono).
+The art is hand-written SVG and CSS, and the sound and music are synthesised in the browser
+(`web/sound.js`); there are no image or audio files from elsewhere.
+
+**AI-generated code.** I built this with Claude Code as my coding assistant, and much of the code in
+this repository was written with it, under my direction and review. The first commit is from
+9 November 2026; nothing in it predates the event.
