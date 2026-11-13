@@ -254,3 +254,6 @@
 .calls-note { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; font-size: 15px; }
 .calls-note[hidden] { display: none; }
 .calls-note li { padding: 4px 8px; border-left: 2px solid var(--frost); background: rgba(159, 182, 207, .07); }
+.google-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; justify-content: center; margin: 4px auto 10px; max-width: 760px; }
+.google-row[hidden] { display: none; }
+.google-row .send-note { margin: 0; flex: 1 1 260px; text-align: left; }

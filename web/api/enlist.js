@@ -114,6 +114,14 @@ async function enlist(plan, env = process.env, opts = {}) {
     };
   }
 
+  if (opts.guest && opts.returning) {
+    const out = await Promise.all(
+      clones.map((id) => near.connection.provider.query({ request_type: "view_account", finality: "optimistic", account_id: id }).then(() => true, () => false)),
+    );
+    if (out.some(Boolean)) {
+      return { status: 409, body: { error: "Some of your clones are still out. Bring them home first (or wait for dawn), then send a new set." } };
+    }
+  }
   const txs = [];
   const pk = keyPair.getPublicKey();
   let exists = false;
@@ -315,6 +323,19 @@ module.exports = async function handler(req, res) {
     return;
   }
   try {
+    // Signed in with Google: send the clones in under the player's one account (api/google.js).
+    // The house keeps its full-access key on that account, so no browser key is added.
+    if (body && body.google) {
+      const guest = String(body.google.guest || "");
+      const { googleGuestOk } = module.exports;
+      if (!googleGuestOk(guest, String(body.google.token || ""))) {
+        res.status(403).json({ error: "That Google sign-in has expired. Sign in again." });
+        return;
+      }
+      const { status, body: out } = await enlist(plan, process.env, { guest, returning: true });
+      res.status(status).json({ ...out, google: true });
+      return;
+    }
     let publicKey;
     if (body && body.publicKey) {
       try {
@@ -335,6 +356,9 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports.enlist = enlist;
+// A guest account a Google sign-in maps to, with the token api/google.js handed the page.
+module.exports.googleGuestOk = (guest, token) =>
+  /^g[a-z0-9]{6}\./.test(guest) && guest.endsWith(`.${process.env.HOUSE_ACCOUNT}`) && token === claimToken(guest);
 module.exports.parseTemperaments = parseTemperaments;
 module.exports.parsePlan = parsePlan;
 module.exports.claimToken = claimToken;

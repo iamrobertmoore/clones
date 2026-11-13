@@ -390,6 +390,42 @@
     step();
     return setInterval(step, 400);
   }
+  /* ---------- Sign in with Google: one account on every device ---------- */
+  var GOOGLE_KEY = 'clones.google';
+  function googleSession() { try { return JSON.parse(stored(GOOGLE_KEY) || 'null'); } catch (e) { return null; } }
+  function paintGoogle() {
+    var g = googleSession();
+    if (!g) return;
+    $('googleNote').textContent = 'Signed in' + (g.name ? ' as ' + g.name : '') + '. Your clones go into your own account, ' + g.guest.split('.')[0] + ', the same on every device. ';
+    var out = el('a', null, 'Sign out'); out.href = '#';
+    out.addEventListener('click', function (e) { e.preventDefault(); store(GOOGLE_KEY, null); location.href = 'town.html?new=1'; });
+    $('googleNote').appendChild(out);
+  }
+  function onGoogle(resp) {
+    $('googleNote').textContent = 'Checking your Google sign-in...';
+    post('/api/google', { credential: resp.credential }).then(function (g) {
+      store(GOOGLE_KEY, JSON.stringify({ guest: g.guest, token: g.token, name: g.name }));
+      store('clones.token.' + g.guest, g.token);
+      store(STORE_KEY, g.guest);
+      if (g.inTown) { location.href = 'town.html?g=' + encodeURIComponent(g.guest); return; }
+      paintGoogle();
+      if (window.ClonesSound) ClonesSound.play('bell', { f: 262, vol: 0.12 });
+    }).catch(function (err) { $('googleNote').textContent = err.message; });
+  }
+  function setupGoogle() {
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (cfg) {
+      if (!cfg || !cfg.googleClientId) return;
+      $('googleRow').hidden = false;
+      paintGoogle();
+      var sc = document.createElement('script');
+      sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+      sc.onload = function () {
+        window.google.accounts.id.initialize({ client_id: cfg.googleClientId, callback: onGoogle });
+        window.google.accounts.id.renderButton($('googleBtn'), { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'rectangular' });
+      };
+      document.head.appendChild(sc);
+    }).catch(function () { /* no Google sign-in here */ });
+  }
   function enlist(ev) {
     ev.preventDefault();
     var plan = chosen();
@@ -397,8 +433,10 @@
     $('sendBtn').disabled = true;
     $('statusError').hidden = true;
     var timer = showProgress();
-    makeKey().catch(function () { return null; }).then(function (key) {
-      return post('/api/enlist', key ? { clones: plan, publicKey: key.publicKey } : { clones: plan }).then(function (res) {
+    var gs = googleSession();
+    (gs ? Promise.resolve(null) : makeKey().catch(function () { return null; })).then(function (key) {
+      var req = gs ? { clones: plan, google: { guest: gs.guest, token: gs.token } } : key ? { clones: plan, publicKey: key.publicKey } : { clones: plan };
+      return post('/api/enlist', req).then(function (res) {
         if (key && res.custody) store('clones.secret.' + res.guest, JSON.stringify({ account_id: res.guest, public_key: key.publicKey, private_key: key.secret }));
         return res;
       });
@@ -424,6 +462,7 @@
     $('enlistForm').hidden = false;
     buildSlots();
     $('enlistForm').addEventListener('submit', enlist);
+    setupGoogle();
     setStatus('Send your clones in', 'Pick a temperament, a stake and how many nights for each clone. Then ring the bell and watch them trade, or leave them to the nightly bell.');
     (town ? Promise.resolve(town) : loadTown()).then(function () { guide(0, omenAdvice(), 'omen'); }).catch(function () { /* no omen yet */ });
     $('slots').addEventListener('change', function () { guide(1, 'Each clone gets a temperament, a stake and a number of nights. When you are happy, send them in.', 'sendBtn'); });
@@ -1095,6 +1134,8 @@
         return 'function call only, on ' + fc.receiver_id + ', methods [' + (fc.method_names || []).join(', ') + ']';
       }).join('; ');
     }
+    var gs = googleSession();
+    if (gs && gs.guest === guest) ul.appendChild(el('li', 'muted', 'Signed in with Google: the house holds a full key to this account, like an exchange holds one for you, so you can play from any device. Your clones are on exactly the same leash: they can never withdraw. To hold the account yourself, play without signing in: your browser then makes its only full key.'));
     [['you (guest)', guest], ['market', MARKET]].forEach(function (p) {
       var li = el('li'); li.appendChild(el('b', null, p[0] + ': ')); li.appendChild(acctLink(p[1]));
       if (p[1] === guest) {
