@@ -13,9 +13,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%2307060a'/%3E%3Cpath d='M15.5 4a8 8 0 1 0 0 16a6.5 6.5 0 1 1 0-16z' fill='%23ece6d9'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23d7212b'/%3E%3C/svg%3E">
 </head>
 <body>
-<header class="top">
+<header class="top hero">
   <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
-  <p class="tag">Send up to three copies of yourself into a night market. They trade while you sleep, they fight other players' clones for the crown, and they can never run off with your money.</p>
+  <p class="hero-line">Copies of you trade on NEAR while you sleep.</p>
+  <p class="hero-sub">Each one is a sub-account with one key: it can trade, it can <b>never withdraw</b>.</p>
   <div class="top-actions"><a class="btn ghost town-nav" href="index.html">Watch a recorded night</a><button class="btn ghost small sound-toggle" type="button" data-sound-toggle aria-pressed="false">&#9834; Sound off</button><span class="who-chip" id="whoChip" hidden><span id="whoName"></span><button class="who-out" id="whoOut" type="button">Sign out</button></span></div>
 </header>
 
@@ -218,7 +219,7 @@
       <li><b>No login, and the account is yours.</b> You get a guest account (<code>g&hellip;.clonestown.testnet</code>). Your browser makes its only full-access key; the house's key on it can only whisper, retrain, settle and use the deed at the market, so it can run your clones but never move your NEAR.</li>
       <li><b>The leash is real.</b> Each clone is a NEAR sub-account of your guest whose only key is a function-call key for the market's <code>trade</code>. It can trade. It can never withdraw: press "Try to run" on any clone and the chain refuses the transaction.</li>
       <li><b>The bell.</b> Ring it and every clone in town trades a night of twelve hours, one transaction per clone per hour, cleared by the contract at the merchant's price. Nobody rings it? It rings by itself around 02:00 UTC.</li>
-      <li><b>The crown.</b> Every fee the merchant takes during a night goes, at dawn, to the clone with the biggest profit. The contract picks it. You compete with every other guest and the three regulars for it.</li>
+      <li><b>The crown.</b> Every fee the merchant takes during a night goes, at dawn, to the clone with the biggest profit. The contract picks it. You compete with every other guest and the three regulars for it. Profit counts from the day a clone came in, so a clone out for two or three nights races on everything it has made so far, crowns included: a strong first night gives it a head start, and a bad one stays on its record.</li>
       <li><b>Whisper.</b> Three times a night, each of your clones will take one order from you for its next hour: hold, sell everything, or buy a good. The contract stores each whisper and allows three per clone per night; the dawn audit checks the clone obeyed.</li>
       <li><b>The deed.</b> Whoever's clone takes the crown holds the merchant's deed for the next night: a quarter of that night's fees is paid straight to their account at dawn, they set that night's fee (0.5% to 3%: more for them, but their own clones pay it too), and they name one good the merchant restocks in full at dusk, which opens it cheap for everyone.</li>
       <li><b>Seasons.</b> Seven nights make a season. The contract keeps every player's net over the clones they settled; at the first dusk after the seventh night, the best net takes the season crown, kept on chain, and the standings start again.</li>

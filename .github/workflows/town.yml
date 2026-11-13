@@ -62,6 +62,8 @@ jobs:
           mkdir -p "nights/$day" nights/latest
           cp "$NIGHTS"/*.json "nights/$day/"
           cp "$NIGHTS"/*.json nights/latest/
-          git add nights
+          # This branch holds data, not the site: tell Vercel not to build it (the project's root is web/).
+          mkdir -p web && printf '{ "git": { "deploymentEnabled": false } }\n' > web/vercel.json
+          git add nights web/vercel.json
           git commit -m "Town night $day"
           git push origin town-data

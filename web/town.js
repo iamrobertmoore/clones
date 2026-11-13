@@ -79,6 +79,7 @@
   }
   var othersInTown = false; // other players' clones (not the regulars') in town: the bell can open a night
   var omenBefore = null, omenVerdict = ''; // the omen posted before this ring, and whether it came true
+  var lastDusk = null; // {night, mood, verdict}: the night the verdict belongs to, so the omen box never mixes two nights
 
   /* ---------- helpers ---------- */
   function el(tag, cls, text) {
@@ -117,6 +118,11 @@
     return typeof id === 'string' && id.length <= 64 && /^[a-z0-9]+([-_][a-z0-9]+)*\.clonestown\.testnet$/.test(id);
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  // The pause between hours is only for the eye. In a hidden tab the browser may hold timers for up
+  // to a minute each, which made a night rung from a background tab take a quarter of an hour, so
+  // a hidden tab rings straight on.
+  function beat(ms) { return document.hidden ? Promise.resolve() : sleep(ms); }
+  var nudge = null; // wakes a watching tab at once when it is shown again
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- chain reads ---------- */
@@ -298,10 +304,13 @@
     if (!town || !MOODS[town.omen]) return;
     var on = !town.asleep;
     var m = MOODS[on ? town.mood : town.omen];
+    var past = lastDusk && lastDusk.night === town.night && MOODS[lastDusk.mood] ? lastDusk : null;
     $('omen').hidden = false;
-    $('omenWhen').textContent = on ? 'tonight\'s mood (the omen for the night after: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for the coming night, the one the bell plays next (omens lie three nights in ten)';
+    $('omenWhen').textContent = on ? 'night ' + town.night + '\'s mood (the omen for the night after: ' + MOODS[town.omen].name.toLowerCase() + ')' : 'the omen for night ' + (town.night + 1) + ', the one the bell plays next (omens lie three nights in ten)';
     $('omenMood').textContent = m.name;
-    $('omenWhy').textContent = m.why + (on && omenVerdict ? ' ' + omenVerdict : '');
+    $('omenWhy').textContent = m.why + (on
+      ? (past && past.verdict ? ' ' + past.verdict : '')
+      : (past ? ' Night ' + past.night + ', just played, was ' + MOODS[past.mood].name.toLowerCase() + '.' : ''));
   }
   function loadTown() {
     return view('get_town', {}).then(function (t) {
@@ -721,10 +730,12 @@
         buildBoard(e.prices, e.stock);
         if (e.kind === 'dusk' && MOODS[e.mood]) {
           if (e.omen_was) omenBefore = e.omen_was;
-          omenVerdict = omenBefore && MOODS[omenBefore] ? 'The omen said ' + MOODS[omenBefore].name.toLowerCase() + (omenBefore === e.mood ? ', and it came true.' : ', but it lied: the night was ' + MOODS[e.mood].name.toLowerCase() + '.') : '';
+          omenVerdict = omenBefore && MOODS[omenBefore] ? 'The omen for night ' + e.night + ' said ' + MOODS[omenBefore].name.toLowerCase() + (omenBefore === e.mood ? ', and it came true.' : ', but it lied: night ' + e.night + ' was ' + MOODS[e.mood].name.toLowerCase() + '.') : '';
+          lastDusk = { night: e.night, mood: e.mood, verdict: omenVerdict };
           var said = omenBefore && MOODS[omenBefore] ? (omenBefore === e.mood ? ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ', and it came true.' : ' The omen said ' + MOODS[omenBefore].name.toLowerCase() + ': it lied.') : '';
           showOmen();
           cry('Dusk, night ' + e.night + '. The mood tonight: ' + MOODS[e.mood].name + '. ' + MOODS[e.mood].why + said, said && omenBefore !== e.mood ? 'refused-row' : '');
+          omenBefore = null; // used once: a later night must bring its own
         }
         if (e.kind === 'dusk' && e.night > 1 && (e.night - 1) % 7 === 0) {
           view('get_season', { from: 0, limit: 1 }).then(function (sz) {
@@ -797,7 +808,9 @@
     setStatus('A night is under way', 'Another player is ringing it, so you are watching it from the chain. Whisper under a clone\'s purse to steer it: a whisper is for the next hour only.');
     guide(2, 'Someone else rang the bell, so you are watching this night from the chain. Whisper under your clones to steer them, for the next hour only.', 'raceBox');
     return new Promise(function (resolve) {
+      var timer = null;
       (function tick() {
+        nudge = function () { clearTimeout(timer); tick(); };
         loadTown().then(function (t) {
           if (t.round !== seen) {
             if (t.round > seen && seen >= 0) cry('Hour ' + Math.min(t.round + 1, t.rounds) + ' rings (another player\'s bell).', 'muted');
@@ -806,10 +819,10 @@
             if (window.ClonesSound) ClonesSound.event('hour', { round: t.round });
           }
           $('bellBtn').textContent = 'Watching: night ' + t.night + ', hour ' + Math.min(t.round + 1, t.rounds) + ' of ' + t.rounds;
-          if (t.asleep) return resolve('done');
-          if (Date.now() - at > 60000) return resolve('stalled');
-          setTimeout(tick, document.hidden ? 6000 : 2000);
-        }).catch(function () { setTimeout(tick, 4000); });
+          if (t.asleep) { nudge = null; return resolve('done'); }
+          if (Date.now() - at > 60000 && !document.hidden) { nudge = null; return resolve('stalled'); }
+          timer = setTimeout(tick, document.hidden ? 6000 : 2000);
+        }).catch(function () { timer = setTimeout(tick, 4000); });
       })();
     });
   }
@@ -860,7 +873,7 @@
             return waitForPlayer(out.round).then(step);
           }
           if (out.phase === 'home') setStatus('The regulars are coming', 'Last night\'s clones are home. The Widow, the Abbot and the Hound are sending clones in; the night opens in a few seconds.');
-          return sleep(reduceMotion ? 200 : 900).then(step);
+          return beat(reduceMotion ? 200 : 900).then(step);
         });
       }).catch(function (err) {
         tries += 1;
@@ -977,7 +990,9 @@
     return new Promise(function (resolve) {
       var go = function () { decidedOne = function () {}; pauseRound = null; card.hidden = true; $('carryOn').removeEventListener('click', go); clearInterval(tick); if (!reduceMotion) $('guestClones').scrollIntoView({ block: 'nearest' }); guide(3, 'The night rings on. Every two hours the bell holds for your call, and each clone has three whispers a night.', 'raceBox'); resolve(); };
       $('pauseCount').textContent = 'rings on in ' + left + 's';
-      tick = setInterval(function () { left -= 1; $('pauseCount').textContent = 'rings on in ' + left + 's'; if (left <= 0) go(); }, 1000);
+      // Count real seconds, not ticks: a hidden tab's timer may fire once a minute.
+      var last = Date.now();
+      tick = setInterval(function () { var now = Date.now(); left -= Math.max(1, Math.round((now - last) / 1000)); last = now; $('pauseCount').textContent = 'rings on in ' + Math.max(0, left) + 's'; if (left <= 0) go(); }, 1000);
       $('carryOn').addEventListener('click', go);
     });
   }
@@ -1359,7 +1374,11 @@
   openProof();
   window.addEventListener('resize', drawLeashes);
   if (window.ClonesSound) ClonesSound.mine(function (e) { return !e.player || e.player === guest; });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && guest && !ringing) loadGuest(true); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    if (nudge) nudge();
+    else if (guest && !ringing) loadGuest(true);
+  });
   setInterval(tickClock, 1000);
   $('marketLink').href = EXPLORER + '/address/' + MARKET;
   $('bellBtn').addEventListener('click', ringBell);

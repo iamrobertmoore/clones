@@ -481,3 +481,19 @@ a.btn { display: inline-block; text-decoration: none; }
 .top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: none; }
 .sound-toggle { font-size: 15px; padding: 5px 12px; }
 .sound-toggle[aria-pressed="true"] { border-color: var(--frost); color: var(--bone); box-shadow: 0 0 12px rgba(159, 182, 207, .3); }
+
+/* ---------- The hero: the logo and what the game is, the same as the README banner ---------- */
+.top.hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; position: relative; padding: 16px 16px 12px; background: radial-gradient(ellipse 60% 85% at 50% 58%, rgba(58, 10, 16, .85), rgba(21, 6, 10, .45) 55%, rgba(7, 6, 10, 0) 80%); }
+.hero .logo-svg { width: 380px; }
+.hero-line { margin: 2px 0 0; font-family: var(--serif); font-size: 27px; line-height: 1.2; color: var(--bone); }
+.hero-sub { margin: 4px 0 2px; font-family: var(--serif); font-style: italic; font-size: 19px; line-height: 1.3; color: #9fb6cf; }
+.hero-sub b { font-style: normal; font-weight: 600; color: #ff4b55; }
+.hero .top-actions { position: absolute; top: 14px; right: 16px; }
+@media (max-width: 980px) {
+  .hero .top-actions { position: static; margin-top: 8px; justify-content: center; }
+}
+@media (max-width: 600px) {
+  .hero .logo-svg { width: 270px; }
+  .hero-line { font-size: 20px; }
+  .hero-sub { font-size: 16px; }
+}

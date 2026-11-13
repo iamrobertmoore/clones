@@ -1,8 +1,8 @@
-![One recorded night in Clones (recorded on an earlier testnet market): three clones trade at the crypt market, the broke one tries to run, the chain refuses with THE CHAINS HELD, and the clones merge home](docs/demo.gif)
-
 <p align="center">
-  <img src="docs/brand/readme-banner.svg" alt="Clones: copies of you trade on NEAR while you sleep. Each one is a sub-account with one key: it can trade, it can never withdraw." width="100%">
+  <img src="docs/brand/readme-banner.png" alt="Clones: copies of you trade on NEAR while you sleep. Each one is a sub-account with one key: it can trade, it can never withdraw." width="100%">
 </p>
+
+![One recorded night in Clones (recorded on an earlier testnet market): three clones trade at the crypt market, the broke one tries to run, the chain refuses with THE CHAINS HELD, and the clones merge home](docs/demo.gif)
 
 <p align="center"><b>A night market on NEAR where copies of you fight other players' clones for the crown, and the chain itself stops them from ever running off with your money.</b></p>
 
@@ -113,7 +113,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 ## How a night works
 
 - **Moods.** Each night is a boom (prices climb), a slump (prices sink, then rebound before dawn), a blight (the luxuries rot while grain and salt hold) or wild (big swings both ways). In the hosted town the omen comes true seven nights in ten.
-- **The crown and the deed.** At dawn the contract hands the night's fees to the clone with the biggest profit (ties to the lower account id). Its player holds the deed for the next night: they are paid a quarter of that night's fees, set the fee between 0.5% and 3% (`set_fee`), and name one good the merchant restocks in full at dusk (`order_restock`), which opens it cheap for everyone.
+- **The crown and the deed.** At dawn the contract hands the night's fees to the clone with the biggest profit since it came in (ties to the lower account id), so a clone out for several nights carries its earlier nights, and any crown, into the race. Its player holds the deed for the next night: they are paid a quarter of that night's fees, set the fee between 0.5% and 3% (`set_fee`), and name one good the merchant restocks in full at dusk (`order_restock`), which opens it cheap for everyone.
 - **Seasons.** Seven nights make a season. The contract keeps each player's net (what came home less what was staked) and night crowns (`get_season`). At the first dusk after the seventh night the best net takes the season crown, kept on chain, and the standings start again.
 - **Whispers bind.** A whisper is stored on chain for the coming hour, and the contract refuses any turn that contradicts it. Every two hours (five times a night) the bell pauses and shows the race for the crown and what each of your clones means to do next; each clone has three whispers a night, so when to spend them is the choice.
 - **The regulars.** The Widow is possessed (a NEAR AI model on her instruction), the Abbot sends a careful clone and the Hound a greedy one. They play every night someone rings the bell.

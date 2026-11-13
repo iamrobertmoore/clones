@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clones: README banner</title>
+<!-- The README banner is a 2x screenshot of this page, so it uses the site's own fonts, logo and colours.
+     Render: open it at 1280x320 and screenshot at device scale 2 to docs/brand/readme-banner.png. -->
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Grenze+Gotisch:wght@500;700&family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../web/style.css">
+<style>
+  html, body { margin: 0; width: 1280px; height: 320px; overflow: hidden; background: #07060a; }
+  .banner { position: relative; width: 1280px; height: 320px; box-sizing: border-box; border: 1px solid #2a2430; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 18px;
+    background: radial-gradient(ellipse 55% 85% at 50% 58%, rgba(58, 10, 16, .9), rgba(21, 6, 10, .55) 55%, rgba(7, 6, 10, 0) 80%), #07060a; }
+  .banner .peaks { position: absolute; left: 0; bottom: 0; width: 1280px; height: 90px; }
+  .banner .logo-svg { width: 420px; position: relative; }
+  .banner .hero-line { font-size: 32px; position: relative; margin-top: 0; }
+  .banner .hero-sub { font-size: 23px; position: relative; }
+</style>
+</head>
+<body>
+<div class="banner">
+  <svg class="peaks" viewBox="0 230 1280 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 320 L70 268 L120 296 L190 240 L250 290 L330 252 L400 300 L880 300 L950 254 L1020 292 L1090 238 L1160 290 L1220 262 L1280 300 L1280 320 Z" fill="#0d1018"/></svg>
+  <h1 class="logo">Clones</h1>
+  <p class="hero-line">Copies of you trade on NEAR while you sleep.</p>
+  <p class="hero-sub">Each one is a sub-account with one key: it can trade, it can <b>never withdraw</b>.</p>
+</div>
+<script src="../../web/art.js"></script>
+</body>
+</html>
