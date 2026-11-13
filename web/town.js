@@ -159,14 +159,15 @@
   var FIRST_MARKET = 'shroud.' + HOUSE;
   function loadHistory(nowRecent, nowSeason) {
     return Promise.all([viewAt(FIRST_MARKET, 'get_season', { from: 0, limit: 200 }), viewAt(FIRST_MARKET, 'get_recent', {})]).then(function (r) {
-      var sz = r[0], recent = r[1] || [], guests = {};
+      var sz = r[0], recent = r[1] || [], first = {}, here = {};
       if (!sz) return;
       function isGuest(p) { var s = String(p).split('.')[0]; return !RIVAL_TITLES[s] && /^g[a-z0-9]{6}$/.test(s); }
-      recent.concat(nowRecent || []).forEach(function (x) { if (isGuest(x.player)) guests[x.player] = 1; });
-      (sz.rows || []).concat((nowSeason && nowSeason.rows) || []).forEach(function (x) { if (isGuest(x[0])) guests[x[0]] = 1; });
+      recent.forEach(function (x) { if (isGuest(x.player)) first[x.player] = 1; });
+      (nowRecent || []).forEach(function (x) { if (isGuest(x.player) && !first[x.player]) here[x.player] = 1; });
+      ((nowSeason && nowSeason.rows) || []).forEach(function (x) { if (isGuest(x[0]) && !first[x[0]]) here[x[0]] = 1; });
       var crowns = (sz.champions || []).slice().reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ' NEAR)'; });
-      var n = Object.keys(guests).length;
-      $('historyNote').textContent = '\u265B Season crowns so far: ' + crowns.join('; ') + '. Season ' + sz.season + ' had ' + sz.players + ' players when the town moved to this market on 13 November, and this season started level. At least ' + n + ' guest accounts have played since 11 November.';
+      var nf = Object.keys(first).length, nh = Object.keys(here).length;
+      $('historyNote').textContent = '\u265B Season crowns at the first market: ' + crowns.join('; ') + '. Its last six nights had ' + nf + ' guest accounts, and season ' + sz.season + ' had ' + sz.players + ' players when the town moved to this market on 13 November' + (nh ? '; ' + nh + ' more guest ' + (nh === 1 ? 'account has' : 'accounts have') + ' played here since' : '') + '. Seasons here start again at 1, and everyone started level.';
       $('historyNote').hidden = false;
     }).catch(function () { /* the history line is optional */ });
   }
@@ -1041,7 +1042,7 @@
       if (!sz) return;
       $('townBoard').hidden = false;
       var left = Math.max(0, sz.ends_night - (town ? town.night : 0));
-      $('seasonTitle').textContent = 'Season ' + sz.season + ' standings';
+      $('seasonTitle').textContent = 'Season ' + sz.season + ' at this market: standings';
       $('seasonNote').textContent = 'Nights ' + sz.started_night + ' to ' + sz.ends_night + (left ? ', ' + left + (left === 1 ? ' night' : ' nights') + ' left' : ', the last night') + '. Net is what came home less what was staked, over every clone that has come home this season; "out now" is how the clones still in town stand. At the first dusk after the last night, the best net takes the season crown.';
       var st = $('standRows'); st.textContent = '';
       var listed = {}; sz.rows.forEach(function (r) { listed[r[0]] = true; });
@@ -1134,9 +1135,21 @@
     var mine = list.filter(function (c) { return c.state; });
     var sel = $('breakClone'), box = $('breakButtons');
     sel.textContent = ''; box.textContent = '';
-    if (!mine.length) { $('breakResults').textContent = ''; box.appendChild(el('p', 'sub', guest ? 'None of your clones is in town right now. Send some in to try this.' : 'Send clones in, then try this.')); sel.disabled = true; return; }
+    if (!mine.length) {
+      // No clones of your own in town: try it on another player's. Every way out is refused by NEAR
+      // before it reaches a block, so it changes nothing for them and costs nothing.
+      sel.disabled = true;
+      box.appendChild(el('p', 'sub', 'Reading the town for a clone to try...'));
+      view('get_state', {}).then(function (st) {
+        var others = ((st && st[1]) || []).filter(function (c) { return /^clone-[123]\.g[a-z0-9]{6}\./.test(c[0]) && c[0].indexOf('.' + guest) < 0; });
+        if (!others.length) { box.textContent = ''; box.appendChild(el('p', 'sub', guest ? 'None of your clones is in town right now. Send some in to try this.' : 'Send clones in, then try this.')); return; }
+        renderBreak(others.map(function (c) { return { id: c[0], temperament: c[1].temperament, state: c[1], other: true }; }));
+      }).catch(function () { box.textContent = ''; box.appendChild(el('p', 'sub', 'Send clones in, then try this.')); });
+      return;
+    }
     sel.disabled = false;
-    mine.forEach(function (c) { var o = el('option', null, c.id.split('.')[0] + ' (' + c.temperament + ')'); o.value = c.id; sel.appendChild(o); });
+    if (mine[0].other) box.appendChild(el('p', 'sub', 'None of your clones is in town, so try it on another player\'s: every way out is refused before it reaches a block, so it changes nothing for them.'));
+    mine.forEach(function (c) { var o = el('option', null, c.id.split('.')[0] + (c.other ? ' of ' + c.id.split('.')[1] : '') + ' (' + c.temperament + ')'); o.value = c.id; sel.appendChild(o); });
     BREAK_WAYS.forEach(function (w) {
       var b = el('button', 'btn small', w[1]); b.type = 'button';
       b.addEventListener('click', function () {

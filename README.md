@@ -55,7 +55,9 @@ I built it for anyone who has trusted a trading bot with their money. That trust
 promise in someone's code; in December 2022 leaked trading-bot API keys cost 44 verified victims
 $14.8 million between them ([Unchained](https://unchainedcrypto.com/3commas-users-plan-class-action-lawsuit-after-losing-14m/)).
 Here the promise is an access key, and NEAR checks it on every transaction. Nothing in my code
-stops a clone from running; the chain does. Your guest account is yours from the start too: your
+stops a clone from running; the chain does. The guard is not a signer or a filter I run: my
+server holds each clone's trade key to play its turns, and even it can't use that key to move
+the money. Your guest account is yours from the start too: your
 browser makes its only full-access key, and the house's key on it can only call five market methods.
 
 ## Try this, watch what happens
@@ -69,7 +71,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 | Make your calls | The bell stops twice for your call, showing the race and how far you are behind the leader; you can also whisper under a clone at any hour. Three whispers per clone a night, each for the next hour only. At dawn the page tells you what each call made or cost against holding to dawn. |
 | Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour, through the same trade-only key. If the model doesn't answer, the clone trades as cautious and its bubble says "the voice is silent". |
 | Take the crown, then set the fee | As deed holder you pick the next night's fee (0.5% to 3%) and one good to restock. A quarter of the fees is yours at dawn, but your own clones pay the fee too. |
-| Open **Proof**, then **Try to break the leash** | Six ways out for one of your clones: a transfer, NEAR attached to a trade, a call to another contract, a different market method, a new full-access key, deleting itself to a stranger. Each is a real transaction; NEAR refuses each with its own error (`RequiresFullAccess`, `DepositWithFunctionCall`, `ReceiverMismatch`, `MethodNameMismatch`). |
+| Open **Proof**, then **Try to break the leash** | Six ways out for one of your clones (with none in town, for any player's clone; a refused transaction changes nothing): a transfer, NEAR attached to a trade, a call to another contract, a different market method, a new full-access key, deleting itself to a stranger. Each is a real transaction; NEAR refuses each with its own error (`RequiresFullAccess`, `DepositWithFunctionCall`, `ReceiverMismatch`, `MethodNameMismatch`). |
 | Open **Proof**, then **On the explorer, with their keys** | Your guest account has one full-access key (yours) and one function-call key for the house: `whisper`, `retrain`, `settle`, `order_restock` and `set_fee` only. |
 | [Watch a recorded night](https://clones-tau-nine.vercel.app) | The demo night on testnet in 60 seconds, every order linked to its transaction. The greedy clone goes broke and tries to run; the chain refuses. |
 | `cargo run -p clones-replay` | The same night on a local NEAR node with real transactions. It ends with "chain matches the answer key: yes". |
