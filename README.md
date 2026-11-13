@@ -8,7 +8,8 @@
 
 <p align="center">
   <a href="https://clones-tau-nine.vercel.app/town.html">Play the hosted town</a> ·
-  <a href="https://clones-tau-nine.vercel.app">Watch a recorded night (60 s)</a> ·
+  <a href="https://clones-tau-nine.vercel.app/night.html">Watch a recorded night (60 s)</a> ·
+  <a href="https://clones-tau-nine.vercel.app/judges.html">For judges: five minutes</a> ·
   <a href="https://testnet.nearblocks.io/address/pyre.clonestown.testnet">Market on testnet</a> ·
   <a href="https://nearblocks.io/address/market.clones-town.near">Market on mainnet</a>
 </p>
@@ -73,7 +74,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 | Take the crown, then set the fee | As deed holder you pick the next night's fee (0.5% to 3%) and one good to restock. A quarter of the fees is yours at dawn, but your own clones pay the fee too. |
 | Open **Proof**, then **Try to break the leash** | Six ways out for one of your clones (with none in town, for any player's clone; a refused transaction changes nothing): a transfer, NEAR attached to a trade, a call to another contract, a different market method, a new full-access key, deleting itself to a stranger. Each is a real transaction; NEAR refuses each with its own error (`RequiresFullAccess`, `DepositWithFunctionCall`, `ReceiverMismatch`, `MethodNameMismatch`). |
 | Open **Proof**, then **On the explorer, with their keys** | Your guest account has one full-access key (yours) and one function-call key for the house: `whisper`, `retrain`, `settle`, `order_restock` and `set_fee` only. |
-| [Watch a recorded night](https://clones-tau-nine.vercel.app) | The demo night on testnet in 60 seconds, every order linked to its transaction. The greedy clone goes broke and tries to run; the chain refuses. |
+| [Watch a recorded night](https://clones-tau-nine.vercel.app/night.html) | The demo night on testnet in 60 seconds, every order linked to its transaction. The greedy clone goes broke and tries to run; the chain refuses. |
 | `cargo run -p clones-replay` | The same night on a local NEAR node with real transactions. It ends with "chain matches the answer key: yes". |
 
 ## Verify every claim in five minutes

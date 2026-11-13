@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clones: for judges</title>
+<meta name="description" content="A five-minute path through Clones for NEAR HACKATHON judges: play it, check every claim against the chain, and see what isn't true yet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Grenze+Gotisch:wght@500;700&family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="landing.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%2307060a'/%3E%3Cpath d='M15.5 4a8 8 0 1 0 0 16a6.5 6.5 0 1 1 0-16z' fill='%23ece6d9'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23d7212b'/%3E%3C/svg%3E">
+</head>
+<body class="landing">
+
+<nav class="lnav" aria-label="Site">
+  <a class="lnav-home" href="index.html">Clones</a>
+  <span class="lnav-links">
+    <a href="town.html">Play</a>
+    <a href="night.html">Watch a night</a>
+    <a href="index.html#how">How it works</a>
+    <a href="index.html#proof">Check it</a>
+    <a href="judges.html">For judges</a>
+    <a href="https://github.com/iamrobertmoore/clones">Code</a>
+  </span>
+</nav>
+
+<main class="lmain jmain">
+  <h1 class="lh jtitle">For judges</h1>
+  <p class="jlede">Five minutes: two to play, three to check. Everything below links to the chain or to the code, and the last section says what isn't true yet.</p>
+
+  <section class="lsec">
+    <h2 class="lh">1. Play it (2 minutes)</h2>
+    <ol class="lsteps">
+      <li><b>Open <a href="town.html">the hosted town</a> and press "Send them in".</b> You get a guest account on NEAR testnet and three clones, funded by the house. No wallet, no login (Google sign-in is optional).</li>
+      <li><b>Press "Try to run" on any clone.</b> It signs a transfer of its own NEAR with its own key. NEAR rejects it with <code>RequiresFullAccess</code>, and the page shows THE CHAINS HELD.</li>
+      <li><b>Open Proof, then "Try to break the leash".</b> Six more ways out, each a real transaction NEAR refuses with its own error. With none of your clones in town, it uses another player's; a refused transaction changes nothing.</li>
+      <li><b>Ring the bell.</b> The whole town trades twelve hours in a few minutes, against the Widow (an AI on NEAR AI Cloud), the Abbot, the Hound and any other guests. Every two hours it stops for your call. At dawn the crown goes to the biggest profit, its player gets the deed and sets tomorrow's fee, and the page replays the night from the chain and says whether the audit passed.</li>
+    </ol>
+    <p>Short on time? <a href="night.html">Watch one recorded night in 60 seconds</a>.</p>
+  </section>
+
+  <section class="lsec">
+    <h2 class="lh">2. Check it (3 minutes)</h2>
+    <table class="jtable">
+      <thead><tr><th>Claim</th><th>How to check</th></tr></thead>
+      <tbody>
+        <tr><td>A clone's only key can call <code>trade</code> on one market</td><td>In the town, Proof, "On the explorer, with their keys" lists every key live; or open any <code>clone-N.g&hellip;.clonestown.testnet</code> on <a href="https://testnet.nearblocks.io/address/pyre.clonestown.testnet">nearblocks</a></td></tr>
+        <tr><td>The market has no access key, on testnet and mainnet</td><td><a href="https://testnet.nearblocks.io/address/pyre.clonestown.testnet">pyre.clonestown.testnet</a> and <a href="https://nearblocks.io/address/market.clones-town.near">market.clones-town.near</a>: both list no access keys</td></tr>
+        <tr><td>The code on chain is this repository's code</td><td>Built with <code>cargo near build reproducible-wasm</code>; its NEP-330 metadata names the commit. Testnet code hash <code>Fh4Z8qs8kFJnubytxtB9EzG3LB4i3qTNquvypA5c7iZk</code> from commit <code>7bd9d25</code>, rebuilt and compared every six hours by <a href="https://github.com/iamrobertmoore/clones/blob/main/.github/workflows/verify.yml">verify.yml</a></td></tr>
+        <tr><td>Every night replays from chain state</td><td><code>cd web && node scripts/verify-night.js</code> (read-only, no keys) prints "Audit passed"</td></tr>
+        <tr><td>A full night ran on mainnet</td><td><code>MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com node scripts/verify-night.js</code>: night 7, 3 clones, 26 orders replayed</td></tr>
+        <tr><td>Clones come home with DeleteAccount</td><td><code>merge</code> in <a href="https://github.com/iamrobertmoore/clones/blob/main/contracts/leash/src/lib.rs">contracts/leash</a> only lets the parent or the bound market call it, and always pays the parent</td></tr>
+        <tr><td>Players run the merchant</td><td>A guest took the season 2 crown at the earlier market (<code>get_season</code> on <code>shroud.clonestown.testnet</code>); guests have set the fee and ordered restocks</td></tr>
+        <tr><td>Tested</td><td>108 Rust tests (three suites play real nights on a local NEAR node) and 26 web tests, in CI on every push to main</td></tr>
+      </tbody>
+    </table>
+    <p>The <a href="https://github.com/iamrobertmoore/clones#verify-every-claim-in-five-minutes">README's verify table</a> has every claim with its evidence.</p>
+  </section>
+
+  <section class="lsec">
+    <h2 class="lh">3. The brief</h2>
+    <p><b>Games With Real Economies</b>: "NPCs with wallets, player-owned markets and economies that evolve without a dev patch".</p>
+    <ul class="jlist">
+      <li><b>NPCs with wallets.</b> The three regulars and every clone are NEAR accounts holding testnet NEAR; the Widow's clones trade on a NEAR AI Cloud model, on the same leash as yours.</li>
+      <li><b>A player-owned market.</b> The crown's player holds the merchant's deed for a night: a quarter of the fees, the fee itself (0.5% to 3%) and a restock of one good.</li>
+      <li><b>No dev patch.</b> The market has no access key, so nobody, me included, can change its rules. Prices move with the merchant's stock and every player's trades; moods, omens and seasons turn by themselves.</li>
+      <li><b>Players never notice the chain</b>, until a clone tries to run and the chain is the story. No wallet, no gas, optional Google sign-in.</li>
+      <li><b>The hints:</b> agent NPCs, yes. Social login, yes (Google). NEP-245, yes: the goods are multi-tokens. NEAR Intents: not used.</li>
+    </ul>
+    <p><b>Agents</b>: an agent you don't have to trust. The leash (a sub-account whose only key can call one method, brought home by DeleteAccount) is a standalone crate with a guide, <a href="https://github.com/iamrobertmoore/clones/tree/main/contracts/leash">contracts/leash</a>, for any agent you want to let act but never let leave.</p>
+  </section>
+
+  <section class="lsec">
+    <h2 class="lh">4. What isn't true yet</h2>
+    <ul class="jlist">
+      <li>Play is on testnet. The one mainnet night used 0.25 NEAR stakes of my own, its prices came from a seed the keeper chose, and its build isn't reproducible (the six-hourly check verifies its keys and replays its night, not its hash).</li>
+      <li>The house runs every clone and the regulars, and holds a function-call key on your guest account, so it decides when nights happen. It can't move the NEAR of an account whose only full key your browser made. For a Google sign-in it holds a full key.</li>
+      <li>NEP-245 goods can't be transferred: they stay at the market, and a clone can only trade them.</li>
+      <li>NEAR's validators produce the block randomness, and a validator could in principle bias it: fine for a testnet game, not for real stakes.</li>
+      <li>The player counts include a few of my own test accounts, and the current market played many short nights on 13 November, so the Widow (a regular) holds most of its season crowns.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="foot lfoot">
+  Built for <a href="https://nearhackathon.com">NEAR HACKATHON</a>, November 2026, by Robert Moore ·
+  <a href="https://github.com/iamrobertmoore/clones">Code (MIT)</a> ·
+  <a href="index.html">Home</a> ·
+  <a href="privacy.html">Privacy</a>
+</footer>
+</body>
+</html>

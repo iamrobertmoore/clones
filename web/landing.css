@@ -1,0 +1,63 @@
+/* The landing page: the same palette and type as the town */
+body.landing { background: #07060a; }
+.lnav { max-width: 1000px; margin: 0 auto; padding: 12px 16px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--goth); font-size: 17px; }
+.lnav a { color: var(--ash); text-decoration: none; }
+.lnav a:hover { color: var(--bone); }
+.lnav-home { font-family: var(--frak); font-size: 26px; color: var(--bone) !important; }
+.lnav-links { display: flex; gap: 6px 18px; flex-wrap: wrap; }
+.lhero { padding-top: 26px; padding-bottom: 20px; }
+.lhero .logo-svg { width: 460px; }
+.lcta { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 18px 0 6px; }
+.lnote { margin: 4px 0 0; color: var(--ash); font-style: italic; font-size: 15px; }
+.lnote a { color: var(--ash); }
+.lmain { max-width: 1000px; margin: 0 auto; padding: 0 16px 30px; }
+.lvideo { margin: 10px 0 26px; }
+.lvideo video { width: 100%; display: block; border: 1px solid #2a2430; box-shadow: 0 0 40px rgba(215, 33, 43, .12); background: #0b0a10; }
+.lvideo figcaption { color: var(--ash); font-style: italic; font-size: 15px; margin-top: 6px; text-align: center; }
+.lh { font-family: var(--frak); font-weight: 400; font-size: 36px; line-height: 1.05; margin: 0 0 12px; color: var(--bone); text-shadow: 0 2px 0 #000; }
+.lstats { border: 1px solid #b8903a; background: rgba(217, 165, 58, .07); padding: 16px 18px 12px; margin: 0 0 30px; }
+.lstats .lh { font-size: 30px; }
+.lstats ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.lstats li { display: flex; flex-direction: column; gap: 2px; }
+.lstats b { font-family: var(--mono); font-size: 34px; color: #f3d48a; line-height: 1.1; }
+.lstats span { color: var(--ash); font-size: 15px; line-height: 1.25; }
+.lsmall { color: var(--dim, #8d8597); font-size: 13.5px; margin: 10px 0 0; }
+.lsec { margin: 0 0 34px; font-size: 17.5px; line-height: 1.5; }
+.lsec p { margin: 0 0 10px; }
+.lsteps { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.lsteps b { font-family: var(--goth); font-weight: 700; font-size: 19px; }
+.lleash { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: center; }
+.lleash img { width: 100%; border: 1px solid var(--blood-hi, #d7212b); box-shadow: 0 0 30px rgba(215, 33, 43, .25); }
+.lcards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.lcards li { border: 1px solid #2a2430; background: #0b0a10; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px; }
+.lcards b { font-family: var(--goth); font-size: 19px; color: var(--bone); }
+.lcards span { color: var(--ash); font-size: 16px; line-height: 1.35; }
+.lcode { background: #050407; border: 1px solid #3a3440; padding: 12px 14px; overflow-x: auto; font: 13.5px/1.55 var(--mono); color: var(--bone); margin: 4px 0 12px; }
+.lend { text-align: center; }
+.lfoot { text-align: center; }
+.lfoot a { color: var(--ash); }
+@media (max-width: 760px) {
+  .lstats ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lleash, .lcards { grid-template-columns: 1fr; }
+  .lh { font-size: 30px; }
+}
+@media (max-width: 600px) {
+  .lhero .logo-svg { width: 280px; }
+  .lnav-links { gap: 4px 12px; font-size: 15px; }
+  .lstats b { font-size: 26px; }
+  .lsec { font-size: 16.5px; }
+}
+/* The judges page */
+.jmain { padding-top: 18px; }
+.jtitle { font-size: 54px; margin-bottom: 6px; }
+.jlede { font-size: 20px; font-style: italic; color: #9fb6cf; margin: 0 0 26px; }
+.jtable { width: 100%; border-collapse: collapse; font-size: 16px; margin: 0 0 10px; }
+.jtable th, .jtable td { text-align: left; vertical-align: top; padding: 8px 10px; border: 1px solid #2a2430; }
+.jtable th { font-family: var(--goth); font-size: 17px; color: var(--bone); background: #0b0a10; }
+.jtable td:first-child { width: 34%; color: var(--bone); }
+.jtable td { color: var(--ash); overflow-wrap: anywhere; }
+.jtable code, .jlist code, .lsteps code { font-size: 14px; }
+.jlist { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.jmain a { color: #9fb6cf; }
+@media (max-width: 600px) { .jtitle { font-size: 42px; } .jtable { font-size: 14.5px; } .jtable td:first-child { width: 40%; } }
+.lsec ol + p, .lsec ul + p { margin-top: 12px; }

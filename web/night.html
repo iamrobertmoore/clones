@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clones: one night in 60 seconds</title>
+<meta name="description" content="Replay one night of Clones: three copies of you trade in a market town on NEAR, on a leash they cannot slip.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Grenze+Gotisch:wght@500;700&family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%2307060a'/%3E%3Cpath d='M15.5 4a8 8 0 1 0 0 16a6.5 6.5 0 1 1 0-16z' fill='%23ece6d9'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23d7212b'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="top hero">
+  <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
+  <p class="hero-line">Copies of you trade on NEAR while you sleep.</p>
+  <p class="hero-sub">Each one is a sub-account with one key: it can trade, it can <b>never withdraw</b>.</p>
+  <div class="top-actions"><a class="btn town-cta" href="town.html">Send your own clones in tonight</a><button class="btn ghost small sound-toggle" type="button" data-sound-toggle aria-pressed="false">&#9834; Sound off</button></div>
+</header>
+
+<main>
+  <section class="stage-wrap" aria-label="Replay of one night">
+    <div class="scene" id="scene">
+      <div class="sky" aria-hidden="true">
+        <div class="stars"></div>
+        <div class="moon" id="moon"></div>
+        <div class="roofs"></div>
+      </div>
+
+      <div class="clock" id="clock" aria-live="off"><span id="clockTime">18:00</span><small id="clockLabel">dusk</small></div>
+
+      <div class="stall" id="stall">
+        <div class="arch" aria-hidden="true"><span class="rose"></span></div>
+        <div class="board" id="board" aria-label="Market board, prices in NEAR per unit">
+          <div class="board-head">Market board <small>NEAR / unit</small></div>
+          <ul class="board-goods" id="boardGoods"></ul>
+        </div>
+        <div class="counter" id="counter">
+          <span class="candle c1" aria-hidden="true"></span><span class="candle c2" aria-hidden="true"></span>
+          <span class="merchant-label">the merchant</span>
+          <a class="acct merchant-acct" id="marketLink" target="_blank" rel="noopener"></a>
+        </div>
+      </div>
+
+      <div class="clones" id="clones"></div>
+
+      <div class="home" id="home">
+        <div class="bed" id="bed" aria-hidden="true">
+          <span class="post" id="bedpost"></span>
+          <svg class="sleeper" viewBox="0 0 40 64"><use href="#person"/></svg>
+          <span class="shroud"></span>
+          <span class="zzz">z z z</span>
+        </div>
+        <div class="player-purse purse">
+          <div class="who">You, asleep <a class="acct" id="playerLink" target="_blank" rel="noopener"></a></div>
+          <div class="coins"><svg class="ico"><use href="#coin"/></svg><b id="playerCash">0.000</b> <span>NEAR</span></div>
+          <div class="note" id="playerNote">&nbsp;</div>
+        </div>
+      </div>
+
+      <svg class="leashes" id="leashes" aria-hidden="true"></svg>
+      <div class="fx" id="fx" aria-hidden="true"></div>
+
+      <div class="refusal" id="refusal" role="alert" hidden>
+        <div class="seal">
+          <div class="seal-big">THE CHAINS HELD</div>
+          <div class="seal-err" id="refusalErr">RequiresFullAccess</div>
+          <p class="seal-why" id="refusalWhy"></p>
+        </div>
+      </div>
+
+      <div class="intro" id="intro">
+        <div class="intro-card">
+          <p class="intro-kicker" id="introKicker">Loading the night log...</p>
+          <h2>One night in 60 seconds</h2>
+          <p id="introBlurb">Twelve hours of trading in the dark. At dawn one clone is broke and tries to run with what is left. Watch what the chain says.</p>
+          <button class="btn big" id="runBtn" disabled>Run one night</button>
+        </div>
+      </div>
+
+      <div class="result" id="result" hidden>
+        <div class="result-card" role="dialog" aria-labelledby="resultTitle">
+          <h2 id="resultTitle">Morning ledger</h2>
+          <ul class="result-rows" id="resultRows"></ul>
+          <p class="result-player" id="resultPlayer"></p>
+          <p class="result-key" id="resultKey"></p>
+          <div class="result-actions">
+            <button class="btn" id="againBtn">Watch again</button>
+            <button class="btn ghost" id="closeResult">Close</button>
+            <a class="btn ghost" href="town.html">Send your own clones in tonight</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="btn small" id="playBtn" disabled aria-label="Play">Play</button>
+      <input type="range" id="scrub" min="0" max="60" step="0.1" value="0" aria-label="Scrub through the night" disabled>
+      <span class="ctime" id="ctime">0:00 / 1:00</span>
+    </div>
+    <div class="sr-only" aria-live="polite" id="announce"></div>
+  </section>
+
+  <section class="ledger" aria-labelledby="ledgerTitle">
+    <details id="ledgerBox" open>
+      <summary id="ledgerTitle">Town ledger: every transaction of the night</summary>
+      <p class="netnote" id="netNote"></p>
+      <ul class="accounts" id="accounts"></ul>
+      <ol class="log" id="log" reversed></ol>
+    </details>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Replay of a recorded night log (<code id="srcName">data</code>, seed <span id="seedNo">?</span>). Load another with <code>?night=data/your-night.json</code>.</p>
+</footer>
+
+<script src="art.js"></script>
+<script src="sound.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

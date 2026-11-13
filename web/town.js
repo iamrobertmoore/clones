@@ -1083,7 +1083,7 @@
   function checkLog() {
     var url = LOGS + encodeURIComponent(guest) + '.json';
     var btn = $('watchBtn');
-    btn.href = 'index.html?night=' + encodeURIComponent(url);
+    btn.href = 'night.html?night=' + encodeURIComponent(url);
     btn.setAttribute('aria-disabled', 'true');
     $('watchNote').textContent = '';
     fetch(url, { cache: 'no-cache' }).then(function (r) {
@@ -1443,7 +1443,7 @@
   setTimeout(function () {
     if ($('statusTitle').textContent !== 'Loading') return;
     setStatus('The town is slow to answer', 'The test network is busy. Give it a few seconds, or watch a recorded night meanwhile.');
-    var a = el('a', null, ' Watch a recorded night'); a.href = 'index.html'; $('statusText').appendChild(a);
+    var a = el('a', null, ' Watch a recorded night'); a.href = 'night.html'; $('statusText').appendChild(a);
   }, 9000);
   var params = new URLSearchParams(location.search);
   var g = params.get('g');
