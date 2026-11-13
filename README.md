@@ -61,6 +61,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 | Try this | Watch what happens |
 |---|---|
 | [Open the town](https://clones-tau-nine.vercel.app/town.html) and follow the guide | No login, no wallet. The guide reads you the omen and which temperament it favours; about half a minute after **Send them in** you have a guest account on testnet with up to three clones in town. |
+| Press **Sign in with Google** before sending clones in | Your Google account maps to one guest account, the same on every device, so you can come back to your season from your phone. The token is checked against Google's keys on the server, and nothing about you is stored ([privacy](https://clones-tau-nine.vercel.app/privacy.html)). |
 | Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key and THE CHAINS HELD comes down: NEAR refused it. The chain's own error is one line below. |
 | Press **Ring the bell** | The town trades twelve hours in a few minutes: speech bubbles, orders, prices moving with the merchant's stock, and the race for the crown. At dawn the omen is shown true or false, the page audits the night from chain state alone, and the clones that are due merge home. |
 | Make your calls | The bell stops twice for your call, showing the race and how far you are behind the leader; you can also whisper under a clone at any hour. Three whispers per clone a night, each for the next hour only. At dawn the page tells you what each call made or cost against holding to dawn. |
