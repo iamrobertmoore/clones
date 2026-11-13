@@ -15,11 +15,22 @@
 //! hour every clone may make one `trade` call, cleared at the merchant's quote for that hour.
 //! After the twelfth hour it is dawn: no trading until the next night, and players settle the
 //! clones that are due home.
+//!
+//! The merchant's five goods are NEP-245 multi-tokens, so wallets and indexers can see what each
+//! clone holds. The token ids are the good names (`grain`, `salt`, `wool`, `iron`, `amber`). A
+//! clone's balance is its holding in this ledger, and the supply of a good is what the clones in
+//! town hold between them; the merchant's own stock is not a token balance. Every buy logs an
+//! `mt_mint` event to the clone and every sell, and every settlement, an `mt_burn`, so the supply
+//! is always the mints less the burns. The views (balances, supply, enumeration, metadata) follow
+//! the standard. The transfers do not: every `mt_*transfer*` method refuses, because a good that
+//! could leave the market would be a way for a clone to hand its value away from its player.
 
 use clones_core as rules;
-use near_sdk::json_types::U64;
+use near_sdk::json_types::{U128, U64};
 use near_sdk::store::{IterableMap, LookupMap, Vector};
-use near_sdk::{env, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise};
+use near_sdk::{
+    env, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
+};
 
 /// Clone names a player may use. Three clones, no more.
 pub const CLONE_NAMES: [&str; 3] = ["clone-1", "clone-2", "clone-3"];
@@ -58,6 +69,18 @@ pub const SEASON_PLAYERS: u32 = 200;
 pub const CHAMPIONS_KEPT: u32 = 20;
 
 const YOCTO_PER_MILLI: u128 = 1_000_000_000_000_000_000_000;
+
+/// NEP-245 metadata: the contract's spec and name, and the one base metadata every good shares.
+pub const MT_SPEC: &str = "mt-1.0.0";
+pub const MT_NAME: &str = "Clones market goods";
+pub const MT_SYMBOL: &str = "GOODS";
+pub const MT_BASE_ID: &str = "goods";
+
+/// Each good's title, in the order of `clones_core::GOODS`.
+pub const GOOD_TITLES: [&str; 5] = ["Grain", "Salt", "Wool", "Iron", "Amber"];
+
+/// Why every NEP-245 transfer is refused.
+pub const GOODS_STAY: &str = "goods stay at the market: a clone can only trade them";
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -355,7 +378,150 @@ pub struct TownView {
     pub clones_in_town: u32,
 }
 
-#[near(contract_state)]
+/// NEP-245 contract metadata (`mt_metadata_contract`).
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MtContractMetadata {
+    pub spec: String,
+    pub name: String,
+}
+
+/// NEP-245 base metadata, shared by all five goods (id `goods`).
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MtBaseTokenMetadata {
+    pub name: String,
+    pub id: String,
+    pub symbol: Option<String>,
+    pub icon: Option<String>,
+    pub decimals: Option<String>,
+    pub base_uri: Option<String>,
+    pub reference: Option<String>,
+    pub copies: Option<u64>,
+    pub reference_hash: Option<String>,
+}
+
+/// NEP-245 per-token metadata: one per good.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MtTokenMetadata {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub media: Option<String>,
+    pub media_hash: Option<String>,
+    pub issued_at: Option<String>,
+    pub expires_at: Option<String>,
+    pub starts_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub extra: Option<String>,
+    pub reference: Option<String>,
+    pub reference_hash: Option<String>,
+}
+
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MtTokenMetadataAll {
+    pub base: MtBaseTokenMetadata,
+    pub token: MtTokenMetadata,
+}
+
+/// A NEP-245 token: one good. Goods are fungible and many clones hold each, so `owner_id` is
+/// always null.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Token {
+    pub token_id: String,
+    pub owner_id: Option<AccountId>,
+    pub token_metadata: Option<MtTokenMetadata>,
+    pub base_metadata_id: String,
+}
+
+fn good_or_panic(token_id: &str) -> usize {
+    rules::good_index(token_id).unwrap_or_else(|| env::panic_str("unknown good"))
+}
+
+fn mt_base_metadata() -> MtBaseTokenMetadata {
+    MtBaseTokenMetadata {
+        name: MT_NAME.to_string(),
+        id: MT_BASE_ID.to_string(),
+        symbol: Some(MT_SYMBOL.to_string()),
+        icon: None,
+        decimals: Some("0".to_string()),
+        base_uri: None,
+        reference: None,
+        copies: None,
+        reference_hash: None,
+    }
+}
+
+fn mt_token_metadata(g: usize) -> MtTokenMetadata {
+    MtTokenMetadata {
+        title: Some(GOOD_TITLES[g].to_string()),
+        description: Some(format!(
+            "{}, a good of the Clones market town. Clones buy it from the merchant and sell it back; it never leaves the market.",
+            GOOD_TITLES[g]
+        )),
+        media: None,
+        media_hash: None,
+        issued_at: None,
+        expires_at: None,
+        starts_at: None,
+        updated_at: None,
+        extra: None,
+        reference: None,
+        reference_hash: None,
+    }
+}
+
+fn mt_token_of(g: usize) -> Token {
+    Token {
+        token_id: rules::GOODS[g].to_string(),
+        owner_id: None,
+        token_metadata: Some(mt_token_metadata(g)),
+        base_metadata_id: MT_BASE_ID.to_string(),
+    }
+}
+
+/// A page of `goods` (indices into `clones_core::GOODS`) as NEP-245 enumeration returns it.
+fn mt_page(
+    goods: impl Iterator<Item = usize>,
+    from_index: Option<U128>,
+    limit: Option<u32>,
+) -> Vec<Token> {
+    let from = from_index.map_or(0, |f| f.0.min(rules::GOODS.len() as u128) as usize);
+    goods
+        .skip(from)
+        .take(limit.map_or(usize::MAX, |l| l as usize))
+        .map(mt_token_of)
+        .collect()
+}
+
+/// Log one NEP-245 event (`mt_mint` or `mt_burn`) for `owner_id`, batching every good with a
+/// non-zero amount into one entry. Nothing is logged when every amount is zero. Account ids and
+/// good names never need JSON escaping.
+fn log_mt_event(event: &str, owner_id: &AccountId, amounts: &[u64; 5]) {
+    let goods: Vec<usize> = (0..5).filter(|g| amounts[*g] > 0).collect();
+    if goods.is_empty() {
+        return;
+    }
+    let quoted = |f: &dyn Fn(usize) -> String| {
+        goods
+            .iter()
+            .map(|g| format!("\"{}\"", f(*g)))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    let ids = quoted(&|g| rules::GOODS[g].to_string());
+    let qty = quoted(&|g| amounts[g].to_string());
+    env::log_str(&format!(
+        "EVENT_JSON:{{\"standard\":\"nep245\",\"version\":\"1.0.0\",\"event\":\"{event}\",\"data\":[{{\"owner_id\":\"{owner_id}\",\"token_ids\":[{ids}],\"amounts\":[{qty}]}}]}}"
+    ));
+}
+
+#[near(
+    contract_state,
+    contract_metadata(standard(standard = "nep245", version = "1.0.0"))
+)]
 #[derive(PanicOnDefault)]
 pub struct Market {
     keeper: AccountId,
@@ -795,6 +961,16 @@ impl Market {
         rec.stock = ledger.stock;
         rec.orders_placed += fills.len() as u32;
         rec.last_turn = Some((night, hour));
+        // NEP-245: what the clone bought is minted to it, what it sold is burned.
+        let (mut bought, mut sold) = ([0u64; 5], [0u64; 5]);
+        for i in &intents {
+            match i.side {
+                rules::Side::Buy => bought[i.good] += i.qty as u64,
+                rules::Side::Sell => sold[i.good] += i.qty as u64,
+            }
+        }
+        log_mt_event("mt_mint", &clone, &bought);
+        log_mt_event("mt_burn", &clone, &sold);
         let mut ids = Vec::new();
         for (o, f) in orders.into_iter().zip(fills) {
             self.fees += f.fee;
@@ -968,6 +1144,7 @@ impl Market {
         for (g, q) in rec.stock.iter().enumerate() {
             rules::move_stock(&mut self.stock, g, rules::Side::Sell, *q);
         }
+        log_mt_event("mt_burn", &clone_id, &rec.stock.map(|q| q as u64));
         let broke = rules::is_broke(ledger.cash, rec.stake);
         env::log_str(&format!(
             "settled {clone_id}: staked {} mNEAR, paid out {} mNEAR{}",
@@ -1202,6 +1379,187 @@ impl Market {
             .take(limit as usize)
             .cloned()
             .collect()
+    }
+}
+
+/// NEP-245 (multi token): the merchant's goods as tokens. Balances, supply, enumeration and
+/// metadata follow the standard; transfers refuse.
+#[near]
+impl Market {
+    /// A clone's holding of a good in this ledger; 0 for any other account.
+    fn holding(&self, account_id: &AccountId, g: usize) -> u128 {
+        self.clones
+            .get(account_id)
+            .map_or(0, |r| r.stock[g] as u128)
+    }
+
+    /// What the clones in town hold of each good, between them.
+    fn supplies(&self) -> [u128; 5] {
+        let mut total = [0u128; 5];
+        for r in self.clones.values() {
+            for (t, q) in total.iter_mut().zip(r.stock) {
+                *t += q as u128;
+            }
+        }
+        total
+    }
+
+    /// How much of a good a clone holds. Players and every other account hold none: goods only
+    /// ever sit with a clone in town. Panics on an unknown good.
+    pub fn mt_balance_of(&self, account_id: AccountId, token_id: String) -> U128 {
+        U128(self.holding(&account_id, good_or_panic(&token_id)))
+    }
+
+    pub fn mt_batch_balance_of(&self, account_id: AccountId, token_ids: Vec<String>) -> Vec<U128> {
+        token_ids
+            .iter()
+            .map(|t| U128(self.holding(&account_id, good_or_panic(t))))
+            .collect()
+    }
+
+    /// The supply of a good: the total the clones in town hold, which is every `mt_mint` less
+    /// every `mt_burn`. The merchant's own stock is not counted (see `get_town().stock`); it is
+    /// not anyone's token balance. Null for an unknown good.
+    pub fn mt_supply(&self, token_id: String) -> Option<U128> {
+        rules::good_index(&token_id).map(|g| U128(self.supplies()[g]))
+    }
+
+    pub fn mt_batch_supply(&self, token_ids: Vec<String>) -> Vec<Option<U128>> {
+        let total = self.supplies();
+        token_ids
+            .iter()
+            .map(|t| rules::good_index(t).map(|g| U128(total[g])))
+            .collect()
+    }
+
+    /// Each token, or null for an unknown id.
+    pub fn mt_token(&self, token_ids: Vec<String>) -> Vec<Option<Token>> {
+        token_ids
+            .iter()
+            .map(|t| rules::good_index(t).map(mt_token_of))
+            .collect()
+    }
+
+    /// All five goods, a page at a time.
+    pub fn mt_tokens(&self, from_index: Option<U128>, limit: Option<u32>) -> Vec<Token> {
+        mt_page(0..rules::GOODS.len(), from_index, limit)
+    }
+
+    /// The goods this account holds (a clone in town; nobody else holds any), a page at a time.
+    pub fn mt_tokens_for_owner(
+        &self,
+        account_id: AccountId,
+        from_index: Option<U128>,
+        limit: Option<u32>,
+    ) -> Vec<Token> {
+        let stock = self.clones.get(&account_id).map_or([0; 5], |r| r.stock);
+        mt_page(
+            (0..rules::GOODS.len()).filter(|g| stock[*g] > 0),
+            from_index,
+            limit,
+        )
+    }
+
+    pub fn mt_metadata_contract(&self) -> MtContractMetadata {
+        MtContractMetadata {
+            spec: MT_SPEC.to_string(),
+            name: MT_NAME.to_string(),
+        }
+    }
+
+    /// Panics on an unknown good, like every metadata view below.
+    pub fn mt_metadata_token_all(&self, token_ids: Vec<String>) -> Vec<MtTokenMetadataAll> {
+        token_ids
+            .iter()
+            .map(|t| MtTokenMetadataAll {
+                base: mt_base_metadata(),
+                token: mt_token_metadata(good_or_panic(t)),
+            })
+            .collect()
+    }
+
+    pub fn mt_metadata_token_by_token_id(&self, token_ids: Vec<String>) -> Vec<MtTokenMetadata> {
+        token_ids
+            .iter()
+            .map(|t| mt_token_metadata(good_or_panic(t)))
+            .collect()
+    }
+
+    pub fn mt_metadata_base_by_token_id(&self, token_ids: Vec<String>) -> Vec<MtBaseTokenMetadata> {
+        token_ids
+            .iter()
+            .map(|t| {
+                good_or_panic(t);
+                mt_base_metadata()
+            })
+            .collect()
+    }
+
+    /// The only base metadata id is `goods`.
+    pub fn mt_metadata_base_by_metadata_id(
+        &self,
+        base_metadata_ids: Vec<String>,
+    ) -> Vec<MtBaseTokenMetadata> {
+        base_metadata_ids
+            .iter()
+            .map(|id| {
+                require!(id == MT_BASE_ID, "unknown base metadata id");
+                mt_base_metadata()
+            })
+            .collect()
+    }
+
+    /// Every base metadata (there is one, `goods`), a page at a time.
+    pub fn mt_tokens_base_metadata_all(
+        &self,
+        from_index: Option<U128>,
+        limit: Option<u32>,
+    ) -> Vec<MtBaseTokenMetadata> {
+        std::iter::once(mt_base_metadata())
+            .skip(from_index.map_or(0, |f| f.0.min(1) as usize))
+            .take(limit.map_or(usize::MAX, |l| l as usize))
+            .collect()
+    }
+
+    // The four NEP-245 transfers refuse every call. A clone's goods are its player's stake in
+    // another form: if a clone could move them to any account it would have a way out of the
+    // leash (it could hand its value to a stranger), and if the player could, the player could
+    // take goods out of a clone mid-run and the ledger the night's audit replays would no longer
+    // match the trades. Goods leave a clone only by `trade` (sold to the merchant) or `settle`
+    // (sold to the merchant, cash paid out).
+    //
+    // They answer to the standard's names and accept its arguments, but never read them: a call
+    // that is refused whatever it says needs no parsing, and parsing four argument shapes only to
+    // throw them away would add a fifth to the contract's size. They are payable, so a call with
+    // the standard's 1 yoctoNEAR gets this message rather than a deposit error.
+
+    /// NEP-245 `mt_transfer(receiver_id, token_id, amount, approval, memo)`. Refused: goods stay
+    /// at the market.
+    #[payable]
+    pub fn mt_transfer(&mut self) {
+        env::panic_str(GOODS_STAY)
+    }
+
+    /// NEP-245 `mt_batch_transfer(receiver_id, token_ids, amounts, approvals, memo)`. Refused:
+    /// goods stay at the market.
+    #[payable]
+    pub fn mt_batch_transfer(&mut self) {
+        env::panic_str(GOODS_STAY)
+    }
+
+    /// NEP-245 `mt_transfer_call(receiver_id, token_id, amount, approval, memo, msg)`. Refused:
+    /// goods stay at the market, so no `mt_on_transfer` is ever called and there is nothing for
+    /// an `mt_resolve_transfer` to resolve.
+    #[payable]
+    pub fn mt_transfer_call(&mut self) -> PromiseOrValue<Vec<U128>> {
+        env::panic_str(GOODS_STAY)
+    }
+
+    /// NEP-245 `mt_batch_transfer_call(receiver_id, token_ids, amounts, approvals, memo, msg)`.
+    /// Refused: goods stay at the market.
+    #[payable]
+    pub fn mt_batch_transfer_call(&mut self) -> PromiseOrValue<Vec<U128>> {
+        env::panic_str(GOODS_STAY)
     }
 }
 
@@ -2076,6 +2434,309 @@ mod tests {
             900,
             "the merchant took the salt back"
         );
+    }
+
+    // NEP-245: the goods as multi-tokens.
+
+    fn ids(goods: &[&str]) -> Vec<String> {
+        goods.iter().map(|g| g.to_string()).collect()
+    }
+
+    /// The NEP-245 events in the logs of the last call, parsed.
+    fn mt_events() -> Vec<near_sdk::serde_json::Value> {
+        near_sdk::test_utils::get_logs()
+            .iter()
+            .filter_map(|l| l.strip_prefix("EVENT_JSON:"))
+            .map(|j| near_sdk::serde_json::from_str(j).unwrap())
+            .collect()
+    }
+
+    /// Alice's clone with 3 salt and 5 grain (bought in hour 0), and bob's with 2 salt.
+    fn town_with_goods() -> Market {
+        let mut m = town_with_clone();
+        as_caller("bob.testnet", NearToken::from_near(1));
+        m.register_clone(
+            acc("clone-2.bob.testnet"),
+            Temperament::Possessed,
+            None,
+            None,
+        );
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        ring_to_dawn(&mut m);
+        open(&mut m);
+        as_clone();
+        m.trade(0, vec![order("grain", Side::Buy, 5, 1000)]);
+        as_caller("clone-2.bob.testnet", zero());
+        m.trade(0, vec![order("salt", Side::Buy, 2, 1000)]);
+        m
+    }
+
+    #[test]
+    fn mt_balance_of_is_a_clones_holding_and_zero_for_anyone_else() {
+        let m = town_with_goods();
+        let alice = acc("clone-1.alice.testnet");
+        assert_eq!(m.mt_balance_of(alice.clone(), "salt".into()), U128(3));
+        assert_eq!(m.mt_balance_of(alice.clone(), "grain".into()), U128(5));
+        assert_eq!(m.mt_balance_of(alice, "amber".into()), U128(0));
+        assert_eq!(
+            m.mt_balance_of(acc("alice.testnet"), "salt".into()),
+            U128(0),
+            "the player holds none"
+        );
+        assert_eq!(
+            m.mt_balance_of(acc("mallory.testnet"), "salt".into()),
+            U128(0)
+        );
+    }
+
+    #[test]
+    fn mt_batch_balance_of_reads_each_good() {
+        let m = town_with_goods();
+        assert_eq!(
+            m.mt_batch_balance_of(
+                acc("clone-1.alice.testnet"),
+                ids(&["grain", "salt", "wool", "iron", "amber"])
+            ),
+            vec![U128(5), U128(3), U128(0), U128(0), U128(0)]
+        );
+        assert_eq!(
+            m.mt_batch_balance_of(acc("clone-2.bob.testnet"), ids(&["salt"])),
+            vec![U128(2)]
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown good")]
+    fn mt_balance_of_an_unknown_good_panics() {
+        let m = town_with_goods();
+        m.mt_balance_of(acc("clone-1.alice.testnet"), "gold".into());
+    }
+
+    #[test]
+    fn mt_supply_is_what_the_clones_in_town_hold() {
+        let m = town_with_goods();
+        assert_eq!(m.mt_supply("salt".into()), Some(U128(5)));
+        assert_eq!(m.mt_supply("grain".into()), Some(U128(5)));
+        assert_eq!(m.mt_supply("iron".into()), Some(U128(0)));
+        assert_eq!(m.mt_supply("gold".into()), None);
+        assert_eq!(
+            m.mt_batch_supply(ids(&["salt", "gold", "wool"])),
+            vec![Some(U128(5)), None, Some(U128(0))]
+        );
+    }
+
+    #[test]
+    fn mt_token_returns_each_good_or_null() {
+        let m = town_with_clone();
+        let t = m.mt_token(ids(&["amber", "gold"]));
+        assert_eq!(t.len(), 2);
+        let amber = t[0].clone().unwrap();
+        assert_eq!(amber.token_id, "amber");
+        assert_eq!(amber.owner_id, None);
+        assert_eq!(amber.base_metadata_id, MT_BASE_ID);
+        assert_eq!(
+            amber.token_metadata.unwrap().title.as_deref(),
+            Some("Amber")
+        );
+        assert_eq!(t[1], None);
+    }
+
+    #[test]
+    fn mt_tokens_lists_the_five_goods_a_page_at_a_time() {
+        let m = town_with_clone();
+        let all: Vec<String> = m
+            .mt_tokens(None, None)
+            .into_iter()
+            .map(|t| t.token_id)
+            .collect();
+        assert_eq!(all, rules::GOODS.map(String::from).to_vec());
+        let page: Vec<String> = m
+            .mt_tokens(Some(U128(1)), Some(2))
+            .into_iter()
+            .map(|t| t.token_id)
+            .collect();
+        assert_eq!(page, ids(&["salt", "wool"]));
+        assert!(m.mt_tokens(Some(U128(u128::MAX)), None).is_empty());
+    }
+
+    #[test]
+    fn mt_tokens_for_owner_lists_only_the_goods_held() {
+        let m = town_with_goods();
+        let held: Vec<String> = m
+            .mt_tokens_for_owner(acc("clone-1.alice.testnet"), None, None)
+            .into_iter()
+            .map(|t| t.token_id)
+            .collect();
+        assert_eq!(held, ids(&["grain", "salt"]));
+        let second = m.mt_tokens_for_owner(acc("clone-1.alice.testnet"), Some(U128(1)), Some(5));
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].token_id, "salt");
+        assert!(m
+            .mt_tokens_for_owner(acc("alice.testnet"), None, None)
+            .is_empty());
+    }
+
+    #[test]
+    fn mt_metadata_views_follow_the_standard() {
+        let m = town_with_clone();
+        let c = m.mt_metadata_contract();
+        assert_eq!(
+            (c.spec.as_str(), c.name.as_str()),
+            ("mt-1.0.0", "Clones market goods")
+        );
+        let all = m.mt_metadata_token_all(ids(&["grain", "iron"]));
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].base.symbol.as_deref(), Some("GOODS"));
+        assert_eq!(all[0].base.id, MT_BASE_ID);
+        assert_eq!(all[0].base.decimals.as_deref(), Some("0"));
+        assert_eq!(all[1].token.title.as_deref(), Some("Iron"));
+        let titles: Vec<Option<String>> = m
+            .mt_metadata_token_by_token_id(rules::GOODS.map(String::from).to_vec())
+            .into_iter()
+            .map(|t| t.title)
+            .collect();
+        assert_eq!(titles, GOOD_TITLES.map(|t| Some(t.to_string())).to_vec());
+        let base = m.mt_metadata_base_by_token_id(ids(&["wool"]));
+        assert_eq!(base[0].name, MT_NAME);
+        assert_eq!(m.mt_metadata_base_by_metadata_id(ids(&[MT_BASE_ID])), base);
+        assert_eq!(m.mt_tokens_base_metadata_all(None, None), base);
+        assert!(m
+            .mt_tokens_base_metadata_all(Some(U128(1)), None)
+            .is_empty());
+        // The JSON carries every field of the standard's shapes, null when unset.
+        let j = near_sdk::serde_json::to_value(&all[0]).unwrap();
+        assert!(j["base"]["base_uri"].is_null());
+        assert!(j["token"]["media"].is_null());
+        let t = near_sdk::serde_json::to_value(m.mt_token(ids(&["salt"]))).unwrap();
+        assert!(t[0]["owner_id"].is_null());
+        assert_eq!(t[0]["base_metadata_id"], "goods");
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown good")]
+    fn mt_metadata_of_an_unknown_good_panics() {
+        let m = town_with_clone();
+        m.mt_metadata_token_by_token_id(ids(&["gold"]));
+    }
+
+    #[test]
+    #[should_panic(expected = "unknown base metadata id")]
+    fn mt_base_metadata_of_an_unknown_id_panics() {
+        let m = town_with_clone();
+        m.mt_metadata_base_by_metadata_id(ids(&["grain"]));
+    }
+
+    #[test]
+    #[should_panic(expected = "goods stay at the market")]
+    fn a_clone_cannot_mt_transfer_its_goods() {
+        let mut m = town_with_goods();
+        as_caller("clone-1.alice.testnet", NearToken::from_yoctonear(1));
+        m.mt_transfer();
+    }
+
+    #[test]
+    #[should_panic(expected = "goods stay at the market")]
+    fn a_player_cannot_mt_batch_transfer_its_clones_goods() {
+        let mut m = town_with_goods();
+        as_caller("alice.testnet", NearToken::from_yoctonear(1));
+        m.mt_batch_transfer();
+    }
+
+    #[test]
+    #[should_panic(expected = "goods stay at the market")]
+    fn mt_transfer_call_is_refused() {
+        let mut m = town_with_goods();
+        as_caller("clone-1.alice.testnet", NearToken::from_yoctonear(1));
+        let _ = m.mt_transfer_call();
+    }
+
+    #[test]
+    #[should_panic(expected = "goods stay at the market")]
+    fn mt_batch_transfer_call_is_refused() {
+        let mut m = town_with_goods();
+        as_caller("alice.testnet", NearToken::from_yoctonear(1));
+        let _ = m.mt_batch_transfer_call();
+    }
+
+    #[test]
+    fn a_buy_logs_an_mt_mint_to_the_clone() {
+        let mut m = town_with_clone();
+        as_clone();
+        m.trade(0, vec![order("salt", Side::Buy, 3, 30)]);
+        let ev = mt_events();
+        assert_eq!(ev.len(), 1);
+        assert_eq!(
+            ev[0],
+            near_sdk::serde_json::json!({
+                "standard": "nep245",
+                "version": "1.0.0",
+                "event": "mt_mint",
+                "data": [{
+                    "owner_id": "clone-1.alice.testnet",
+                    "token_ids": ["salt"],
+                    "amounts": ["3"]
+                }]
+            })
+        );
+    }
+
+    #[test]
+    fn a_sell_logs_an_mt_burn_batching_the_goods() {
+        let mut m = town_with_goods();
+        as_caller("keeper.testnet", zero());
+        m.advance_round(0);
+        as_clone();
+        m.trade(
+            1,
+            vec![
+                order("salt", Side::Sell, 3, 1),
+                order("grain", Side::Sell, 5, 1),
+            ],
+        );
+        let ev = mt_events();
+        assert_eq!(ev.len(), 1, "one event for the whole turn");
+        assert_eq!(ev[0]["event"], "mt_burn");
+        assert_eq!(ev[0]["standard"], "nep245");
+        let d = &ev[0]["data"][0];
+        assert_eq!(d["owner_id"], "clone-1.alice.testnet");
+        assert_eq!(
+            d["token_ids"],
+            near_sdk::serde_json::json!(["grain", "salt"])
+        );
+        assert_eq!(d["amounts"], near_sdk::serde_json::json!(["5", "3"]));
+        assert_eq!(
+            m.mt_supply("salt".into()),
+            Some(U128(2)),
+            "bob's two remain"
+        );
+    }
+
+    #[test]
+    fn settle_burns_what_the_clone_held() {
+        let mut m = town_with_goods();
+        ring_to_dawn(&mut m);
+        as_caller("alice.testnet", zero());
+        let _ = m.settle(acc("clone-1.alice.testnet"));
+        let ev = mt_events();
+        assert_eq!(ev.len(), 1);
+        assert_eq!(ev[0]["event"], "mt_burn");
+        assert_eq!(
+            ev[0]["data"][0]["token_ids"],
+            near_sdk::serde_json::json!(["grain", "salt"])
+        );
+        assert_eq!(
+            ev[0]["data"][0]["amounts"],
+            near_sdk::serde_json::json!(["5", "3"])
+        );
+        assert_eq!(m.mt_supply("grain".into()), Some(U128(0)));
+        assert_eq!(m.mt_supply("salt".into()), Some(U128(2)));
+        // A clone with nothing to sell logs no event.
+        let mut empty = town_with_clone();
+        ring_to_dawn(&mut empty);
+        as_caller("alice.testnet", zero());
+        let _ = empty.settle(acc("clone-1.alice.testnet"));
+        assert!(mt_events().is_empty());
     }
 
     #[test]

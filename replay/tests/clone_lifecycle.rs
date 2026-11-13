@@ -214,6 +214,97 @@ async fn the_chain_refuses_every_way_a_clone_could_move_money() -> anyhow::Resul
 }
 
 #[tokio::test]
+async fn goods_are_nep245_tokens_that_never_leave_the_market() -> anyhow::Result<()> {
+    let t = town().await?;
+    let out = t
+        .clone
+        .call(t.market.id(), "trade")
+        .args_json(json!({ "round": 0, "orders": [{ "good": "salt", "side": "buy", "qty": 3, "price": 30 }] }))
+        .transact()
+        .await?
+        .into_result()?;
+    let mint = out
+        .logs()
+        .iter()
+        .find_map(|l| l.strip_prefix("EVENT_JSON:"))
+        .map(serde_json::from_str::<serde_json::Value>)
+        .ok_or_else(|| anyhow::anyhow!("the buy logged no NEP-245 event"))??;
+    assert_eq!(mint["standard"], "nep245");
+    assert_eq!(mint["event"], "mt_mint");
+    assert_eq!(mint["data"][0]["owner_id"], t.clone.id().as_str());
+    assert_eq!(mint["data"][0]["amounts"], json!(["3"]));
+
+    let balance: String = t
+        .market
+        .view("mt_balance_of")
+        .args_json(json!({ "account_id": t.clone.id(), "token_id": "salt" }))
+        .await?
+        .json()?;
+    assert_eq!(balance, "3");
+    let held: serde_json::Value = t
+        .market
+        .view("mt_tokens_for_owner")
+        .args_json(json!({ "account_id": t.clone.id() }))
+        .await?
+        .json()?;
+    assert_eq!(held[0]["token_id"], "salt");
+    let supply: Option<String> = t
+        .market
+        .view("mt_supply")
+        .args_json(json!({ "token_id": "salt" }))
+        .await?
+        .json()?;
+    assert_eq!(supply.as_deref(), Some("3"));
+
+    // The player calls each transfer the way the standard says, with 1 yoctoNEAR: refused.
+    let single = json!({ "receiver_id": t.player.id(), "token_id": "salt", "amount": "3",
+        "approval": null, "memo": null, "msg": "" });
+    let batch = json!({ "receiver_id": t.player.id(), "token_ids": ["salt"], "amounts": ["3"],
+        "approvals": null, "memo": null, "msg": "" });
+    for (method, args) in [
+        ("mt_transfer", &single),
+        ("mt_transfer_call", &single),
+        ("mt_batch_transfer", &batch),
+        ("mt_batch_transfer_call", &batch),
+    ] {
+        let out = t
+            .player
+            .call(t.market.id(), method)
+            .args_json(args)
+            .deposit(NearToken::from_yoctonear(1))
+            .transact()
+            .await?;
+        let err = format!("{:?}", out.into_result().expect_err(method));
+        assert!(
+            err.contains("goods stay at the market"),
+            "{method}: unexpected refusal: {err}"
+        );
+    }
+
+    // The clone's own key cannot even ask: it only calls `trade`.
+    let out = t
+        .clone
+        .call(t.market.id(), "mt_transfer")
+        .args_json(&single)
+        .transact()
+        .await;
+    let err = format!("{:?}", out.expect_err("a clone must not call mt_transfer"));
+    assert!(
+        err.contains("MethodNameMismatch"),
+        "unexpected refusal: {err}"
+    );
+
+    let balance: String = t
+        .market
+        .view("mt_balance_of")
+        .args_json(json!({ "account_id": t.clone.id(), "token_id": "salt" }))
+        .await?
+        .json()?;
+    assert_eq!(balance, "3", "the clone still holds its salt");
+    Ok(())
+}
+
+#[tokio::test]
 async fn a_stranger_cannot_merge_the_clone() -> anyhow::Result<()> {
     let t = town().await?;
     let mallory = t.worker.dev_create_account().await?;
