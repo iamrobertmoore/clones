@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clones: privacy</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { background: #07060a; color: #ece6d9; }
+  main.priv { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; font-size: 17px; line-height: 1.5; }
+  main.priv h1 { font-family: var(--frak, serif); font-weight: 400; font-size: 44px; margin: 10px 0 6px; }
+  main.priv h2 { font-size: 22px; margin: 26px 0 6px; }
+  main.priv a { color: #9fb6cf; }
+</style>
+</head>
+<body>
+<main class="priv">
+  <p><a href="town.html">Back to the town</a></p>
+  <h1>Privacy</h1>
+  <p>Clones is a game built for NEAR HACKATHON (November 2026). It runs on NEAR testnet with play money. This page says what the game learns about you and what it keeps.</p>
+
+  <h2>Playing without signing in</h2>
+  <p>You don't need an account. The town page makes a NEAR key in your browser and creates a guest account for you on NEAR testnet. Your browser keeps that key and your guest account's name in its own local storage; the game's server keeps nothing about you.</p>
+
+  <h2>Sign in with Google</h2>
+  <p>If you choose to sign in with Google, Google sends the page a signed token that says which Google account you are, and the page passes it to the game's server once. The server checks Google's signature and uses your Google account's ID, mixed with a secret, to work out your guest account name, so the same Google account always gets the same game account. Your Google ID, email address and name are not stored on the server and never go on chain. Your first name is kept in your own browser's local storage so the page can say who is signed in; "Sign out" removes it.</p>
+  <p>The game only asks Google for your basic profile (the standard openid, email and profile scopes) and uses it only to sign you in. It is not sold, shared or used for anything else. Clones' use of information received from Google APIs follows the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+
+  <h2>What is public</h2>
+  <p>Everything your clones do happens on NEAR testnet, which is a public blockchain: your guest account's name (a random-looking id such as g1a2b3c), your clones' accounts, their trades, whispers and results can be read by anyone and cannot be deleted. None of it contains your name or email.</p>
+
+  <h2>Other services</h2>
+  <p>The site is hosted on Vercel. If you pick an AI clone, the instruction you write and the market prices are sent to NEAR AI Cloud to choose its moves; your instruction is also stored on chain with the clone. The page reads the chain through public NEAR RPC servers.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or a request about your data: open an issue on the game's code page, <a href="https://github.com/iamrobertmoore/clones">github.com/iamrobertmoore/clones</a>.</p>
+</main>
+</body>
+</html>
