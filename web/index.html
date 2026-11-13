@@ -12,104 +12,141 @@
 <link rel="stylesheet" href="landing.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='4' fill='%2307060a'/%3E%3Cpath d='M15.5 4a8 8 0 1 0 0 16a6.5 6.5 0 1 1 0-16z' fill='%23ece6d9'/%3E%3Ccircle cx='17' cy='9' r='1.4' fill='%23d7212b'/%3E%3C/svg%3E">
 </head>
-<body class="landing">
+<body class="landing front">
 
 <nav class="lnav" aria-label="Site">
   <a class="lnav-home" href="index.html">Clones</a>
   <span class="lnav-links">
-    <a href="town.html">Play</a>
-    <a href="night.html">Watch a night</a>
     <a href="#how">How it works</a>
+    <a href="#leash">The leash</a>
     <a href="#proof">Check it</a>
     <a href="judges.html">For judges</a>
     <a href="https://github.com/iamrobertmoore/clones">Code</a>
+    <a class="lnav-play" href="town.html">Play</a>
   </span>
 </nav>
 
-<header class="top hero lhero">
-  <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
-  <p class="hero-line">Copies of you trade on NEAR while you sleep.</p>
-  <p class="hero-sub">Each one is a sub-account with one key: it can trade, it can <b>never withdraw</b>.</p>
-  <p class="lcta">
-    <a class="btn big" href="town.html">Send your clones in</a>
-    <a class="btn ghost" href="night.html">Watch a night in 60 seconds</a>
-    <a class="btn ghost" href="judges.html">For judges</a>
-  </p>
-  <p class="lnote">No wallet, no login. Testnet NEAR from the house. <a href="https://nearhackathon.com">Built at NEAR HACKATHON</a>, November 2026.</p>
+<header class="scene-hero">
+  <div class="sky"><div class="stars"></div><div class="moon"></div></div>
+  <div class="drift" aria-hidden="true">
+    <svg class="d1"><use href="#coin"/></svg><svg class="d2"><use href="#g-amber"/></svg><svg class="d3"><use href="#g-grain"/></svg>
+    <svg class="d4"><use href="#coin"/></svg><svg class="d5"><use href="#g-salt"/></svg><svg class="d6"><use href="#g-iron"/></svg>
+    <svg class="d7"><use href="#coin"/></svg><svg class="d8"><use href="#g-wool"/></svg>
+  </div>
+  <div class="hero-copy">
+    <a class="logo-link" href="index.html"><h1 class="logo">Clones</h1></a>
+    <p class="hero-line">Copies of you trade on NEAR while you sleep.</p>
+    <p class="hero-sub">Each one is a sub-account with one key: it can trade, it can <b>never withdraw</b>.</p>
+    <p class="lcta">
+      <a class="btn big glow" href="town.html">Send your clones in</a>
+      <a class="btn ghost" href="night.html">Watch a night in 60 seconds</a>
+    </p>
+    <p class="lnote">No wallet, no login. Built at NEAR HACKATHON, November 2026.</p>
+  </div>
+  <div class="trio" aria-hidden="true">
+    <svg class="chains" viewBox="0 0 900 300" preserveAspectRatio="none">
+      <path class="chain c1" d="M190 60 C 260 180, 380 250, 450 280"/>
+      <path class="chain c2" d="M450 52 C 450 150, 450 220, 450 280"/>
+      <path class="chain c3" d="M710 60 C 640 180, 520 250, 450 280"/>
+    </svg>
+    <div class="big-clone t-greedy"><svg><use href="#person"/></svg><span>greedy</span></div>
+    <div class="big-clone t-cautious mid"><svg><use href="#person"/></svg><span>cautious</span></div>
+    <div class="big-clone t-possessed"><svg><use href="#person"/></svg><span>possessed</span></div>
+    <div class="anchor"><span>you, asleep</span></div>
+  </div>
 </header>
 
+<section class="lstats reveal" aria-label="Live from the chain">
+  <ul>
+    <li><b id="sNights">&hellip;</b><span>nights played</span></li>
+    <li><b id="sTown">&hellip;</b><span>clones at the counter now</span></li>
+    <li><b id="sCrowns">&hellip;</b><span id="sCrownsLabel">season crowns won</span></li>
+    <li><b id="sKeys">&hellip;</b><span>keys on the market, testnet · mainnet</span></li>
+  </ul>
+  <p class="lsmall">Live from <code>pyre.clonestown.testnet</code> and <code>market.clones-town.near</code>, read in your browser.</p>
+</section>
+
 <main class="lmain">
-  <figure class="lvideo">
-    <video src="media/night-loop.mp4" poster="media/night-poster.jpg" autoplay muted loop playsinline aria-label="The town at night: the market board's prices move as clones trade at the counter"></video>
-    <figcaption>The hosted town at night. Your three clones and everyone else's trade at one merchant, so their buying moves your prices.</figcaption>
-  </figure>
-
-  <section class="lstats" aria-label="Live from the chain">
-    <h2 class="lh">Live from the chain</h2>
-    <ul>
-      <li><b id="sNights">&hellip;</b><span>nights played at the current market</span></li>
-      <li><b id="sTown">&hellip;</b><span>clones at the counter right now</span></li>
-      <li><b id="sCrowns">&hellip;</b><span>season crowns won so far</span></li>
-      <li><b id="sKeys">&hellip;</b><span>access keys on the market, testnet and mainnet</span></li>
-    </ul>
-    <p class="lsmall" id="sNote">Read in your browser from <code>pyre.clonestown.testnet</code> and <code>market.clones-town.near</code> through public NEAR RPC.</p>
-  </section>
-
   <section class="lsec" id="how">
-    <h2 class="lh">One night, three moves</h2>
-    <ol class="lsteps">
-      <li><b>Read the omen, pick your clones.</b> Each night has a mood (boom, slump, blight or wild), and the contract posts tomorrow's as an omen. It lies three nights in ten. Give each clone a temperament: cautious, greedy, loyal, or possessed by a NEAR AI model that follows one sentence you write.</li>
-      <li><b>Ring the bell, make your calls.</b> The whole town trades twelve hours against one merchant whose stock is real, so every clone's buying moves everyone's prices. Every two hours the bell stops for your call, and each clone has three whispers a night.</li>
-      <li><b>Dawn: the crown and the deed.</b> The night's fees go to the clone with the biggest profit. Its player holds the merchant's deed for the next night: a quarter of the fees, the fee itself, and a restock. Seven nights make a season.</li>
-    </ol>
-  </section>
-
-  <section class="lsec lleash">
-    <div>
-      <h2 class="lh">Try to run. NEAR refuses.</h2>
-      <p>Each clone is a real NEAR account, <code>clone-1.&lt;you&gt;</code>. Its only key is a function-call key that can call <code>trade</code> on one market and nothing else. Press "Try to run" on any clone and it tries to send its NEAR home. NEAR rejects the transaction before it reaches a block.</p>
-      <p>The town has a drawer of six ways out: a transfer, NEAR attached to a trade, a call to another contract, another market method, a new full-access key, and deleting itself to a stranger. Each is a real transaction, and each fails with NEAR's own error. Nothing in my code stops a clone from running; the chain does.</p>
-      <p>When a clone has played its nights, it comes home with a real <code>DeleteAccount</code> and everything it made lands in your account.</p>
+    <h2 class="lh center reveal">One night, three moves</h2>
+    <div class="steps3">
+      <article class="step reveal">
+        <div class="art omen-art"><small>the omen for tomorrow</small><b id="omenWord">Boom</b><em id="omenWhy">Prices climb all night.</em></div>
+        <h3>1. Read the omen</h3>
+        <p>Each night has a mood, and the market posts tomorrow's in advance. It lies three nights in ten. Give each clone a temperament: cautious, greedy, loyal, or possessed by an AI that follows one sentence you write.</p>
+      </article>
+      <article class="step reveal">
+        <div class="art board-art">
+          <div class="mini-board" id="miniBoard"></div>
+          <div class="bell" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 4 C 12 4, 10 12, 10 20 L 6 30 H 34 L 30 20 C 30 12, 28 4, 20 4 Z" fill="#b8903a" stroke="#3b2b0d" stroke-width="1.5"/><circle cx="20" cy="33" r="3" fill="#b8903a" stroke="#3b2b0d"/></svg></div>
+        </div>
+        <h3>2. Ring the bell</h3>
+        <p>The whole town trades twelve hours at one merchant whose stock is real, so every clone's buying moves everyone's prices. Every two hours the bell stops for your call.</p>
+      </article>
+      <article class="step reveal">
+        <div class="art crown-art"><svg viewBox="0 0 64 44" aria-hidden="true"><path d="M6 38 L4 12 L18 24 L32 6 L46 24 L60 12 L58 38 Z" fill="#d9a53a" stroke="#4a3208" stroke-width="2" stroke-linejoin="round"/><circle cx="18" cy="31" r="3" fill="#d7212b"/><circle cx="32" cy="31" r="3.4" fill="#7aa2c8"/><circle cx="46" cy="31" r="3" fill="#d7212b"/></svg><small>the crown and the deed</small></div>
+        <h3>3. Take the crown at dawn</h3>
+        <p>The night's fees go to the clone with the biggest profit. Its player holds the merchant's deed for the next night: a share of the fees, the fee itself, a restock. Seven nights make a season.</p>
+      </article>
     </div>
-    <img src="media/chains-held.jpg" alt="The town page after a clone tried to run: THE CHAINS HELD, with NEAR's RequiresFullAccess error" loading="lazy">
   </section>
 
-  <section class="lsec">
-    <h2 class="lh">Built on NEAR</h2>
+  <section class="lsec leash" id="leash">
+    <div class="leash-copy reveal">
+      <h2 class="lh">Try to run. NEAR refuses.</h2>
+      <p>Each clone is a real NEAR account, <code>clone-1.&lt;you&gt;</code>, and its only key can call <code>trade</code> on one market. Press "Try to run" and it signs a transfer of its own NEAR. NEAR rejects it before it reaches a block.</p>
+      <p>There are six ways out to try: a transfer, a deposit, another contract, another method, a new key, deleting itself to a stranger. Each fails with NEAR's own error. When a clone has played its nights, it comes home with a real <code>DeleteAccount</code> and everything it made lands in your account.</p>
+    </div>
+    <div class="run-stage reveal" id="runStage" aria-label="A clone lunges for a pile of coins and its chain holds">
+      <div class="pile" aria-hidden="true"><svg><use href="#coin"/></svg><svg><use href="#coin"/></svg><svg><use href="#coin"/></svg><svg><use href="#coin"/></svg><svg><use href="#coin"/></svg></div>
+      <svg class="run-chain" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true"><path id="runChain" d="M40 150 Q 120 175 200 110"/></svg>
+      <div class="post" aria-hidden="true"></div>
+      <div class="runner t-greedy" aria-hidden="true"><svg><use href="#person"/></svg></div>
+      <div class="held"><b>THE CHAINS HELD</b><code>InvalidAccessKeyError: RequiresFullAccess</code></div>
+    </div>
+  </section>
+
+  <section class="lsec" id="near">
+    <h2 class="lh center reveal">Built on NEAR</h2>
     <ul class="lcards">
-      <li><b>Sub-accounts as agents</b><span>Every clone is its own account under yours, so its money is on chain where you can see it.</span></li>
-      <li><b>Function-call keys</b><span>The leash: one key, one method, one market. NEAR checks it on every transaction.</span></li>
-      <li><b>DeleteAccount</b><span>A clone comes home by deleting itself into its parent, and the leash contract allows no other beneficiary.</span></li>
-      <li><b>A market with no key</b><span>Created, deployed and initialised in one transaction, then left with no access key, on testnet and mainnet.</span></li>
-      <li><b>Block randomness</b><span>In the hosted town each hour's prices and the nightly omen are drawn from the chain as the hour is rung, so nobody knows them in advance.</span></li>
-      <li><b>NEP-245 goods</b><span>Grain, salt, wool, iron and amber are multi-tokens: indexers can read what every clone holds.</span></li>
-      <li><b>NEAR AI Cloud</b><span>A possessed clone picks its moves with a model, on the same leash as the rest.</span></li>
-      <li><b>Social login</b><span>Optional Google sign-in maps you to one account on every device.</span></li>
+      <li class="reveal"><b>Sub-accounts as agents</b><span>Every clone is its own account under yours, so its money sits on chain where you can see it.</span></li>
+      <li class="reveal"><b>Function-call keys</b><span>The leash: one key, one method, one market. NEAR checks it on every transaction.</span></li>
+      <li class="reveal"><b>DeleteAccount</b><span>A clone comes home by deleting itself into its parent; the leash contract allows no other beneficiary.</span></li>
+      <li class="reveal"><b>A market with no key</b><span>Deployed and left with no access key, on testnet and mainnet, so nobody can change its rules.</span></li>
+      <li class="reveal"><b>Block randomness</b><span>In the hosted town, each hour's prices and the omen are drawn from the chain as the hour is rung.</span></li>
+      <li class="reveal"><b>NEP-245 goods</b><span>Grain, salt, wool, iron and amber are multi-tokens, so indexers can read what every clone holds.</span></li>
+      <li class="reveal"><b>NEAR AI Cloud</b><span>A possessed clone picks its moves with a model, on the same leash as the rest.</span></li>
+      <li class="reveal"><b>Social login</b><span>No wallet needed; optional Google sign-in keeps one account on every device.</span></li>
     </ul>
   </section>
 
-  <section class="lsec" id="proof">
-    <h2 class="lh">Don't trust this page. Check it.</h2>
-    <p>Every night replays from chain state. The dawn audit checks that each clone did what its temperament or your whisper said, and that every price, fee, crown and payout is what the rules say.</p>
-<pre class="lcode"><code>git clone https://github.com/iamrobertmoore/clones && cd clones/web && npm ci
-node scripts/verify-night.js                       # the last night in the hosted town
+  <section class="lsec proof" id="proof">
+    <h2 class="lh center reveal">Don't trust this page. Check it.</h2>
+    <p class="center narrow reveal">Every night replays from chain state: each clone did what its temperament or your whisper said, and every price, fee, crown and payout is what the rules say. A GitHub Actions job does it every six hours and rebuilds the market to compare its code hash with the chain.</p>
+<pre class="lcode reveal"><code>git clone https://github.com/iamrobertmoore/clones && cd clones/web && npm ci
+node scripts/verify-night.js        # the last night in the hosted town: "Audit passed"
 MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.mainnet.fastnear.com \
-  node scripts/verify-night.js                     # the night played on mainnet</code></pre>
-    <p>A GitHub Actions job does the same every six hours, rebuilds the market reproducibly and compares its code hash with the chain. The README has a table that checks every claim in five minutes, and an honest list of what isn't true yet.</p>
+  node scripts/verify-night.js      # the night played on mainnet: 26 orders replayed</code></pre>
+    <p class="center reveal"><a class="btn ghost" href="judges.html">The five-minute judges' path</a></p>
   </section>
 
-  <section class="lsec lend">
-    <h2 class="lh">Copies of you are waiting.</h2>
-    <p class="lcta"><a class="btn big" href="town.html">Send your clones in</a></p>
+  <section class="lsec lend reveal">
+    <div class="trio small" aria-hidden="true">
+      <div class="big-clone t-greedy"><svg><use href="#person"/></svg></div>
+      <div class="big-clone t-cautious mid"><svg><use href="#person"/></svg></div>
+      <div class="big-clone t-possessed"><svg><use href="#person"/></svg></div>
+    </div>
+    <h2 class="lh center">Copies of you are waiting.</h2>
+    <p class="lcta"><a class="btn big glow" href="town.html">Send your clones in</a></p>
   </section>
 </main>
 
 <footer class="foot lfoot">
   Built for <a href="https://nearhackathon.com">NEAR HACKATHON</a>, November 2026, by Robert Moore ·
   <a href="https://github.com/iamrobertmoore/clones">Code (MIT)</a> ·
+  <a href="night.html">A recorded night</a> ·
   <a href="judges.html">For judges</a> ·
-  <a href="privacy.html">Privacy</a> ·
-  testnet <code>pyre.clonestown.testnet</code> · mainnet <code>market.clones-town.near</code>
+  <a href="privacy.html">Privacy</a>
 </footer>
 
 <script src="art.js"></script>

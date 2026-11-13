@@ -25,7 +25,53 @@
     var all = (r[0].champions || []).concat(r[1].champions || []);
     var guests = all.filter(function (c) { return /^g[a-z0-9]{6}\./.test(c.player); }).length;
     set('sCrowns', all.length);
-    var li = document.getElementById('sCrowns'); if (li && li.nextSibling) li.nextSibling.textContent = 'season crowns won so far, ' + guests + ' of them by guest accounts';
+    set('sCrownsLabel', 'season crowns won, ' + guests + ' by guest accounts');
   }).catch(function () { set('sCrowns', '?'); });
   Promise.all([keys(TESTNET, MARKET), keys(MAINNET, MAIN)]).then(function (k) { set('sKeys', k[0] + ' · ' + k[1]); }).catch(function () { set('sKeys', '?'); });
+
+  var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Sections fade up as they scroll in.
+  var io = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.15 }) : null;
+  Array.prototype.forEach.call(document.querySelectorAll('.reveal'), function (n) { if (io && !still) io.observe(n); else n.classList.add('in'); });
+
+  // The omen keeps changing its mind.
+  var MOODS = [['Boom', 'Prices climb all night.'], ['Slump', 'Prices sink, then rebound before dawn.'], ['Blight', 'The luxuries rot; the staples hold.'], ['Wild', 'Big swings both ways.']];
+  var omen = document.querySelector('.omen-art'), mi = 0;
+  if (omen && !still) setInterval(function () {
+    omen.classList.add('out');
+    setTimeout(function () { mi = (mi + 1) % MOODS.length; set('omenWord', MOODS[mi][0]); set('omenWhy', MOODS[mi][1]); omen.classList.remove('out'); }, 500);
+  }, 3200);
+
+  // The market board: five goods whose prices move as clones trade.
+  var board = document.getElementById('miniBoard');
+  var GOODS = [['grain', 19], ['salt', 29], ['wool', 49], ['iron', 79], ['amber', 119]];
+  if (board) {
+    var cells = GOODS.map(function (g) {
+      var d = document.createElement('div');
+      d.innerHTML = '<svg><use href="#g-' + g[0] + '"/></svg><b>' + (g[1] / 1000).toFixed(3) + '</b><i>' + g[0] + '</i>';
+      board.appendChild(d); return { el: d, b: d.querySelector('b'), p: g[1] };
+    });
+    if (!still) setInterval(function () {
+      cells.forEach(function (c) {
+        var m = 1 + (Math.random() - 0.48) * 0.16, n = Math.max(5, Math.round(c.p * m));
+        c.el.className = n > c.p ? 'up' : n < c.p ? 'down' : '';
+        c.p = n; c.b.textContent = (n / 1000).toFixed(3);
+      });
+    }, 1400);
+  }
+
+  // A clone lunges for the coins; the chain holds.
+  var stage = document.getElementById('runStage');
+  if (stage && !still) {
+    var cycle = function () {
+      stage.className = 'run-stage reveal in lunge';
+      setTimeout(function () { stage.className = 'run-stage reveal in snap'; }, 700);
+      setTimeout(function () { stage.className = 'run-stage reveal in hold'; }, 1200);
+      setTimeout(function () { stage.className = 'run-stage reveal in'; }, 3600);
+    };
+    setTimeout(cycle, 1200); setInterval(cycle, 5200);
+  } else if (stage) stage.classList.add('hold');
 })();
