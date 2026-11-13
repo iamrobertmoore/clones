@@ -220,4 +220,4 @@ The art is hand-written SVG and CSS, and the sound and music are synthesised in 
 
 **AI-generated code.** I built this with Claude Code as my coding assistant, and much of the code in
 this repository was written with it, under my direction and review. The first commit is from
-9 November 2026; nothing in it predates the event.
+9 November 2026; nothing in it predates the event. Clones is my only project in NEAR HACKATHON.
