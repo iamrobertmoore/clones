@@ -23,7 +23,7 @@ Every night has a mood (boom, slump, blight or wild) that favours a different te
 market contract posts tomorrow's mood tonight as an omen, drawn from the chain's own randomness,
 and the omen lies three nights in ten. You share the merchant with three regulars (the Widow, the
 Abbot and the Hound) and every other player, so their buying moves your prices. At dawn the night's
-fees go to the clone with the best return, and its player holds the merchant's deed for the next
+fees go to the clone with the biggest profit, and its player holds the merchant's deed for the next
 night and sets the fee. Clones that are broke or have done their nights come home with a real
 `DeleteAccount`, and what they made lands in your account.
 
@@ -34,8 +34,8 @@ Real players, not just me, have been in the town every day since 11 November:
 - **A player took the season 2 crown.** Seasons run seven nights; at the dusk after night 14 the
   contract gave season 2 to guest `gkgm6rc` at +0.776 NEAR (`get_season`, `champions`). Season 1
   went to the Widow, a regular, at +1.193 NEAR.
-- **20 guest accounts in the last six nights at the first market.** The contract keeps the last
-  40 settlements (`get_recent`). At the first market, `shroud.clonestown.testnet`, they cover nights
+- **20 guest accounts in the last six nights at the earlier market.** The contract keeps the last
+  40 settlements (`get_recent`). At the earlier market, `shroud.clonestown.testnet`, they cover nights
   14 to 19 and come from 20 guest accounts, a few of them mine from testing. The town moved to the
   current market, `pyre`, on 13 November and the first one plays no more nights, so the command
   below keeps giving the same answer. A guest account is anonymous and a new set of clones makes a
@@ -68,7 +68,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 | Press **Sign in with Google** before sending clones in | Your Google account maps to one guest account, the same on every device, so you can come back to your season from your phone. The token is checked against Google's keys on the server, and nothing about you is stored ([privacy](https://clones-tau-nine.vercel.app/privacy.html)). |
 | Press **Try to run** on any clone | The clone signs a transfer from its own account with its own key and THE CHAINS HELD comes down: NEAR refused it. The chain's own error is one line below. |
 | Press **Ring the bell** | The town trades twelve hours in a few minutes: speech bubbles, orders, prices moving with the merchant's stock, and the race for the crown. At dawn the omen is shown true or false, the page audits the night from chain state alone, and the clones that are due merge home. |
-| Make your calls | The bell stops twice for your call, showing the race and how far you are behind the leader; you can also whisper under a clone at any hour. Three whispers per clone a night, each for the next hour only. At dawn the page tells you what each call made or cost against holding to dawn. |
+| Make your calls | When you ring the bell, it stops every two hours (five times a night) for your call, showing the race and how far you are behind the leader; you can also whisper under a clone at any hour. Three whispers per clone a night, each for the next hour only. At dawn the page tells you what each call made or cost against holding to dawn. |
 | Pick **possessed** and write an instruction | A NEAR AI model trades that clone on your sentence, one legal move an hour, through the same trade-only key. If the model doesn't answer, the clone trades as cautious and its bubble says "the voice is silent". |
 | Take the crown, then set the fee | As deed holder you pick the next night's fee (0.5% to 3%) and one good to restock. A quarter of the fees is yours at dawn, but your own clones pay the fee too. |
 | Open **Proof**, then **Try to break the leash** | Six ways out for one of your clones (with none in town, for any player's clone; a refused transaction changes nothing): a transfer, NEAR attached to a trade, a call to another contract, a different market method, a new full-access key, deleting itself to a stranger. Each is a real transaction; NEAR refuses each with its own error (`RequiresFullAccess`, `DepositWithFunctionCall`, `ReceiverMismatch`, `MethodNameMismatch`). |
@@ -85,7 +85,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 | The chain refuses its withdrawal | `InvalidAccessKeyError(RequiresFullAccess)`, live from **Try to run**, and in `web/data/night.json` | A refused transaction never reaches a block, so there is no explorer link. Press the button, or run `cargo test -p clones-replay` (also a refused deposit and a refused call to anything but the market) |
 | Merge is a real DeleteAccount to the player | [clone-2 merged](https://testnet.nearblocks.io/txns/3gdn6QfmuqsZJnfHUaS515jkvg1zNvZKzJgha2rdLCPS) | The clone account no longer exists; its balance went to the player |
 | The contract decides every number | `contracts/market` quotes, clears and charges every order with the rules in `core`, and keeps each hour's prices and every order | Every town night ends with an audit that replays the night from the dusk state and the orders on chain (`web/lib/night.js`, `audit`; tested in `web/lib/night.test.js`) |
-| The crown goes to the best return | `crown()` in `contracts/market/src/lib.rs` runs at dawn; `get_town` shows `crowned` | The dawn audit recomputes the pot and the winner from the orders and checks the contract agrees; contract test `the_nights_fees_crown_the_best_return` |
+| The crown goes to the biggest profit | `crown()` in `contracts/market/src/lib.rs` runs at dawn; `get_town` shows `crowned` | The dawn audit recomputes the pot and the winner from the orders and checks the contract agrees; contract test `the_nights_fees_crown_the_biggest_profit` |
 | Nobody can see the next hour's prices | The hosted market draws each hour's prices, and tomorrow's mood, from `env::random_seed` as the keeper rings the hour | `get_town` shows `chain_dice: true` and the prices drawn so far (`hours`); contract test `a_hosted_town_draws_prices_and_tomorrows_omen_from_the_chain` |
 | Clones move each other's prices | The merchant's stock is stored in the contract (`get_town`: `stock`, `hour_stock`) | Watch the stock bars while the bell rings; `core` test `clones_move_each_others_prices` |
 | The code on chain is this repository's code | Built with `cargo near build reproducible-wasm` in a pinned image; its NEP-330 metadata (`contract_source_metadata`) names the commit. Code hash `Fh4Z8qs8kFJnubytxtB9EzG3LB4i3qTNquvypA5c7iZk` (testnet, commit `7bd9d25`) | Rebuild at that commit for the same hash; the [verify workflow](.github/workflows/verify.yml) does it every six hours, and for the leash every clone gets |
@@ -99,7 +99,7 @@ browser makes its only full-access key, and the house's key on it can only call 
 3. **DeleteAccount as the merge.** The leash contract on each clone has `merge`, which only the parent account or the market it is bound to may call, and it always deletes the clone with the player as beneficiary (`contracts/leash/src/lib.rs`). The leash is a reusable crate with its own guide: [`contracts/leash`](contracts/leash/README.md).
 4. **A contract-held ledger.** A function-call key can't attach NEAR, so a clone's cash lives in the market's ledger next to the merchant's stock. `settle` sells what a clone holds and pays out before the merge; if the clone account is already gone, the payout goes to the player.
 5. **The house on a leash too.** At sign-up the browser's key becomes the guest account's only full-access key, and the house's key is replaced by a function-call key for `whisper`, `retrain`, `settle`, `order_restock` and `set_fee` (`web/api/enlist.js`).
-6. **A market with no key.** The market account was created, deployed and initialised in one transaction and holds no access key, so nobody can redeploy it or move its ledger. Its keeper may only open nights and ring hours.
+6. **A market with no key.** The market account was created, deployed and initialised in one transaction and holds no access key, so nobody can redeploy it or move its ledger. Its keeper may only open nights and ring hours. In the hosted testnet market each hour's prices come from block randomness as it is rung; the one mainnet night used a seed the keeper chose when it opened the night.
 7. **Block randomness for prices and moods.** The hosted market draws each hour's price moves and tomorrow's mood from `env::random_seed()` when the hour is rung, so not even the house knows the next hour.
 8. **NEAR AI Cloud for possessed clones.** `google/gemini-2.5-flash-lite` picks one legal move an hour from your instruction (`web/lib/mind.js`); the contract prices and clears it like any other order.
 9. **NEP-245 goods.** The merchant's five goods are NEP-245 multi-tokens: `mt_balance_of`, `mt_supply`, `mt_tokens_for_owner` and the metadata views show every clone's holdings to any wallet or indexer, and each trade logs the standard `mt_mint` and `mt_burn` events. Transfers are refused on purpose ("goods stay at the market"): a good moved out would be a way off the leash.
@@ -130,7 +130,7 @@ Over 20,000 simulated nights, about 5,000 of each mood (`cargo run -p clones-cor
 | Blight | -18% | -43% | **+1%** |
 | Wild | **+9%** | -59%, broke 1 night in 4 | +1% |
 
-Those figures leave the crown out. Sent blind, no temperament dominates (cautious +2%, loyal +1%, greedy -23% on average). Because the omen lies three nights in ten and the crown goes to one clone in the whole town, reading the omen well is not enough on its own.
+Those figures leave the crown out. Sent blind, cautious is the safest bet (cautious +2%, loyal +1%, greedy -23% on average), and a boom or a blight beats it. Because the omen lies three nights in ten and the crown goes to one clone in the whole town, reading the omen well is not enough on its own.
 
 The demo night (seed 606, a wild night): cautious 2.000 to 3.112 NEAR (2.613 plus the crown), greedy 2.000 to 0.484 (broke), loyal 2.000 to 2.053.
 
@@ -138,15 +138,15 @@ The demo night (seed 606, a wild night): cautious 2.000 to 3.112 NEAR (2.613 plu
 
 `clonestown.testnet` runs a market, `pyre.clonestown.testnet`, that only takes its own guests and draws its prices from block randomness. The house is only its keeper. Each clone has its own key, derived from the house secret, and the contract refuses any turn that isn't what the clone's temperament (or your whisper) says; a possessed clone may make one legal move an hour.
 
-The sign-up function creates a guest account and its clones and sends them in, funded with testnet NEAR by the house. The bell (`web/api/bell.js`) plays one step of the night per call, and the town page calls it until dawn. If nobody rings it, a GitHub Actions job rings the same code around 02:00 UTC and publishes each guest's night log. When a guest's clones are all home, the house sweeps its testnet NEAR back. The town holds up to 45 clones a night.
+The sign-up function creates a guest account and its clones and sends them in, funded with testnet NEAR by the house. The bell (`web/api/bell.js`) plays one step of the night per call, and the town page calls it until dawn. If nobody rings it, a GitHub Actions job rings the same code around 02:00 UTC and publishes each guest's night log. When a guest's clones are all home, the house sweeps the account's testnet NEAR back only if it holds the account's only full-access key (a Google sign-in); an account whose full key your browser made keeps everything. The town holds up to 45 clones a night.
 
-**Make the account yours.** On your guest page, **Add my own key** makes an Ed25519 key in your browser and adds it to your guest account as a full-access key. The private key never leaves the page. From then on your winnings stay with you, and you can remove the house key.
+**Make a Google account yours.** If the house holds your account's full key (Google sign-in), **Add my own key** makes an Ed25519 key in your browser and adds it to your guest account as a full-access key. The private key never leaves the page. From then on your winnings stay with you, and you can remove the house key.
 
 ## Mainnet
 
 One full night has been played on NEAR mainnet, in a market nobody can change.
 
-- [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) was created, funded, deployed and initialised in [one transaction](https://nearblocks.io/txns/Cuv4CvkqR27DnkhA81vP6ow21eagdqBnYu8c98KG3KBS) and has no access key. Its code hash is `D6N3XwQyRQzQDDmqY9pvH66VbMRKBDQTvjj3maHCRF6w`, built with `cargo near` from commit `17515bd`, the commit the testnet market was built from reproducibly. The mainnet build was not reproducible, so its hash only matches a build on the machine that made it; the six-hourly check verifies its keys and replays its night, not its hash. The house, `clones-town.near`, is only its keeper.
+- [`market.clones-town.near`](https://nearblocks.io/address/market.clones-town.near) was created, funded, deployed and initialised in [one transaction](https://nearblocks.io/txns/Cuv4CvkqR27DnkhA81vP6ow21eagdqBnYu8c98KG3KBS) and has no access key. Its code hash is `D6N3XwQyRQzQDDmqY9pvH66VbMRKBDQTvjj3maHCRF6w`, built with `cargo near` from commit `17515bd`, the commit the first testnet market, `shroud`, was built from reproducibly; the current testnet market, `pyre`, is built from `7bd9d25` and adds NEP-245 goods, which the mainnet market doesn't have. The mainnet build was not reproducible, so its hash only matches a build on the machine that made it; the six-hourly check verifies its keys and replays its night, not its hash. The house, `clones-town.near`, is only its keeper.
 - Night 7: three clones of [`you.clones-town.near`](https://nearblocks.io/address/you.clones-town.near) with 0.25 NEAR stakes placed 26 orders on chain. The cautious clone took the crown and came home with 0.330 NEAR. The greedy one went broke, tried to send its own balance home and was refused, because its only key may call `trade` and nothing else; it came home with 0.054 NEAR. The loyal one came home with 0.257 NEAR. All three were merged into the player with DeleteAccount.
 - The night replays from mainnet state alone with the dawn audit, and the six-hourly check does that again and confirms the market still has no key:
 
@@ -167,21 +167,21 @@ cd web && MARKET_ACCOUNT=market.clones-town.near NEAR_RPCS=https://archival-rpc.
 - With eleven clones in town the public RPC rate-limited some turns, and the audit flagged the missing orders at dawn. The runner now sends at most four turns at once, backs off longer, resends any turn that didn't land before ringing the hour, and spreads accounts across two RPC hostnames.
 - GitHub's scheduler started the nightly job seven hours late and skipped the backstop. A player's clones could have sat unplayed all morning, so the night now runs whenever anyone rings the bell, and the schedule is only a fallback.
 - A lagging RPC node made the runner replay an hour. The contract already refused the duplicate trades; the runner now also waits until a node shows the new hour before it returns.
-- A market with no key can never be upgraded, which is the point, so each change to what the market stores means a new market: NEAR wouldn't delete the old accounts, which hold a lot of state. Seasons 1 to 3 were played at `shroud.clonestown.testnet`; the town moved to `pyre.clonestown.testnet` on 13 November for NEP-245 goods.
+- A market with no key can never be upgraded, which is the point, so each change to what the market stores means a new market: NEAR wouldn't delete the old accounts, which hold a lot of state. Seasons 1 and 2, and nights 15 to 19 of season 3, were played at `shroud.clonestown.testnet`; the town moved to `pyre.clonestown.testnet` on 13 November for NEP-245 goods.
 - The dawn audit could only see a clone's last whisper, so a night with two whispers to one clone could not be replayed afterwards, and a clone that had gone home took its dusk holdings with it. The contract now keeps every whisper of the night and puts the dusk holdings in each settlement, and a scheduled job replays the last finished night from chain state.
 - Earlier: the public RPC rate-limited the first testnet night (calls now retry on rate limits only), merging with maximum gas reserved more than a small player held (merge asks for 100 Tgas), and settling an already merged clone would have stranded its cash (`after_payout` pays the player instead).
 
 ## After the hackathon
 
 - **The town keeps running without me.** The house is a testnet account; a GitHub Actions job funds it from testnet's faucet every three hours and rings the bell every night, and the site is a static page plus serverless functions on Vercel's free tier. The only running cost is NEAR AI Cloud credit for the AI clones; without it they trade as cautious and say so.
-- **Real stakes are one step away, not a rewrite.** The mainnet market is already live, keyless and played. What's missing is sign-up: on testnet the house pays your stakes, and on mainnet you'd fund your own guest account from your wallet. The leash, the market and the audit stay the same. Before real money I'd also want prices drawn from something no single validator can bias (see Known limits).
+- **Real stakes are one step away, not a rewrite.** The mainnet market is already live, keyless and played. What's missing is sign-up: on testnet the house pays your stakes, and on mainnet you'd fund your own guest account from your wallet. The leash and the audit stay the same; the market would be a new one deployed with block-randomness prices, since the mainnet market's keeper chose its night's seed, and with the NEP-245 goods. Before real money I'd also want prices drawn from something no single validator can bias (see Known limits).
 - **The deed is the business model the game already has.** The crown's player earns a quarter of the next night's fees and sets the fee, so the town's economy pays whoever runs the merchant, with no token.
 - **The leash outlives the game.** `contracts/leash` is a standalone crate with its own guide: any agent you want to let act on your behalf but never let leave, such as a trading bot on its own sub-account, can use it as it is.
 
 ## Known limits
 
 - The hosted town runs on testnet. The one mainnet night used 0.25 NEAR stakes of my own.
-- The house still runs every clone and holds a function-call key on your guest account, so it decides when nights happen and what the regulars do. It can't move your NEAR.
+- The house still runs every clone and holds a function-call key on your guest account, so it decides when nights happen and what the regulars do. It can't move the NEAR of an account whose only full key your browser made; for a Google sign-in account it holds a full key, as the sign-in panel says.
 - Possessed clones need NEAR AI Cloud credits on the house's key; without them they trade as cautious and say so.
 - NEAR's validators produce the block randomness, and a validator could in principle bias it. That's fine for a testnet game and not for real stakes. The recorded demo night and the tests use a seed so their answer key can be worked out in advance.
 - The market doesn't check a clone's shape (one function-call key); the sign-up function sets it up, and the page shows it live.
@@ -204,7 +204,7 @@ the rules). The recorded nights are in `web/data/`.
 ## How this maps to the judging criteria
 
 - **Game loop:** read the omen (and doubt it), choose temperament, stake and nights for each clone, ring the bell, make your calls, fight the regulars and other guests for the crown, see who comes home, retrain or recall the ones still out, ring again. Your clones share one merchant with everyone else's.
-- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 108 Rust tests, including three suites that play real nights on a local NEAR node, and 26 web tests (the night audit among them) run in CI on every push. Every six hours CI rebuilds the deployed contract, compares its hash with the chain, and replays the last live night from chain state.
+- **Technical:** two contracts and three NEAR mechanics (sub-accounts, function-call keys, DeleteAccount) carry the game. 108 Rust tests, including three suites that play real nights on a local NEAR node, and 26 web tests (the night audit among them) run in CI on every push to main and every pull request. Every six hours CI rebuilds the deployed contract, compares its hash with the chain, and replays the last finished night from chain state.
 - **NEAR integration:** the leash is a NEAR function-call access key, and every price, fill and payout is computed by the market contract.
 - **Design:** you lie asleep in a coffin, chained to three corpse-painted copies of yourself trading at a crypt in a frozen forest, so the idea reads in one frame. Every number on screen comes from the chain or a night log, and the proof (keys, audit, rules) sits in drawers under the game.
 - **Open source and impact:** MIT. The pattern (an agent on a sub-account with a function-call key, merged back by DeleteAccount) works for any agent you want to let act but never let leave, and the leash is packaged as a crate with a guide ([`contracts/leash`](contracts/leash/README.md)).

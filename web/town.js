@@ -174,7 +174,7 @@
       function list(ch) { return (ch || []).slice().reverse().map(function (c) { return 'season ' + c.season + ', ' + nameOf(c.player) + ' (' + signed(c.net) + ')'; }).join('; '); }
       var nf = Object.keys(first).length, nh = Object.keys(here).length;
       var hereCrowns = list(nowSeason && nowSeason.champions);
-      $('historyNote').textContent = '\u265B Season crowns. This market, since 13 November: ' + (hereCrowns || 'none yet') + '. The first market, 11 to 13 November: ' + list(sz.champions) + '. Its last six nights had ' + nf + ' guest accounts' + (nh ? ', and ' + nh + ' more ' + (nh === 1 ? 'has' : 'have') + ' played here since' : '') + '.';
+      $('historyNote').textContent = '\u265B Season crowns. This market, since 13 November: ' + (hereCrowns || 'none yet') + '. The earlier market, shroud, 11 to 13 November: ' + list(sz.champions) + '. Its last six nights had ' + nf + ' guest accounts' + (nh ? ', and ' + nh + ' more ' + (nh === 1 ? 'has' : 'have') + ' played here since' : '') + '.';
       $('historyNote').hidden = false;
     }).catch(function () { /* the history line is optional */ });
   }

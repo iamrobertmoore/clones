@@ -731,7 +731,7 @@ impl Market {
         self.round
     }
 
-    /// At dawn the night's fees go to the clone with the best return on its stake.
+    /// At dawn the night's fees go to the clone with the biggest profit (worth at dawn less stake).
     fn crown(&mut self) {
         if self.night_fees == 0 {
             return;
@@ -1853,7 +1853,7 @@ mod tests {
     }
 
     #[test]
-    fn the_nights_fees_crown_the_best_return() {
+    fn the_nights_fees_crown_the_biggest_profit() {
         let mut m = town_with_clone();
         as_caller("bob.testnet", NearToken::from_near(1));
         m.register_clone(acc("clone-1.bob.testnet"), Temperament::Loyal, None, None);
