@@ -1,6 +1,6 @@
 {
- "seed": 48855,
- "night": 6,
+ "seed": 446170,
+ "night": 49,
  "network": "testnet",
  "market": "pyre.clonestown.testnet",
  "player": "abbot.clonestown.testnet",
@@ -17,9 +17,9 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 576,
+   "final_cash": 873,
    "broke": false,
-   "orders": 3,
+   "orders": 8,
    "home": true
   }
  ],
@@ -28,82 +28,68 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 576,
+   "final_cash": 873,
    "broke": false,
-   "orders": 3,
+   "orders": 8,
    "home": true
   }
  ],
  "events": [
   {
+   "kind": "rival",
+   "title": "the Widow"
+  },
+  {
+   "kind": "rival",
+   "title": "the Abbot"
+  },
+  {
+   "kind": "rival",
+   "title": "the Hound"
+  },
+  {
    "kind": "dusk",
-   "fee_bps": 200,
-   "night": 6,
-   "mood": "boom",
-   "omen": "slump",
-   "omen_was": "boom",
+   "fee_bps": 300,
+   "night": 49,
+   "mood": "wild",
+   "omen": "boom",
+   "omen_was": "wild",
    "prices": [
-    23,
-    28,
-    53,
-    84,
-    113
+    19,
+    29,
+    49,
+    79,
+    119
    ],
    "stock": [
-    1183,
-    895,
-    599,
-    359,
-    233
-   ]
-  },
-  {
-   "kind": "hour",
-   "round": 1,
-   "prices": [
-    23,
-    28,
-    53,
-    84,
-    113
-   ],
-   "stock": [
-    1183,
-    895,
-    599,
-    359,
-    233
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 1,
-   "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "hour",
-   "round": 2,
-   "prices": [
-    23,
-    28,
-    57,
-    98,
-    112
-   ],
-   "stock": [
-    1151,
+    1201,
     901,
-    599,
-    359,
-    240
+    601,
+    361,
+    241
+   ]
+  },
+  {
+   "kind": "hour",
+   "round": 0,
+   "prices": [
+    19,
+    29,
+    49,
+    79,
+    119
+   ],
+   "stock": [
+    1201,
+    901,
+    601,
+    361,
+    241
    ]
   },
   {
    "kind": "bubble",
-   "round": 2,
+   "round": 0,
    "clone": "clone-1",
    "say": "Nothing worth the risk this hour.",
    "whispered": false,
@@ -111,25 +97,25 @@
   },
   {
    "kind": "hour",
-   "round": 3,
+   "round": 1,
    "prices": [
-    23,
-    26,
-    60,
-    117,
-    91
+    17,
+    28,
+    49,
+    75,
+    83
    ],
    "stock": [
-    1198,
-    900,
-    600,
-    351,
-    240
+    1201,
+    901,
+    601,
+    361,
+    232
    ]
   },
   {
    "kind": "bubble",
-   "round": 3,
+   "round": 1,
    "clone": "clone-1",
    "say": "Amber is cheap, buying a little.",
    "whispered": false,
@@ -137,30 +123,92 @@
   },
   {
    "kind": "order",
-   "round": 3,
+   "round": 1,
    "clone": "clone-1",
    "good": "amber",
    "side": "buy",
    "qty": 1,
-   "price": 91,
-   "tx": "7swus455u1yxhve8ouGHDdnHMPqvMozYg7Sze19BjeTm"
+   "price": 84,
+   "tx": "Di25Q83GjVSUJA3VUqLNsMdePdyrSsqZNpQPUzmafvLA"
+  },
+  {
+   "kind": "hour",
+   "round": 2,
+   "prices": [
+    17,
+    31,
+    40,
+    64,
+    61
+   ],
+   "stock": [
+    1201,
+    901,
+    586,
+    361,
+    238
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 2,
+   "clone": "clone-1",
+   "say": "Nothing worth the risk this hour.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 3,
+   "prices": [
+    18,
+    32,
+    46,
+    58,
+    92
+   ],
+   "stock": [
+    1201,
+    883,
+    601,
+    361,
+    238
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 3,
+   "clone": "clone-1",
+   "say": "Iron is cheap, buying a little.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 3,
+   "clone": "clone-1",
+   "good": "iron",
+   "side": "buy",
+   "qty": 1,
+   "price": 59,
+   "tx": "8CP4gy67aouDYTgj8mY39GSGG2aEcAfQFgcbwRWTu2g9"
   },
   {
    "kind": "hour",
    "round": 4,
    "prices": [
-    25,
-    26,
-    68,
-    123,
-    78
+    21,
+    36,
+    55,
+    65,
+    118
    ],
    "stock": [
-    1196,
-    900,
-    600,
-    351,
-    238
+    1201,
+    901,
+    601,
+    355,
+    233
    ]
   },
   {
@@ -175,25 +223,25 @@
    "kind": "hour",
    "round": 5,
    "prices": [
-    25,
-    24,
-    71,
-    131,
-    104
+    17,
+    35,
+    49,
+    73,
+    123
    ],
    "stock": [
-    1194,
-    900,
-    600,
-    351,
-    238
+    1201,
+    901,
+    601,
+    355,
+    233
    ]
   },
   {
    "kind": "bubble",
    "round": 5,
    "clone": "clone-1",
-   "say": "Salt is cheap, buying a little.",
+   "say": "Grain is cheap, buying a little.",
    "whispered": false,
    "ai": false
   },
@@ -201,28 +249,28 @@
    "kind": "order",
    "round": 5,
    "clone": "clone-1",
-   "good": "salt",
+   "good": "grain",
    "side": "buy",
    "qty": 4,
-   "price": 24,
-   "tx": "2qdeF3BCTwnAyUKi8RZpw45SWa23nQwihmtc9LY93NFg"
+   "price": 18,
+   "tx": "48p2qtquyjjWK1y5A6Pc56obv5WdW16WgKuSg8HS4nS1"
   },
   {
    "kind": "hour",
    "round": 6,
    "prices": [
-    27,
-    23,
-    68,
-    149,
-    137
+    21,
+    39,
+    49,
+    85,
+    132
    ],
    "stock": [
-    1193,
-    893,
-    600,
-    360,
-    228
+    1185,
+    901,
+    601,
+    355,
+    233
    ]
   },
   {
@@ -240,51 +288,71 @@
    "good": "amber",
    "side": "sell",
    "qty": 1,
-   "price": 137,
-   "tx": "G89pbFumT4X7gUYi9MGwC2Mt9Y66hm1zGogfudMsniQj"
+   "price": 132,
+   "tx": "7SKRH5PrFxrLpVAiJqEyfLhFtV6LwMaCEwKUNzx67GkF"
   },
   {
    "kind": "hour",
    "round": 7,
    "prices": [
-    26,
-    27,
-    72,
-    144,
-    150
+    17,
+    43,
+    42,
+    88,
+    81
    ],
    "stock": [
-    1193,
-    892,
-    600,
-    360,
-    230
+    1152,
+    901,
+    601,
+    355,
+    239
    ]
   },
   {
    "kind": "bubble",
    "round": 7,
    "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
+   "say": "Iron is 10% over usual, taking profit; amber is cheap, buying a little.",
    "whispered": false,
    "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 7,
+   "clone": "clone-1",
+   "good": "iron",
+   "side": "sell",
+   "qty": 1,
+   "price": 87,
+   "tx": "GnAny2zTCpiicHj9g6PLXBmmiZ3SgA9P22VP6Jz4sg7v"
+  },
+  {
+   "kind": "order",
+   "round": 7,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "buy",
+   "qty": 1,
+   "price": 81,
+   "tx": "GnAny2zTCpiicHj9g6PLXBmmiZ3SgA9P22VP6Jz4sg7v"
   },
   {
    "kind": "hour",
    "round": 8,
    "prices": [
-    31,
-    28,
-    72,
-    171,
-    188
+    19,
+    38,
+    40,
+    100,
+    64
    ],
    "stock": [
-    1193,
-    892,
-    600,
-    360,
-    230
+    1185,
+    889,
+    601,
+    357,
+    238
    ]
   },
   {
@@ -299,18 +367,18 @@
    "kind": "hour",
    "round": 9,
    "prices": [
-    31,
-    31,
-    72,
-    182,
-    150
+    19,
+    29,
+    42,
+    77,
+    94
    ],
    "stock": [
-    1193,
-    892,
-    600,
-    360,
-    230
+    1185,
+    901,
+    601,
+    354,
+    238
    ]
   },
   {
@@ -325,78 +393,103 @@
    "kind": "hour",
    "round": 10,
    "prices": [
-    35,
+    18,
     29,
-    83,
-    185,
-    175
+    38,
+    80,
+    115
    ],
    "stock": [
-    1193,
-    848,
-    600,
-    360,
-    240
+    1185,
+    901,
+    601,
+    357,
+    235
    ]
   },
   {
    "kind": "bubble",
    "round": 10,
    "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
+   "say": "Wool is cheap, buying a little.",
    "whispered": false,
    "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 10,
+   "clone": "clone-1",
+   "good": "wool",
+   "side": "buy",
+   "qty": 2,
+   "price": 39,
+   "tx": "EnZjMmcU2xVfaCU5fwvrTBQT9oPXHJ9QZ1QrdNmPvuzw"
   },
   {
    "kind": "hour",
    "round": 11,
    "prices": [
-    39,
+    21,
     29,
-    94,
-    212,
-    201
+    37,
+    76,
+    155
    ],
    "stock": [
-    1193,
-    893,
-    600,
-    360,
-    233
+    1185,
+    901,
+    595,
+    357,
+    235
    ]
   },
   {
    "kind": "bubble",
    "round": 11,
    "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
+   "say": "Amber is 10% over usual, taking profit.",
    "whispered": false,
    "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 11,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "sell",
+   "qty": 1,
+   "price": 154,
+   "tx": "GPUHmQSGgDW5pVHTQuNy8NAtS2ePPgdWbzWsnkLAf76o"
   },
   {
    "kind": "hour",
    "round": 12,
    "prices": [
+    19,
+    24,
     42,
-    34,
-    90,
-    214,
-    201
+    65,
+    95
    ],
    "stock": [
-    1193,
-    893,
-    600,
-    360,
-    233
+    1185,
+    901,
+    595,
+    357,
+    236
    ]
+  },
+  {
+   "kind": "crowned",
+   "clone": "clone-1",
+   "pot": 246
   },
   {
    "kind": "settled",
    "clone": "clone-1",
-   "paid_out": 576,
+   "paid_out": 873,
    "broke": false,
-   "tx": "6LtykTSzGNXSptg73rsAi7jPBEf3QpjhXKRPD4NeZd4Q"
+   "tx": "3HwhHuZPRYWSu3Sqz4j5Zwd8nEPWrysTYXv6fic3DBsu"
   },
   {
    "kind": "merged",

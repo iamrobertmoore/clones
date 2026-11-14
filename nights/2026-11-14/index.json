@@ -1,0 +1,21 @@
+{
+ "ran_at": 1794657018,
+ "guests": [
+  {
+   "player": "gqzjmdc.clonestown.testnet",
+   "matched": true
+  },
+  {
+   "player": "abbot.clonestown.testnet",
+   "matched": true
+  },
+  {
+   "player": "hound.clonestown.testnet",
+   "matched": true
+  },
+  {
+   "player": "widow.clonestown.testnet",
+   "matched": true
+  }
+ ]
+}
