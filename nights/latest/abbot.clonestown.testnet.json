@@ -1,6 +1,6 @@
 {
- "seed": 591898,
- "night": 51,
+ "seed": 951718,
+ "night": 53,
  "network": "testnet",
  "market": "pyre.clonestown.testnet",
  "player": "abbot.clonestown.testnet",
@@ -17,7 +17,7 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 407,
+   "final_cash": 543,
    "broke": false,
    "orders": 2,
    "home": true
@@ -28,7 +28,7 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 407,
+   "final_cash": 543,
    "broke": false,
    "orders": 2,
    "home": true
@@ -36,26 +36,60 @@
  ],
  "events": [
   {
-   "kind": "hour",
-   "round": 2,
+   "kind": "rival",
+   "title": "the Widow"
+  },
+  {
+   "kind": "rival",
+   "title": "the Abbot"
+  },
+  {
+   "kind": "rival",
+   "title": "the Hound"
+  },
+  {
+   "kind": "dusk",
+   "fee_bps": 300,
+   "night": 53,
+   "mood": "boom",
+   "omen": "boom",
+   "omen_was": "boom",
    "prices": [
-    21,
-    31,
-    39,
-    81,
-    102
+    20,
+    30,
+    49,
+    79,
+    120
    ],
    "stock": [
-    1156,
-    901,
-    598,
+    1197,
+    899,
+    601,
     361,
-    231
+    240
+   ]
+  },
+  {
+   "kind": "hour",
+   "round": 0,
+   "prices": [
+    20,
+    30,
+    49,
+    79,
+    120
+   ],
+   "stock": [
+    1197,
+    899,
+    601,
+    361,
+    240
    ]
   },
   {
    "kind": "bubble",
-   "round": 2,
+   "round": 0,
    "clone": "clone-1",
    "say": "Nothing worth the risk this hour.",
    "whispered": false,
@@ -63,25 +97,25 @@
   },
   {
    "kind": "hour",
-   "round": 3,
+   "round": 1,
    "prices": [
-    23,
-    30,
-    39,
-    76,
-    83
+    19,
+    32,
+    56,
+    90,
+    98
    ],
    "stock": [
-    1112,
-    901,
-    597,
+    1197,
+    899,
+    601,
     361,
-    241
+    233
    ]
   },
   {
    "kind": "bubble",
-   "round": 3,
+   "round": 1,
    "clone": "clone-1",
    "say": "Amber is cheap, buying a little.",
    "whispered": false,
@@ -89,35 +123,35 @@
   },
   {
    "kind": "order",
-   "round": 3,
+   "round": 1,
    "clone": "clone-1",
    "good": "amber",
    "side": "buy",
    "qty": 1,
-   "price": 84,
-   "tx": "HcoSFv4oXB4sY3HP3fjKxTxWzcWp7dUNQkJShWvUpujL"
+   "price": 99,
+   "tx": "5KEP9YY1xS9jEPEE1NcKzRS7mAo4GWGuzEvifKgDNvbk"
   },
   {
    "kind": "hour",
-   "round": 4,
+   "round": 2,
    "prices": [
-    22,
-    31,
-    35,
-    71,
-    79
+    19,
+    29,
+    56,
+    92,
+    115
    ],
    "stock": [
-    1121,
-    901,
-    597,
+    1197,
+    900,
+    587,
     361,
-    240
+    238
    ]
   },
   {
    "kind": "bubble",
-   "round": 4,
+   "round": 2,
    "clone": "clone-1",
    "say": "Nothing worth the risk this hour.",
    "whispered": false,
@@ -125,20 +159,82 @@
   },
   {
    "kind": "hour",
-   "round": 5,
+   "round": 3,
    "prices": [
     22,
     30,
-    32,
-    68,
-    71
+    63,
+    95,
+    130
    ],
    "stock": [
-    1121,
-    901,
-    597,
+    1197,
+    899,
+    601,
     361,
-    240
+    232
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 3,
+   "clone": "clone-1",
+   "say": "Nothing worth the risk this hour.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 4,
+   "prices": [
+    19,
+    29,
+    61,
+    96,
+    151
+   ],
+   "stock": [
+    1203,
+    899,
+    601,
+    361,
+    232
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 4,
+   "clone": "clone-1",
+   "say": "Amber is 10% over usual, taking profit.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 4,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "sell",
+   "qty": 1,
+   "price": 150,
+   "tx": "6bmLmxgspZBZa6nP9punFpia2mB2Uk6HwgyTwHDKamoh"
+  },
+  {
+   "kind": "hour",
+   "round": 5,
+   "prices": [
+    22,
+    33,
+    63,
+    92,
+    130
+   ],
+   "stock": [
+    1202,
+    899,
+    601,
+    361,
+    235
    ]
   },
   {
@@ -153,18 +249,18 @@
    "kind": "hour",
    "round": 6,
    "prices": [
-    23,
-    29,
-    28,
-    66,
-    70
+    26,
+    33,
+    75,
+    108,
+    167
    ],
    "stock": [
-    1121,
-    901,
-    597,
+    1167,
+    902,
+    601,
     361,
-    240
+    241
    ]
   },
   {
@@ -179,18 +275,18 @@
    "kind": "hour",
    "round": 7,
    "prices": [
-    24,
-    31,
-    25,
-    57,
-    55
+    27,
+    37,
+    83,
+    109,
+    150
    ],
    "stock": [
-    1121,
-    901,
-    595,
+    1167,
+    902,
+    601,
     361,
-    240
+    241
    ]
   },
   {
@@ -205,18 +301,18 @@
    "kind": "hour",
    "round": 8,
    "prices": [
-    22,
-    32,
-    23,
-    56,
-    61
+    27,
+    34,
+    92,
+    122,
+    201
    ],
    "stock": [
-    1121,
-    901,
-    595,
+    1167,
+    902,
+    601,
     361,
-    240
+    241
    ]
   },
   {
@@ -231,18 +327,18 @@
    "kind": "hour",
    "round": 9,
    "prices": [
-    20,
-    31,
-    22,
-    56,
-    58
+    26,
+    34,
+    100,
+    144,
+    272
    ],
    "stock": [
-    1165,
-    901,
-    595,
+    1203,
+    902,
+    601,
     361,
-    226
+    238
    ]
   },
   {
@@ -257,18 +353,18 @@
    "kind": "hour",
    "round": 10,
    "prices": [
-    20,
-    33,
-    22,
-    49,
-    64
+    26,
+    36,
+    101,
+    152,
+    347
    ],
    "stock": [
-    1165,
-    901,
-    595,
+    1203,
+    902,
+    601,
     361,
-    226
+    238
    ]
   },
   {
@@ -283,18 +379,18 @@
    "kind": "hour",
    "round": 11,
    "prices": [
-    22,
-    32,
-    22,
-    45,
-    56
+    29,
+    38,
+    103,
+    147,
+    465
    ],
    "stock": [
-    1165,
-    901,
-    595,
+    1203,
+    902,
+    601,
     361,
-    226
+    238
    ]
   },
   {
@@ -309,30 +405,26 @@
    "kind": "hour",
    "round": 12,
    "prices": [
-    21,
-    30,
-    19,
+    34,
     43,
-    46
+    115,
+    148,
+    455
    ],
    "stock": [
-    1131,
-    901,
-    595,
+    1203,
+    902,
+    601,
     361,
-    240
+    238
    ]
-  },
-  {
-   "kind": "deed",
-   "share": 22
   },
   {
    "kind": "settled",
    "clone": "clone-1",
-   "paid_out": 407,
+   "paid_out": 543,
    "broke": false,
-   "tx": "BvHb22yBE76QQv74P5P8NhCAoKFTagLPQtgzxTCC7tBT"
+   "tx": "3ANSJ2d9Tf6K1E74jddz82DYnPXfD3FehYSqSPaXSvGk"
   },
   {
    "kind": "merged",
