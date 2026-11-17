@@ -21,7 +21,13 @@ async function nightly(res) {
     const t = await openTown();
     let opened = false, out = null;
     for (let i = 0; i < 40 && Date.now() - started < 270e3; i++) {
-      out = await ring(t, { start: !opened });
+      // A busy public RPC answers 429 now and then; wait and ring the same step again.
+      for (let tries = 1; ; tries++) {
+        try { out = await ring(t, { start: !opened }); break; } catch (e) {
+          if (tries >= 5 || !/429|rate limit|Rate limits/i.test(message(e)) || Date.now() - started > 250e3) throw e;
+          await new Promise((r) => setTimeout(r, 4000 * tries));
+        }
+      }
       steps.push(out.phase + (out.round != null ? ":" + out.round : ""));
       if (out.phase === "dusk" || out.phase === "hour" || out.phase === "dawn") opened = true;
       if (out.phase === "empty" || out.phase === "waiting" || (out.phase === "home" && !out.next)) break;
