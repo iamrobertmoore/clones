@@ -1,6 +1,6 @@
 {
- "seed": 951718,
- "night": 53,
+ "seed": 417996,
+ "night": 56,
  "network": "testnet",
  "market": "pyre.clonestown.testnet",
  "player": "widow.clonestown.testnet",
@@ -17,9 +17,9 @@
    "name": "clone-1",
    "temperament": "possessed",
    "stake": 1000,
-   "final_cash": 1085,
+   "final_cash": 853,
    "broke": false,
-   "orders": 2,
+   "orders": 1,
    "home": true
   }
  ],
@@ -28,9 +28,9 @@
    "name": "clone-1",
    "temperament": "possessed",
    "stake": 1000,
-   "final_cash": 1085,
+   "final_cash": 853,
    "broke": false,
-   "orders": 2,
+   "orders": 1,
    "home": true
   }
  ],
@@ -49,104 +49,104 @@
   },
   {
    "kind": "dusk",
-   "fee_bps": 300,
-   "night": 53,
-   "mood": "boom",
-   "omen": "boom",
-   "omen_was": "boom",
+   "fee_bps": 200,
+   "night": 56,
+   "mood": "blight",
+   "omen": "wild",
+   "omen_was": "blight",
    "prices": [
     20,
     30,
     49,
-    79,
-    120
+    80,
+    119
    ],
    "stock": [
-    1197,
-    899,
-    601,
-    361,
-    240
-   ]
-  },
-  {
-   "kind": "hour",
-   "round": 0,
-   "prices": [
-    20,
-    30,
-    49,
-    79,
-    120
-   ],
-   "stock": [
-    1197,
-    899,
-    601,
-    361,
-    240
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 0,
-   "clone": "clone-1",
-   "say": "(the voice is silent) Nothing worth the risk this hour.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "hour",
-   "round": 1,
-   "prices": [
-    19,
-    32,
-    56,
-    90,
-    98
-   ],
-   "stock": [
-    1197,
-    899,
-    601,
-    361,
-    233
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 1,
-   "clone": "clone-1",
-   "say": "(the voice is silent) Amber is cheap, buying a little.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "order",
-   "round": 1,
-   "clone": "clone-1",
-   "good": "amber",
-   "side": "buy",
-   "qty": 2,
-   "price": 99,
-   "tx": "4nSj2zVZ2vrXBGdzq1RFHs5y1ShoTZt1nKVwRDVSfmoA"
-  },
-  {
-   "kind": "hour",
-   "round": 2,
-   "prices": [
-    19,
-    29,
-    56,
-    92,
-    115
-   ],
-   "stock": [
-    1197,
+    1200,
     900,
-    587,
-    361,
-    238
+    601,
+    360,
+    241
+   ]
+  },
+  {
+   "kind": "hour",
+   "round": 0,
+   "prices": [
+    20,
+    30,
+    49,
+    80,
+    119
+   ],
+   "stock": [
+    1200,
+    900,
+    601,
+    360,
+    241
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 0,
+   "clone": "clone-1",
+   "say": "(the voice is silent) Nothing worth the risk this hour.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 1,
+   "prices": [
+    20,
+    28,
+    45,
+    75,
+    121
+   ],
+   "stock": [
+    1200,
+    900,
+    601,
+    360,
+    234
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 1,
+   "clone": "clone-1",
+   "say": "(the voice is silent) Wool is cheap, buying a little.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 1,
+   "clone": "clone-1",
+   "good": "wool",
+   "side": "buy",
+   "qty": 5,
+   "price": 46,
+   "tx": "HxBtJSkRJNSVPMcqweyte8LAFxrGrmRgoJKQ6FeGhEmB"
+  },
+  {
+   "kind": "hour",
+   "round": 2,
+   "prices": [
+    21,
+    30,
+    42,
+    75,
+    114
+   ],
+   "stock": [
+    1200,
+    900,
+    593,
+    360,
+    234
    ]
   },
   {
@@ -161,18 +161,18 @@
    "kind": "hour",
    "round": 3,
    "prices": [
-    22,
+    18,
     30,
-    63,
-    95,
-    130
+    41,
+    72,
+    116
    ],
    "stock": [
-    1197,
-    899,
-    601,
-    361,
-    232
+    1201,
+    872,
+    593,
+    360,
+    241
    ]
   },
   {
@@ -187,54 +187,44 @@
    "kind": "hour",
    "round": 4,
    "prices": [
-    19,
-    29,
-    61,
-    96,
-    151
+    17,
+    30,
+    37,
+    73,
+    111
    ],
    "stock": [
-    1203,
-    899,
-    601,
-    361,
-    232
+    1206,
+    872,
+    593,
+    360,
+    240
    ]
   },
   {
    "kind": "bubble",
    "round": 4,
    "clone": "clone-1",
-   "say": "(the voice is silent) Amber is 10% over usual, taking profit.",
+   "say": "(the voice is silent) Nothing worth the risk this hour.",
    "whispered": false,
    "ai": false
-  },
-  {
-   "kind": "order",
-   "round": 4,
-   "clone": "clone-1",
-   "good": "amber",
-   "side": "sell",
-   "qty": 2,
-   "price": 149,
-   "tx": "y3bmtvE26e4XFdXkB6daVGqNWdGifHTeCKBuC6oRmam"
   },
   {
    "kind": "hour",
    "round": 5,
    "prices": [
-    22,
-    33,
-    63,
-    92,
-    130
+    16,
+    29,
+    34,
+    64,
+    107
    ],
    "stock": [
-    1202,
-    899,
-    601,
-    361,
-    235
+    1206,
+    872,
+    593,
+    360,
+    240
    ]
   },
   {
@@ -249,18 +239,18 @@
    "kind": "hour",
    "round": 6,
    "prices": [
-    26,
-    33,
-    75,
-    108,
-    167
+    17,
+    27,
+    30,
+    62,
+    97
    ],
    "stock": [
-    1167,
-    902,
-    601,
-    361,
-    241
+    1206,
+    872,
+    593,
+    360,
+    240
    ]
   },
   {
@@ -275,17 +265,17 @@
    "kind": "hour",
    "round": 7,
    "prices": [
+    18,
+    28,
     27,
-    37,
-    83,
-    109,
-    150
+    59,
+    106
    ],
    "stock": [
-    1167,
-    902,
-    601,
-    361,
+    1158,
+    900,
+    593,
+    360,
     241
    ]
   },
@@ -301,17 +291,17 @@
    "kind": "hour",
    "round": 8,
    "prices": [
-    27,
-    34,
-    92,
-    122,
-    201
+    17,
+    29,
+    24,
+    54,
+    94
    ],
    "stock": [
-    1167,
-    902,
-    601,
-    361,
+    1158,
+    900,
+    593,
+    360,
     241
    ]
   },
@@ -327,18 +317,18 @@
    "kind": "hour",
    "round": 9,
    "prices": [
-    26,
-    34,
-    100,
-    144,
-    272
+    17,
+    27,
+    20,
+    52,
+    93
    ],
    "stock": [
-    1203,
-    902,
-    601,
-    361,
-    238
+    1158,
+    900,
+    593,
+    360,
+    241
    ]
   },
   {
@@ -353,18 +343,18 @@
    "kind": "hour",
    "round": 10,
    "prices": [
-    26,
-    36,
-    101,
-    152,
-    347
+    17,
+    27,
+    18,
+    45,
+    103
    ],
    "stock": [
-    1203,
-    902,
-    601,
-    361,
-    238
+    1158,
+    900,
+    593,
+    360,
+    241
    ]
   },
   {
@@ -379,18 +369,18 @@
    "kind": "hour",
    "round": 11,
    "prices": [
-    29,
-    38,
-    103,
-    147,
-    465
+    19,
+    27,
+    18,
+    45,
+    104
    ],
    "stock": [
-    1203,
-    902,
-    601,
-    361,
-    238
+    1158,
+    900,
+    593,
+    360,
+    241
    ]
   },
   {
@@ -405,26 +395,26 @@
    "kind": "hour",
    "round": 12,
    "prices": [
-    34,
-    43,
-    115,
-    148,
-    455
+    19,
+    30,
+    18,
+    40,
+    102
    ],
    "stock": [
-    1203,
-    902,
-    601,
-    361,
-    238
+    1158,
+    900,
+    593,
+    360,
+    241
    ]
   },
   {
    "kind": "settled",
    "clone": "clone-1",
-   "paid_out": 1085,
+   "paid_out": 853,
    "broke": false,
-   "tx": "GEoC3TNbZBYK879JXreDaUjf6zvb3p6Av33jWyfkTrxv"
+   "tx": "DuYfxjNPYgoC23mFhNMTJqXcLLfnCNU9kyAUkBMR8tjj"
   },
   {
    "kind": "merged",
