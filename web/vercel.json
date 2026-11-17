@@ -36,6 +36,15 @@
     },
     "api/config.js": {
       "maxDuration": 10
+    },
+    "api/nightly.js": {
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/nightly",
+      "schedule": "5 2 * * *"
+    }
+  ]
 }

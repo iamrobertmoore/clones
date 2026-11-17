@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The nightly bell rings on time. GitHub started its scheduled job 6 to 8 hours late every day, so the 02:00 UTC bell rang mid-morning. Vercel's scheduler now calls `api/nightly.js` at 02:05 UTC, which plays the whole night in one call; the GitHub job stays as a backstop and still publishes the night logs.
 - Every page shares the landing page's chrome: one nav with same-sized buttons, goods drifting in the dark, and the red glow behind the header. On the town page the omen sits in a compact box that no longer crowds the market board.
 - The README opens with badges (tests, the six-hourly rebuild and replay, the keyless mainnet market, MIT) and a "For judges: start here" table with the exact output each command should print; the games brief is answered point by point; a disclosures table answers the rulebook's questions. The site serves `llms.txt`, a plain summary for AI screeners.
 - The site has a front door: the root is a landing page (what Clones is, a loop of the town at night, live numbers read from the chain, how a night works, the leash, what it uses on NEAR, and how to check it), and `judges.html` walks a judge through playing it and checking every claim in five minutes, with how it fits the brief and what isn't true yet. The recorded night moved to `night.html`.
