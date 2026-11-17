@@ -5,7 +5,7 @@
       "includeFiles": "api/leash.wasm"
     },
     "api/bell.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/escape.js": {
       "maxDuration": 30
@@ -36,14 +36,11 @@
     },
     "api/config.js": {
       "maxDuration": 10
-    },
-    "api/nightly.js": {
-      "maxDuration": 300
     }
   },
   "crons": [
     {
-      "path": "/api/nightly",
+      "path": "/api/bell?nightly=1",
       "schedule": "5 2 * * *"
     }
   ]
