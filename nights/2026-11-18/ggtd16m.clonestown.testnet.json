@@ -1,6 +1,6 @@
 {
- "seed": 761973,
- "night": 62,
+ "seed": 405957,
+ "night": 63,
  "network": "testnet",
  "market": "pyre.clonestown.testnet",
  "player": "ggtd16m.clonestown.testnet",
@@ -17,10 +17,10 @@
    "name": "clone-1",
    "temperament": "loyal",
    "stake": 250,
-   "final_cash": 339,
+   "final_cash": 380,
    "broke": false,
-   "orders": 6,
-   "home": false
+   "orders": 3,
+   "home": true
   }
  ],
  "outcomes": [
@@ -28,10 +28,10 @@
    "name": "clone-1",
    "temperament": "loyal",
    "stake": 250,
-   "final_cash": 339,
+   "final_cash": 380,
    "broke": false,
-   "orders": 6,
-   "home": false
+   "orders": 3,
+   "home": true
   }
  ],
  "events": [
@@ -50,22 +50,22 @@
   {
    "kind": "dusk",
    "fee_bps": 200,
-   "night": 62,
-   "mood": "wild",
+   "night": 63,
+   "mood": "blight",
    "omen": "blight",
-   "omen_was": "wild",
+   "omen_was": "blight",
    "prices": [
-    19,
-    29,
-    50,
+    20,
+    30,
+    49,
     80,
     119
    ],
    "stock": [
-    1201,
-    901,
-    597,
-    360,
+    1196,
+    898,
+    602,
+    357,
     241
    ]
   },
@@ -73,17 +73,17 @@
    "kind": "hour",
    "round": 0,
    "prices": [
-    19,
-    29,
-    50,
+    20,
+    30,
+    49,
     80,
     119
    ],
    "stock": [
-    1201,
-    901,
-    597,
-    360,
+    1196,
+    898,
+    602,
+    357,
     241
    ]
   },
@@ -91,45 +91,25 @@
    "kind": "bubble",
    "round": 0,
    "clone": "clone-1",
-   "say": "Grain is below usual, a small buy; salt is below usual, a small buy.",
+   "say": "Keeping your money safe. Staples only.",
    "whispered": false,
    "ai": false
-  },
-  {
-   "kind": "order",
-   "round": 0,
-   "clone": "clone-1",
-   "good": "grain",
-   "side": "buy",
-   "qty": 2,
-   "price": 20,
-   "tx": "5Y2i8QavRnyHiKrJdNRuvYAgEJecCnBhhdfxYhuRZmgE"
-  },
-  {
-   "kind": "order",
-   "round": 0,
-   "clone": "clone-1",
-   "good": "salt",
-   "side": "buy",
-   "qty": 1,
-   "price": 30,
-   "tx": "5Y2i8QavRnyHiKrJdNRuvYAgEJecCnBhhdfxYhuRZmgE"
   },
   {
    "kind": "hour",
    "round": 1,
    "prices": [
-    23,
+    19,
     32,
-    51,
-    76,
-    75
+    50,
+    69,
+    136
    ],
    "stock": [
-    1199,
-    900,
-    597,
-    360,
+    1196,
+    898,
+    602,
+    357,
     234
    ]
   },
@@ -137,7 +117,7 @@
    "kind": "bubble",
    "round": 1,
    "clone": "clone-1",
-   "say": "Selling grain above its usual price; selling salt above its usual price.",
+   "say": "Selling salt above its usual price.",
    "whispered": false,
    "ai": false
   },
@@ -145,162 +125,152 @@
    "kind": "order",
    "round": 1,
    "clone": "clone-1",
-   "good": "grain",
+   "good": "salt",
    "side": "sell",
    "qty": 2,
-   "price": 22,
-   "tx": "2gpLr86mGUZAG3zS9VTb5djPDfAqu2ACiAhqBzry3tVf"
+   "price": 32,
+   "tx": "AsjhkMB7Rfic7T4LR5Juj2MqvZHqdHnKkeSVt8GhTV5f"
+  },
+  {
+   "kind": "hour",
+   "round": 2,
+   "prices": [
+    19,
+    32,
+    44,
+    61,
+    136
+   ],
+   "stock": [
+    1196,
+    900,
+    602,
+    359,
+    230
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 2,
+   "clone": "clone-1",
+   "say": "Keeping your money safe. Staples only.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 3,
+   "prices": [
+    18,
+    29,
+    38,
+    56,
+    129
+   ],
+   "stock": [
+    1196,
+    900,
+    602,
+    359,
+    230
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 3,
+   "clone": "clone-1",
+   "say": "Salt is below usual, a small buy.",
+   "whispered": false,
+   "ai": false
   },
   {
    "kind": "order",
-   "round": 1,
+   "round": 3,
    "clone": "clone-1",
    "good": "salt",
-   "side": "sell",
+   "side": "buy",
    "qty": 1,
-   "price": 31,
-   "tx": "2gpLr86mGUZAG3zS9VTb5djPDfAqu2ACiAhqBzry3tVf"
-  },
-  {
-   "kind": "hour",
-   "round": 2,
-   "prices": [
-    24,
-    31,
-    40,
-    89,
-    51
-   ],
-   "stock": [
-    1160,
-    901,
-    604,
-    360,
-    237
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 2,
-   "clone": "clone-1",
-   "say": "Keeping your money safe. Staples only.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "hour",
-   "round": 3,
-   "prices": [
-    21,
-    31,
-    40,
-    87,
-    58
-   ],
-   "stock": [
-    1201,
-    901,
-    604,
-    352,
-    237
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 3,
-   "clone": "clone-1",
-   "say": "Keeping your money safe. Staples only.",
-   "whispered": false,
-   "ai": false
+   "price": 29,
+   "tx": "Ai31w6Kmc8GqnZpGLqjMWp6vxrnnycHvTzPSF2tZkmxF"
   },
   {
    "kind": "hour",
    "round": 4,
    "prices": [
-    16,
+    20,
     28,
-    33,
-    85,
-    63
+    38,
+    56,
+    111
    ],
    "stock": [
-    1201,
-    901,
-    604,
-    361,
-    222
+    1196,
+    899,
+    602,
+    359,
+    230
    ]
   },
   {
    "kind": "bubble",
    "round": 4,
    "clone": "clone-1",
-   "say": "Grain is below usual, a small buy; salt is below usual, a small buy.",
+   "say": "Keeping your money safe. Staples only.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 5,
+   "prices": [
+    22,
+    27,
+    35,
+    52,
+    92
+   ],
+   "stock": [
+    1129,
+    899,
+    602,
+    359,
+    241
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 5,
+   "clone": "clone-1",
+   "say": "Selling grain above its usual price.",
    "whispered": false,
    "ai": false
   },
   {
    "kind": "order",
-   "round": 4,
+   "round": 5,
    "clone": "clone-1",
    "good": "grain",
-   "side": "buy",
+   "side": "sell",
    "qty": 3,
-   "price": 17,
-   "tx": "BENoqvLaUZodtzuwPDjuBVLH4Z7TNoDo2tCQsgKR2JqS"
-  },
-  {
-   "kind": "order",
-   "round": 4,
-   "clone": "clone-1",
-   "good": "salt",
-   "side": "buy",
-   "qty": 2,
-   "price": 29,
-   "tx": "BENoqvLaUZodtzuwPDjuBVLH4Z7TNoDo2tCQsgKR2JqS"
-  },
-  {
-   "kind": "hour",
-   "round": 5,
-   "prices": [
-    15,
-    24,
-    37,
-    89,
-    81
-   ],
-   "stock": [
-    1198,
-    899,
-    604,
-    361,
-    222
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 5,
-   "clone": "clone-1",
-   "say": "Keeping your money safe. Staples only.",
-   "whispered": false,
-   "ai": false
+   "price": 22,
+   "tx": "ErmkRYpEULFwcSTkBbzFkAbG6XgWSQJ2ha8G1ynys6af"
   },
   {
    "kind": "hour",
    "round": 6,
    "prices": [
-    15,
-    21,
+    22,
+    27,
+    34,
     46,
-    97,
-    118
+    100
    ],
    "stock": [
-    1198,
+    1137,
     899,
-    604,
-    361,
-    222
+    602,
+    358,
+    241
    ]
   },
   {
@@ -315,18 +285,18 @@
    "kind": "hour",
    "round": 7,
    "prices": [
-    17,
-    20,
-    45,
-    107,
-    158
+    23,
+    28,
+    32,
+    40,
+    88
    ],
    "stock": [
-    1198,
-    885,
-    604,
-    361,
-    222
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
@@ -341,18 +311,18 @@
    "kind": "hour",
    "round": 8,
    "prices": [
-    14,
-    25,
-    37,
-    100,
-    132
+    22,
+    27,
+    29,
+    35,
+    74
    ],
    "stock": [
-    1198,
-    885,
-    604,
-    361,
-    224
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
@@ -367,18 +337,18 @@
    "kind": "hour",
    "round": 9,
    "prices": [
-    15,
-    23,
+    22,
+    28,
+    25,
     32,
-    102,
-    111
+    73
    ],
    "stock": [
-    1185,
-    818,
-    604,
-    361,
-    238
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
@@ -393,18 +363,18 @@
    "kind": "hour",
    "round": 10,
    "prices": [
-    18,
-    22,
-    42,
-    75,
-    109
+    21,
+    27,
+    24,
+    31,
+    70
    ],
    "stock": [
-    1093,
-    885,
-    597,
-    361,
-    238
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
@@ -419,18 +389,18 @@
    "kind": "hour",
    "round": 11,
    "prices": [
-    15,
     20,
-    37,
-    78,
-    82
+    28,
+    23,
+    31,
+    57
    ],
    "stock": [
-    1093,
-    885,
-    597,
-    361,
-    238
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
@@ -445,23 +415,33 @@
    "kind": "hour",
    "round": 12,
    "prices": [
-    15,
     20,
-    32,
-    65,
-    117
+    29,
+    20,
+    28,
+    49
    ],
    "stock": [
-    1185,
-    885,
-    597,
-    346,
-    238
+    1137,
+    899,
+    602,
+    358,
+    241
    ]
   },
   {
-   "kind": "deed",
-   "share": 88
+   "kind": "settled",
+   "clone": "clone-1",
+   "paid_out": 380,
+   "broke": false,
+   "tx": "Br4jFDW2YrUWZUtnbfXqeDYKato3KNQ3DPi9Udhp74KJ"
+  },
+  {
+   "kind": "merged",
+   "clone": "clone-1",
+   "tx": null,
+   "clone_deleted": true,
+   "by": "market"
   }
  ]
 }
