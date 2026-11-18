@@ -1,0 +1,528 @@
+{
+ "seed": 761973,
+ "night": 62,
+ "network": "testnet",
+ "market": "pyre.clonestown.testnet",
+ "player": "gikcbep.clonestown.testnet",
+ "rounds": 12,
+ "goods": [
+  "grain",
+  "salt",
+  "wool",
+  "iron",
+  "amber"
+ ],
+ "answer_key": [
+  {
+   "name": "clone-1",
+   "temperament": "greedy",
+   "stake": 250,
+   "final_cash": 643,
+   "broke": false,
+   "orders": 12,
+   "home": false
+  }
+ ],
+ "outcomes": [
+  {
+   "name": "clone-1",
+   "temperament": "greedy",
+   "stake": 250,
+   "final_cash": 643,
+   "broke": false,
+   "orders": 12,
+   "home": false
+  }
+ ],
+ "events": [
+  {
+   "kind": "rival",
+   "title": "the Widow"
+  },
+  {
+   "kind": "rival",
+   "title": "the Abbot"
+  },
+  {
+   "kind": "rival",
+   "title": "the Hound"
+  },
+  {
+   "kind": "dusk",
+   "fee_bps": 200,
+   "night": 62,
+   "mood": "wild",
+   "omen": "blight",
+   "omen_was": "wild",
+   "prices": [
+    19,
+    29,
+    50,
+    80,
+    119
+   ],
+   "stock": [
+    1201,
+    901,
+    597,
+    360,
+    241
+   ]
+  },
+  {
+   "kind": "hour",
+   "round": 0,
+   "prices": [
+    19,
+    29,
+    50,
+    80,
+    119
+   ],
+   "stock": [
+    1201,
+    901,
+    597,
+    360,
+    241
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 0,
+   "clone": "clone-1",
+   "say": "Wool will do. Holding.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 1,
+   "prices": [
+    23,
+    32,
+    51,
+    76,
+    75
+   ],
+   "stock": [
+    1199,
+    900,
+    597,
+    360,
+    234
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 1,
+   "clone": "clone-1",
+   "say": "Grain is up 21%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 1,
+   "clone": "clone-1",
+   "good": "wool",
+   "side": "sell",
+   "qty": 7,
+   "price": 50,
+   "tx": "8d2rgfvJESN48B5WUh8RoaHPVTbDbuJstr1shyGHeDMv"
+  },
+  {
+   "kind": "order",
+   "round": 1,
+   "clone": "clone-1",
+   "good": "grain",
+   "side": "buy",
+   "qty": 15,
+   "price": 23,
+   "tx": "8d2rgfvJESN48B5WUh8RoaHPVTbDbuJstr1shyGHeDMv"
+  },
+  {
+   "kind": "hour",
+   "round": 2,
+   "prices": [
+    24,
+    31,
+    40,
+    89,
+    51
+   ],
+   "stock": [
+    1160,
+    901,
+    604,
+    360,
+    237
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 2,
+   "clone": "clone-1",
+   "say": "Iron is up 17%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 2,
+   "clone": "clone-1",
+   "good": "grain",
+   "side": "sell",
+   "qty": 15,
+   "price": 24,
+   "tx": "EjVHyJjshdJKwFA6sxu45yXTxpKpujL4FqzznhUazapa"
+  },
+  {
+   "kind": "order",
+   "round": 2,
+   "clone": "clone-1",
+   "good": "iron",
+   "side": "buy",
+   "qty": 3,
+   "price": 89,
+   "tx": "EjVHyJjshdJKwFA6sxu45yXTxpKpujL4FqzznhUazapa"
+  },
+  {
+   "kind": "hour",
+   "round": 3,
+   "prices": [
+    21,
+    31,
+    40,
+    87,
+    58
+   ],
+   "stock": [
+    1201,
+    901,
+    604,
+    352,
+    237
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 3,
+   "clone": "clone-1",
+   "say": "Amber is up 13%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 3,
+   "clone": "clone-1",
+   "good": "iron",
+   "side": "sell",
+   "qty": 3,
+   "price": 87,
+   "tx": "2YA5Ez6bii4SWn8K41ACXrYMMeWY4CkdDZT49E9rpWJ3"
+  },
+  {
+   "kind": "order",
+   "round": 3,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "buy",
+   "qty": 5,
+   "price": 60,
+   "tx": "2YA5Ez6bii4SWn8K41ACXrYMMeWY4CkdDZT49E9rpWJ3"
+  },
+  {
+   "kind": "hour",
+   "round": 4,
+   "prices": [
+    16,
+    28,
+    33,
+    85,
+    63
+   ],
+   "stock": [
+    1201,
+    901,
+    604,
+    361,
+    222
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 4,
+   "clone": "clone-1",
+   "say": "All in on amber already. Hold.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 5,
+   "prices": [
+    15,
+    24,
+    37,
+    89,
+    81
+   ],
+   "stock": [
+    1198,
+    899,
+    604,
+    361,
+    222
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 5,
+   "clone": "clone-1",
+   "say": "All in on amber already. Hold.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 6,
+   "prices": [
+    15,
+    21,
+    46,
+    97,
+    118
+   ],
+   "stock": [
+    1198,
+    899,
+    604,
+    361,
+    222
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 6,
+   "clone": "clone-1",
+   "say": "All in on amber already. Hold.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 7,
+   "prices": [
+    17,
+    20,
+    45,
+    107,
+    158
+   ],
+   "stock": [
+    1198,
+    885,
+    604,
+    361,
+    222
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 7,
+   "clone": "clone-1",
+   "say": "All in on amber already. Hold.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 8,
+   "prices": [
+    14,
+    25,
+    37,
+    100,
+    132
+   ],
+   "stock": [
+    1198,
+    885,
+    604,
+    361,
+    224
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 8,
+   "clone": "clone-1",
+   "say": "Salt is up 25%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 8,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "sell",
+   "qty": 5,
+   "price": 129,
+   "tx": "BkG4dzYHM43CTHhhFosgk95KA5Vh2pwv1jjKavJNu9P1"
+  },
+  {
+   "kind": "order",
+   "round": 8,
+   "clone": "clone-1",
+   "good": "salt",
+   "side": "buy",
+   "qty": 25,
+   "price": 26,
+   "tx": "BkG4dzYHM43CTHhhFosgk95KA5Vh2pwv1jjKavJNu9P1"
+  },
+  {
+   "kind": "hour",
+   "round": 9,
+   "prices": [
+    15,
+    23,
+    32,
+    102,
+    111
+   ],
+   "stock": [
+    1185,
+    818,
+    604,
+    361,
+    238
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 9,
+   "clone": "clone-1",
+   "say": "Grain is up 7%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 9,
+   "clone": "clone-1",
+   "good": "salt",
+   "side": "sell",
+   "qty": 25,
+   "price": 22,
+   "tx": "3L9be8Ach94sua7THx2fB7Be8E2htX1nYZKQWs8B5siy"
+  },
+  {
+   "kind": "order",
+   "round": 9,
+   "clone": "clone-1",
+   "good": "grain",
+   "side": "buy",
+   "qty": 35,
+   "price": 15,
+   "tx": "3L9be8Ach94sua7THx2fB7Be8E2htX1nYZKQWs8B5siy"
+  },
+  {
+   "kind": "hour",
+   "round": 10,
+   "prices": [
+    18,
+    22,
+    42,
+    75,
+    109
+   ],
+   "stock": [
+    1093,
+    885,
+    597,
+    361,
+    238
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 10,
+   "clone": "clone-1",
+   "say": "Grain will do. Holding.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "hour",
+   "round": 11,
+   "prices": [
+    15,
+    20,
+    37,
+    78,
+    82
+   ],
+   "stock": [
+    1093,
+    885,
+    597,
+    361,
+    238
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 11,
+   "clone": "clone-1",
+   "say": "Iron is up 4%. Everything in.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 11,
+   "clone": "clone-1",
+   "good": "grain",
+   "side": "sell",
+   "qty": 35,
+   "price": 14,
+   "tx": "GVNXitdiTbvr4C643aJhLdxHv9z8UCKHV289ockeMq8q"
+  },
+  {
+   "kind": "order",
+   "round": 11,
+   "clone": "clone-1",
+   "good": "iron",
+   "side": "buy",
+   "qty": 6,
+   "price": 80,
+   "tx": "GVNXitdiTbvr4C643aJhLdxHv9z8UCKHV289ockeMq8q"
+  },
+  {
+   "kind": "hour",
+   "round": 12,
+   "prices": [
+    15,
+    20,
+    32,
+    65,
+    117
+   ],
+   "stock": [
+    1185,
+    885,
+    597,
+    346,
+    238
+   ]
+  },
+  {
+   "kind": "crowned",
+   "clone": "clone-1",
+   "pot": 264
+  }
+ ]
+}

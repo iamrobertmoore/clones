@@ -1,6 +1,6 @@
 {
- "seed": 417996,
- "night": 56,
+ "seed": 761973,
+ "night": 62,
  "network": "testnet",
  "market": "pyre.clonestown.testnet",
  "player": "abbot.clonestown.testnet",
@@ -17,9 +17,9 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 441,
+   "final_cash": 566,
    "broke": false,
-   "orders": 1,
+   "orders": 5,
    "home": true
   }
  ],
@@ -28,9 +28,9 @@
    "name": "clone-1",
    "temperament": "cautious",
    "stake": 500,
-   "final_cash": 441,
+   "final_cash": 566,
    "broke": false,
-   "orders": 1,
+   "orders": 5,
    "home": true
   }
  ],
@@ -50,21 +50,21 @@
   {
    "kind": "dusk",
    "fee_bps": 200,
-   "night": 56,
-   "mood": "blight",
-   "omen": "wild",
-   "omen_was": "blight",
+   "night": 62,
+   "mood": "wild",
+   "omen": "blight",
+   "omen_was": "wild",
    "prices": [
-    20,
-    30,
-    49,
+    19,
+    29,
+    50,
     80,
     119
    ],
    "stock": [
-    1200,
-    900,
-    601,
+    1201,
+    901,
+    597,
     360,
     241
    ]
@@ -73,16 +73,16 @@
    "kind": "hour",
    "round": 0,
    "prices": [
-    20,
-    30,
-    49,
+    19,
+    29,
+    50,
     80,
     119
    ],
    "stock": [
-    1200,
-    900,
-    601,
+    1201,
+    901,
+    597,
     360,
     241
    ]
@@ -99,16 +99,16 @@
    "kind": "hour",
    "round": 1,
    "prices": [
-    20,
-    28,
-    45,
-    75,
-    121
+    23,
+    32,
+    51,
+    76,
+    75
    ],
    "stock": [
-    1200,
+    1199,
     900,
-    601,
+    597,
     360,
     234
    ]
@@ -117,7 +117,7 @@
    "kind": "bubble",
    "round": 1,
    "clone": "clone-1",
-   "say": "Wool is cheap, buying a little.",
+   "say": "Amber is cheap, buying a little.",
    "whispered": false,
    "ai": false
   },
@@ -125,28 +125,28 @@
    "kind": "order",
    "round": 1,
    "clone": "clone-1",
-   "good": "wool",
+   "good": "amber",
    "side": "buy",
-   "qty": 2,
-   "price": 46,
-   "tx": "EZPWKEJoaPWQRurSS6YtqL451ZUeZ1RGpWQDJWebh6cx"
+   "qty": 1,
+   "price": 76,
+   "tx": "6WroJip8fDmRX7ZTEDxV74hetWHt6aBSZ92ZWhe2yftz"
   },
   {
    "kind": "hour",
    "round": 2,
    "prices": [
-    21,
-    30,
-    42,
-    75,
-    114
+    24,
+    31,
+    40,
+    89,
+    51
    ],
    "stock": [
-    1200,
-    900,
-    593,
+    1160,
+    901,
+    604,
     360,
-    234
+    237
    ]
   },
   {
@@ -161,18 +161,18 @@
    "kind": "hour",
    "round": 3,
    "prices": [
-    18,
-    30,
-    41,
-    72,
-    116
+    21,
+    31,
+    40,
+    87,
+    58
    ],
    "stock": [
     1201,
-    872,
-    593,
-    360,
-    241
+    901,
+    604,
+    352,
+    237
    ]
   },
   {
@@ -187,18 +187,18 @@
    "kind": "hour",
    "round": 4,
    "prices": [
-    17,
-    30,
-    37,
-    73,
-    111
+    16,
+    28,
+    33,
+    85,
+    63
    ],
    "stock": [
-    1206,
-    872,
-    593,
-    360,
-    240
+    1201,
+    901,
+    604,
+    361,
+    222
    ]
   },
   {
@@ -213,18 +213,18 @@
    "kind": "hour",
    "round": 5,
    "prices": [
-    16,
-    29,
-    34,
-    64,
-    107
+    15,
+    24,
+    37,
+    89,
+    81
    ],
    "stock": [
-    1206,
-    872,
-    593,
-    360,
-    240
+    1198,
+    899,
+    604,
+    361,
+    222
    ]
   },
   {
@@ -239,122 +239,162 @@
    "kind": "hour",
    "round": 6,
    "prices": [
-    17,
-    27,
-    30,
-    62,
-    97
+    15,
+    21,
+    46,
+    97,
+    118
    ],
    "stock": [
-    1206,
-    872,
-    593,
-    360,
-    240
+    1198,
+    899,
+    604,
+    361,
+    222
    ]
   },
   {
    "kind": "bubble",
    "round": 6,
    "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
+   "say": "Salt is cheap, buying a little.",
    "whispered": false,
    "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 6,
+   "clone": "clone-1",
+   "good": "salt",
+   "side": "buy",
+   "qty": 4,
+   "price": 21,
+   "tx": "Bp8KuKzJ383U41mvNVG5i8aYDuimPsV5gsfdZ5s7ZEAu"
   },
   {
    "kind": "hour",
    "round": 7,
    "prices": [
-    18,
-    28,
-    27,
-    59,
-    106
-   ],
-   "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 7,
-   "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "hour",
-   "round": 8,
-   "prices": [
     17,
-    29,
-    24,
-    54,
-    94
-   ],
-   "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
-   ]
-  },
-  {
-   "kind": "bubble",
-   "round": 8,
-   "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
-   "whispered": false,
-   "ai": false
-  },
-  {
-   "kind": "hour",
-   "round": 9,
-   "prices": [
-    17,
-    27,
     20,
-    52,
-    93
+    45,
+    107,
+    158
    ],
    "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
+    1198,
+    885,
+    604,
+    361,
+    222
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 7,
+   "clone": "clone-1",
+   "say": "Amber is 10% over usual, taking profit.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 7,
+   "clone": "clone-1",
+   "good": "amber",
+   "side": "sell",
+   "qty": 1,
+   "price": 158,
+   "tx": "8xoiC2dV82YXh8waKXHygipsvzqs36FPjbA626m4zGaJ"
+  },
+  {
+   "kind": "hour",
+   "round": 8,
+   "prices": [
+    14,
+    25,
+    37,
+    100,
+    132
+   ],
+   "stock": [
+    1198,
+    885,
+    604,
+    361,
+    224
+   ]
+  },
+  {
+   "kind": "bubble",
+   "round": 8,
+   "clone": "clone-1",
+   "say": "Grain is cheap, buying a little.",
+   "whispered": false,
+   "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 8,
+   "clone": "clone-1",
+   "good": "grain",
+   "side": "buy",
+   "qty": 8,
+   "price": 14,
+   "tx": "GmVQWseQ6NxNrBTsDnxVKZQAuyJbKM1MMVawga8YLFF1"
+  },
+  {
+   "kind": "hour",
+   "round": 9,
+   "prices": [
+    15,
+    23,
+    32,
+    102,
+    111
+   ],
+   "stock": [
+    1185,
+    818,
+    604,
+    361,
+    238
    ]
   },
   {
    "kind": "bubble",
    "round": 9,
    "clone": "clone-1",
-   "say": "Nothing worth the risk this hour.",
+   "say": "Wool is cheap, buying a little.",
    "whispered": false,
    "ai": false
+  },
+  {
+   "kind": "order",
+   "round": 9,
+   "clone": "clone-1",
+   "good": "wool",
+   "side": "buy",
+   "qty": 2,
+   "price": 32,
+   "tx": "5BCQ6t1k2Y3VnasQFuNMqQVkgg1voMypBm1uxT1L52Nf"
   },
   {
    "kind": "hour",
    "round": 10,
    "prices": [
-    17,
-    27,
     18,
-    45,
-    103
+    22,
+    42,
+    75,
+    109
    ],
    "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
+    1093,
+    885,
+    597,
+    361,
+    238
    ]
   },
   {
@@ -369,18 +409,18 @@
    "kind": "hour",
    "round": 11,
    "prices": [
-    19,
-    27,
-    18,
-    45,
-    104
+    15,
+    20,
+    37,
+    78,
+    82
    ],
    "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
+    1093,
+    885,
+    597,
+    361,
+    238
    ]
   },
   {
@@ -395,26 +435,26 @@
    "kind": "hour",
    "round": 12,
    "prices": [
-    19,
-    30,
-    18,
-    40,
-    102
+    15,
+    20,
+    32,
+    65,
+    117
    ],
    "stock": [
-    1158,
-    900,
-    593,
-    360,
-    241
+    1185,
+    885,
+    597,
+    346,
+    238
    ]
   },
   {
    "kind": "settled",
    "clone": "clone-1",
-   "paid_out": 441,
+   "paid_out": 566,
    "broke": false,
-   "tx": "9VLbBkNfXjPDgywzsB1n9XPZTX1KhrMRsbU5FpfCN4rs"
+   "tx": "7Jj9auQev6SNCCWaS5pat811i6tqmM5S7WYh6LKw2z18"
   },
   {
    "kind": "merged",
